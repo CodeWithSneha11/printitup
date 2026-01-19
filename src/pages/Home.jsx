@@ -1,30 +1,28 @@
 import React from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import "../styles/Home.css";
 
 function Home() {
+  const navigate = useNavigate();
+  const token = localStorage.getItem("token"); // check if user is logged in
+
+  const handleStartDesigning = () => {
+    if (token) {
+      navigate("/customize"); // go to customize if logged in
+    } else {
+      navigate("/login"); // go to login if not logged in
+    }
+  };
+
   return (
     <div className="home-container">
-      <header className="navbar">
-        <div className="logo">PrintItUp</div>
-        <nav>
-          <ul className="nav-links">
-            <li><Link to="/">Home</Link></li>
-            <li><Link to="/shop">Shop</Link></li>
-            <li><Link to="/customize">Customize</Link></li>
-            <li><Link to="/about">About</Link></li>
-            <li><Link to="/contact">Contact</Link></li>
-          </ul>
-        </nav>
-      </header>
-
       <section className="hero-section">
         <div className="hero-content">
           <h1>Design. Print. Wear. Express.</h1>
           <p>Bring your ideas to life with custom T-shirts that speak your style.</p>
-          <Link to="/customize">
-            <button className="cta-btn">Start Designing</button>
-          </Link>
+          <button className="cta-btn" onClick={handleStartDesigning}>
+            Start Designing
+          </button>
         </div>
         <div className="hero-image">
           <img src="https://i.imgur.com/6YVjD7Z.png" alt="Custom T-Shirt" />

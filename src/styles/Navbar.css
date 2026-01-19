@@ -1,0 +1,110 @@
+/* Navbar container */
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 24px;
+  background-color: #111;
+  color: #fff;
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
+  font-family: 'Arial', sans-serif;
+}
+
+/* Logo */
+.navbar-logo a {
+  text-decoration: none;
+  color: #fff;
+  font-size: 24px;
+  font-weight: bold;
+}
+
+/* Links */
+.navbar-links {
+  display: flex;
+  align-items: center;
+  gap: 20px;
+}
+
+/* Links style */
+.navbar-links a {
+  text-decoration: none;
+  color: #fff;
+  font-weight: 500;
+  transition: color 0.3s;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.navbar-links a:hover {
+  color: #f0a500;
+}
+
+/* Active link highlight */
+.active-link {
+  color: #f0a500;
+  border-bottom: 2px solid #f0a500;
+  padding-bottom: 2px;
+}
+
+/* Logout button */
+.logout-btn {
+  background: red;
+  color: #fff;
+  border: none;
+  padding: 6px 14px;
+  cursor: pointer;
+  border-radius: 5px;
+  font-weight: 500;
+  transition: background 0.3s;
+}
+
+.logout-btn:hover {
+  background: darkred;
+}
+
+/* Cart icon */
+.cart-icon {
+  font-size: 20px;
+  color: #fff;
+}
+
+/* Hamburger toggle (mobile) */
+.navbar-toggle {
+  display: none;
+  font-size: 22px;
+  cursor: pointer;
+}
+
+/* Responsive for mobile */
+@media (max-width: 768px) {
+  .navbar-links {
+    position: absolute;
+    top: 60px;
+    right: 0;
+    background-color: #111;
+    flex-direction: column;
+    width: 220px;
+    text-align: center;
+    padding: 15px 0;
+    transform: translateX(100%);
+    transition: transform 0.3s ease-in-out;
+  }
+
+  .navbar-links.active {
+    transform: translateX(0);
+  }
+
+  .navbar-toggle {
+    display: block;
+  }
+
+  .navbar-links a,
+  .logout-btn,
+  .cart-icon {
+    margin: 10px 0;
+  }
+}
