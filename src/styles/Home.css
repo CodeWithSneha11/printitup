@@ -1,150 +1,17 @@
-body {
-  margin: 0;
-  font-family: "Poppins", sans-serif;
-  background-color: #f9f9f9;
-  color: #333;
+.home {
+  text-align: center;
+  padding: 80px 20px;
 }
 
-/* Navbar */
-.navbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  background: #222;
-  padding: 15px 50px;
-  color: white;
-}
-
-.logo {
-  font-size: 24px;
-  font-weight: bold;
-  color: #ff6b00;
-}
-
-.nav-links {
-  list-style: none;
-  display: flex;
-  gap: 25px;
-}
-
-.nav-links li a {
-  text-decoration: none;
-  color: white;
-  font-weight: 500;
-  transition: color 0.3s;
-}
-
-.nav-links li a:hover {
-  color: #ff6b00;
-}
-
-/* Hero Section */
-.hero-section {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 80px 100px;
-  background: linear-gradient(135deg, #fff6eb, #ffe5d0);
-}
-
-.hero-content {
-  max-width: 50%;
-}
-
-.hero-content h1 {
+.home h1 {
   font-size: 48px;
-  margin-bottom: 20px;
-  color: #222;
 }
 
-.hero-content p {
-  font-size: 18px;
-  margin-bottom: 30px;
-  color: #555;
-}
-
-.cta-btn {
-  padding: 12px 25px;
-  background: #ff6b00;
+.home button {
+  margin-top: 20px;
+  padding: 14px 30px;
+  background: black;
   color: white;
   border: none;
-  border-radius: 6px;
-  font-size: 16px;
   cursor: pointer;
-  transition: background 0.3s;
-}
-
-.cta-btn:hover {
-  background: #e65b00;
-}
-
-.hero-image img {
-  width: 400px;
-  animation: float 3s ease-in-out infinite;
-}
-
-@keyframes float {
-  0%, 100% {
-    transform: translateY(0);
-  }
-  50% {
-    transform: translateY(-10px);
-  }
-}
-
-/* Features Section */
-.features-section {
-  text-align: center;
-  padding: 80px 50px;
-  background-color: #fff;
-}
-
-.features-section h2 {
-  font-size: 32px;
-  margin-bottom: 50px;
-  color: #222;
-}
-
-.features {
-  display: flex;
-  justify-content: center;
-  gap: 60px;
-  flex-wrap: wrap;
-}
-
-.feature {
-  width: 250px;
-  background: #f9f9f9;
-  border-radius: 12px;
-  padding: 30px;
-  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
-  transition: transform 0.3s;
-}
-
-.feature:hover {
-  transform: translateY(-10px);
-}
-
-.feature img {
-  width: 80px;
-  margin-bottom: 15px;
-}
-
-.feature h3 {
-  font-size: 20px;
-  margin-bottom: 10px;
-  color: #ff6b00;
-}
-
-.feature p {
-  color: #555;
-}
-
-/* Footer */
-footer {
-  background: #222;
-  color: white;
-  text-align: center;
-  padding: 20px;
-  font-size: 14px;
 }

@@ -1,62 +1,91 @@
 import { useState } from "react";
-import axios from "axios";
+import { Link, useNavigate } from "react-router-dom";
 import "../styles/Auth.css";
 
-const Signup = () => {
-  const [form, setForm] = useState({
-    name: "",
-    email: "",
-    password: ""
-  });
+function Signup() {
 
-  const handleChange = (e) => {
-    setForm({ ...form, [e.target.name]: e.target.value });
-  };
+  const [name,setName] = useState("");
+  const [email,setEmail] = useState("");
+  const [password,setPassword] = useState("");
 
-  const handleSubmit = async (e) => {
+  const navigate = useNavigate();
+
+  const handleSignup = async (e) => {
+
     e.preventDefault();
+
     try {
-      await axios.post("http://localhost:5000/api/auth/signup", form);
-      alert("Signup successful! Please login.");
-    } catch (err) {
-      alert(err.response?.data?.message || "Signup failed");
+
+      const res = await fetch("http://localhost:5000/api/auth/signup",{
+        method:"POST",
+        headers:{
+          "Content-Type":"application/json"
+        },
+        body:JSON.stringify({
+          name,
+          email,
+          password
+        })
+      });
+
+      const data = await res.json();
+
+      if(res.ok){
+        alert("Signup Successful");
+        navigate("/login");
+      }else{
+        alert(data.msg);
+      }
+
+    } catch (error) {
+
+      console.log(error);
+      alert("Server error");
+
     }
+
   };
 
   return (
+
     <div className="auth-container">
-      <form className="auth-box" onSubmit={handleSubmit}>
+
+      <form className="auth-card" onSubmit={handleSignup}>
+
         <h2>Create Account</h2>
 
         <input
           type="text"
-          name="name"
           placeholder="Full Name"
-          onChange={handleChange}
           required
+          onChange={(e)=>setName(e.target.value)}
         />
 
         <input
           type="email"
-          name="email"
           placeholder="Email"
-          onChange={handleChange}
           required
+          onChange={(e)=>setEmail(e.target.value)}
         />
 
         <input
           type="password"
-          name="password"
           placeholder="Password"
-          onChange={handleChange}
           required
+          onChange={(e)=>setPassword(e.target.value)}
         />
 
         <button type="submit">Sign Up</button>
-        <p>Already have an account? <a href="/login">Login</a></p>
+
+        <p className="auth-switch">
+          Already have an account? <Link to="/login">Login</Link>
+        </p>
+
       </form>
+
     </div>
+
   );
-};
+}
 
 export default Signup;

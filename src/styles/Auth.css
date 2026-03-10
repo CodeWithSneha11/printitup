@@ -1,47 +1,103 @@
+/* =========================
+   PAGE BACKGROUND
+   ========================= */
+
 .auth-container {
   height: 100vh;
   display: flex;
   justify-content: center;
   align-items: center;
-  background: #f4f6f8;
+  background: linear-gradient(135deg, #111, #1c1c1c);
+  font-family: Arial, sans-serif;
 }
 
-.auth-box {
-  width: 320px;
-  padding: 25px;
-  background: white;
-  border-radius: 10px;
-  box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+/* =========================
+   AUTH CARD
+   ========================= */
+
+.auth-card {
+  width: 360px;
+  padding: 40px;
+  border-radius: 14px;
+  background: rgba(255, 255, 255, 0.06);
+  backdrop-filter: blur(10px);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.6);
   text-align: center;
-}
-
-.auth-box h2 {
-  margin-bottom: 20px;
-}
-
-.auth-box input {
-  width: 100%;
-  padding: 10px;
-  margin-bottom: 12px;
-  border-radius: 6px;
-  border: 1px solid #ccc;
-}
-
-.auth-box button {
-  width: 100%;
-  padding: 10px;
-  background: #111;
   color: white;
-  border: none;
+}
+
+/* =========================
+   TITLE
+   ========================= */
+
+.auth-card h2 {
+  margin-bottom: 25px;
+  font-size: 28px;
+}
+
+/* =========================
+   INPUT FIELDS
+   ========================= */
+
+.auth-card input {
+  width: 100%;
+  padding: 12px;
+  margin-bottom: 16px;
   border-radius: 6px;
-  cursor: pointer;
-}
-
-.auth-box button:hover {
-  background: #333;
-}
-
-.auth-box p {
-  margin-top: 12px;
+  border: none;
+  outline: none;
   font-size: 14px;
+}
+
+/* =========================
+   BUTTON
+   ========================= */
+
+.auth-card button {
+  width: 100%;
+  padding: 12px;
+  border-radius: 25px;
+  border: none;
+  background: linear-gradient(135deg,#ff4d6d,#ff1e56);
+  color: white;
+  font-size: 15px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.auth-card button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 18px rgba(255,77,109,0.6);
+}
+
+/* =========================
+   TEXT BELOW BUTTON
+   ========================= */
+
+.auth-switch {
+  margin-top: 18px;
+  font-size: 14px;
+}
+
+.auth-switch a {
+  color: #ff4d6d;
+  text-decoration: none;
+  font-weight: 500;
+}
+
+/* =========================
+   MEDIA QUERY
+   ========================= */
+
+@media (max-width: 768px) {
+
+  .auth-card {
+    width: 90%;
+    padding: 30px;
+  }
+
+  .auth-card h2 {
+    font-size: 24px;
+  }
+
 }

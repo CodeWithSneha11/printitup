@@ -1,110 +1,120 @@
-/* Navbar container */
+/* =========================
+   BASE NAVBAR STYLES
+   ========================= */
+
 .navbar {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 12px 24px;
-  background-color: #111;
-  color: #fff;
+  padding: 14px 48px;
+  background: linear-gradient(90deg, #111, #1a1a1a);
+  color: white;
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.4);
   position: sticky;
   top: 0;
-  z-index: 1000;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.2);
-  font-family: 'Arial', sans-serif;
+  z-index: 100;
 }
 
-/* Logo */
-.navbar-logo a {
-  text-decoration: none;
-  color: #fff;
+/* =========================
+   LOGO
+   ========================= */
+
+.logo {
   font-size: 24px;
-  font-weight: bold;
-}
-
-/* Links */
-.navbar-links {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-}
-
-/* Links style */
-.navbar-links a {
-  text-decoration: none;
-  color: #fff;
-  font-weight: 500;
-  transition: color 0.3s;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-}
-
-.navbar-links a:hover {
-  color: #f0a500;
-}
-
-/* Active link highlight */
-.active-link {
-  color: #f0a500;
-  border-bottom: 2px solid #f0a500;
-  padding-bottom: 2px;
-}
-
-/* Logout button */
-.logout-btn {
-  background: red;
-  color: #fff;
-  border: none;
-  padding: 6px 14px;
+  font-weight: 700;
+  letter-spacing: 1px;
   cursor: pointer;
-  border-radius: 5px;
+}
+
+.logo span {
+  color: #ff4d6d;
+}
+
+/* =========================
+   NAV LINKS
+   ========================= */
+
+.nav-links {
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.nav-links a {
+  color: #eaeaea;
+  text-decoration: none;
+  font-size: 15px;
   font-weight: 500;
-  transition: background 0.3s;
+  position: relative;
+  transition: color 0.3s ease;
+}
+
+/* Hover underline animation */
+.nav-links a::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  bottom: -4px;
+  width: 0;
+  height: 2px;
+  background-color: #ff4d6d;
+  transition: width 0.3s ease;
+}
+
+.nav-links a:hover {
+  color: #ffffff;
+}
+
+.nav-links a:hover::after {
+  width: 100%;
+}
+
+/* =========================
+   LOGOUT BUTTON
+   ========================= */
+
+.logout-btn {
+  background: linear-gradient(135deg, #ff4d6d, #ff1e56);
+  color: white;
+  border: none;
+  padding: 8px 18px;
+  border-radius: 20px;
+  font-size: 14px;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
 .logout-btn:hover {
-  background: darkred;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 10px rgba(255, 77, 109, 0.5);
 }
 
-/* Cart icon */
-.cart-icon {
-  font-size: 20px;
-  color: #fff;
-}
+/* =========================
+   MEDIA QUERY (MOBILE)
+   ========================= */
 
-/* Hamburger toggle (mobile) */
-.navbar-toggle {
-  display: none;
-  font-size: 22px;
-  cursor: pointer;
-}
-
-/* Responsive for mobile */
 @media (max-width: 768px) {
-  .navbar-links {
-    position: absolute;
-    top: 60px;
-    right: 0;
-    background-color: #111;
-    flex-direction: column;
-    width: 220px;
-    text-align: center;
-    padding: 15px 0;
-    transform: translateX(100%);
-    transition: transform 0.3s ease-in-out;
+  .navbar {
+    padding: 12px 20px;
   }
 
-  .navbar-links.active {
-    transform: translateX(0);
+  .logo {
+    font-size: 20px;
   }
 
-  .navbar-toggle {
-    display: block;
+  .nav-links {
+    gap: 14px;
   }
 
-  .navbar-links a,
-  .logout-btn,
-  .cart-icon {
-    margin: 10px 0;
+  .nav-links a {
+    font-size: 14px;
+  }
+
+  .logout-btn {
+    padding: 6px 14px;
+    font-size: 13px;
   }
 }

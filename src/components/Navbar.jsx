@@ -1,84 +1,41 @@
-import { useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { FaShoppingCart, FaUserCircle, FaBars, FaTimes } from "react-icons/fa";
+import { Link, useNavigate } from "react-router-dom";
+import { isLoggedIn, logoutUser } from "../utils/auth";
 import "../styles/Navbar.css";
 
-function Navbar() {
-  const [menuOpen, setMenuOpen] = useState(false);
+const Navbar = () => {
   const navigate = useNavigate();
-  const location = useLocation();
-  const token = localStorage.getItem("token");
+  const loggedIn = isLoggedIn();
 
   const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
-    setMenuOpen(false);
-  };
-
-  const toggleMenu = () => {
-    setMenuOpen(!menuOpen);
+    logoutUser();
+    navigate("/");
   };
 
   return (
     <nav className="navbar">
-      <div className="navbar-logo">
-        <Link to="/">PrintItUp</Link>
-      </div>
+      <div className="logo">PrintItUp</div>
 
-      <div className={`navbar-links ${menuOpen ? "active" : ""}`}>
-        <Link
-          to="/"
-          className={location.pathname === "/" ? "active-link" : ""}
-          onClick={() => setMenuOpen(false)}
-        >
-          Home
-        </Link>
+      <ul className="nav-links">
+        <li><Link to="/">Home</Link></li>
 
-        {token && (
-          <Link
-            to="/customize"
-            className={location.pathname === "/customize" ? "active-link" : ""}
-            onClick={() => setMenuOpen(false)}
-          >
-            Customize
-          </Link>
-        )}
-
-        {!token && (
+        {loggedIn ? (
           <>
-            <Link
-              to="/login"
-              className={location.pathname === "/login" ? "active-link" : ""}
-              onClick={() => setMenuOpen(false)}
-            >
-              Login
-            </Link>
-            <Link
-              to="/signup"
-              className={location.pathname === "/signup" ? "active-link" : ""}
-              onClick={() => setMenuOpen(false)}
-            >
-              Sign Up
-            </Link>
+            <li><Link to="/customize">Customize</Link></li>
+            <li>
+              <button className="logout-btn" onClick={handleLogout}>
+                Logout
+              </button>
+            </li>
+          </>
+        ) : (
+          <>
+            <li><Link to="/login">Login</Link></li>
+            <li><Link to="/signup">Signup</Link></li>
           </>
         )}
-
-        {token && (
-          <button className="logout-btn" onClick={handleLogout}>
-            Logout
-          </button>
-        )}
-
-        <Link to="/cart" className="cart-icon" onClick={() => setMenuOpen(false)}>
-          <FaShoppingCart />
-        </Link>
-      </div>
-
-      <div className="navbar-toggle" onClick={toggleMenu}>
-        {menuOpen ? <FaTimes /> : <FaBars />}
-      </div>
+      </ul>
     </nav>
   );
-}
+};
 
 export default Navbar;
