@@ -1,5 +1,17 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
+
+import {
+  createUserWithEmailAndPassword
+} from "firebase/auth";
+
+import {
+  doc,
+  setDoc
+} from "firebase/firestore";
+
+import { auth, db } from "../firebase";
+
 import "../styles/Auth.css";
 
 function Signup() {
@@ -16,40 +28,39 @@ function Signup() {
 
     try {
 
-      const res = await fetch("http://localhost:5000/api/auth/signup",{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json"
-        },
-        body:JSON.stringify({
-          name,
+      const userCredential =
+        await createUserWithEmailAndPassword(
+          auth,
           email,
           password
-        })
-      });
+        );
 
-      const data = await res.json();
+      const user = userCredential.user;
 
-      if(res.ok){
-        alert("Signup Successful");
-        navigate("/login");
-      }else{
-        alert(data.msg);
-      }
+      await setDoc(
+        doc(db,"users",user.uid),
+        {
+          uid:user.uid,
+          name:name,
+          email:email,
+          createdAt:new Date()
+        }
+      );
 
-    } catch (error) {
+      alert("Signup Successful");
 
-      console.log(error);
-      alert("Server error");
+      navigate("/login");
+
+    } catch(error) {
+
+      alert(error.message);
 
     }
 
   };
 
   return (
-
     <div className="auth-container">
-
       <form className="auth-card" onSubmit={handleSignup}>
 
         <h2>Create Account</h2>
@@ -75,16 +86,17 @@ function Signup() {
           onChange={(e)=>setPassword(e.target.value)}
         />
 
-        <button type="submit">Sign Up</button>
+        <button type="submit">
+          Sign Up
+        </button>
 
         <p className="auth-switch">
-          Already have an account? <Link to="/login">Login</Link>
+          Already have an account?
+          <Link to="/login"> Login</Link>
         </p>
 
       </form>
-
     </div>
-
   );
 }
 

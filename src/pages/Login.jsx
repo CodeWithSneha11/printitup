@@ -1,5 +1,12 @@
 import { useState } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link,useNavigate } from "react-router-dom";
+
+import {
+  signInWithEmailAndPassword
+} from "firebase/auth";
+
+import { auth } from "../firebase";
+
 import "../styles/Auth.css";
 
 function Login() {
@@ -13,48 +20,34 @@ function Login() {
 
     e.preventDefault();
 
-    try{
+    try {
 
-      const res = await fetch("http://localhost:5000/api/auth/login",{
-        method:"POST",
-        headers:{
-          "Content-Type":"application/json"
-        },
-        body: JSON.stringify({
+      const userCredential =
+        await signInWithEmailAndPassword(
+          auth,
           email,
           password
-        })
-      });
+        );
 
-      const data = await res.json();
+      localStorage.setItem(
+        "uid",
+        userCredential.user.uid
+      );
 
-      if(res.ok){
+      alert("Login Successful");
 
-        localStorage.setItem("token",data.token);
+      navigate("/");
 
-        alert("Login successful");
+    } catch(error) {
 
-        navigate("/");
-
-      }else{
-
-        alert(data.msg);
-
-      }
-
-    }catch(err){
-
-      console.log(err);
-      alert("Server error");
+      alert(error.message);
 
     }
 
   };
 
   return (
-
     <div className="auth-container">
-
       <form className="auth-card" onSubmit={handleLogin}>
 
         <h2>Login</h2>
@@ -78,15 +71,13 @@ function Login() {
         </button>
 
         <p className="auth-switch">
-          Don't have an account? <Link to="/signup">Signup</Link>
+          Don't have an account?
+          <Link to="/signup"> Signup</Link>
         </p>
 
       </form>
-
     </div>
-
   );
-
 }
 
 export default Login;

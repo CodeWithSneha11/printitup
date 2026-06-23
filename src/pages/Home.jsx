@@ -1,21 +1,45 @@
-import { useNavigate } from "react-router-dom";
-import { isLoggedIn } from "../utils/auth";
+import React from "react";
+import { Link } from "react-router-dom";
 import "../styles/Home.css";
 
-const Home = () => {
-  const navigate = useNavigate();
-
-  const handleStart = () => {
-    navigate(isLoggedIn() ? "/customize" : "/login");
-  };
-
+function Home() {
   return (
-    <div className="home">
-      <h1>Design. Print. Wear.</h1>
-      <p>Create custom T-shirts in seconds.</p>
-      <button onClick={handleStart}>Start Designing</button>
+    <div className="home-container">
+
+      {/* HERO SECTION */}
+
+      <section className="hero-section">
+
+        <div className="hero-text">
+
+          <h1>
+            Design Your <span>Own Style</span>
+          </h1>
+
+          <p>
+            Create custom T-shirts with your own text, images and creativity.
+            PrintItUp lets you design and wear what you imagine.
+          </p>
+
+          <Link to="/customize">
+            <button className="hero-btn">
+              Start Designing
+            </button>
+          </Link>
+
+        </div>
+
+        <div className="hero-image">
+          <img
+            src="https://i.imgur.com/6YVjD7Z.png"
+            alt="Custom Tshirt"
+          />
+        </div>
+
+      </section>
+
     </div>
   );
-};
+}
 
 export default Home;

@@ -1,8 +1,12 @@
 import { Navigate } from "react-router-dom";
-import { isLoggedIn } from "../utils/auth";
 
-const ProtectedRoute = ({ children }) => {
-  return isLoggedIn() ? children : <Navigate to="/login" />;
-};
+function ProtectedRoute({ children }) {
+
+  const uid = localStorage.getItem("uid");
+
+  return uid
+    ? children
+    : <Navigate to="/login" />;
+}
 
 export default ProtectedRoute;
