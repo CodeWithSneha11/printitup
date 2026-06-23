@@ -169,3 +169,47 @@
     height: 190px;
   }
 }
+.design-image {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  object-fit: contain;
+  top: 35%;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+}
+@media (max-width: 768px) {
+  .design-image {
+    width: 90px;
+    height: 90px;
+  }
+}
+
+.save-btn{
+  width:100%;
+  margin-top:20px;
+  padding:14px;
+
+  border:none;
+  border-radius:12px;
+
+  background:#22c55e;
+  color:white;
+
+  font-size:16px;
+  font-weight:600;
+
+  cursor:pointer;
+  transition:.3s;
+}
+
+.save-btn:hover{
+  transform:translateY(-2px);
+}
+
+.save-message{
+  margin-top:10px;
+  text-align:center;
+  font-weight:600;
+}
