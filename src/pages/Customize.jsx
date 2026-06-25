@@ -4,6 +4,7 @@ import { db } from "../firebase";
 import "../styles/Customize.css";
 
 const Customize = () => {
+
   const [text, setText] = useState("");
   const [position, setPosition] = useState("center");
   const [side, setSide] = useState("front");
@@ -12,8 +13,12 @@ const Customize = () => {
   const [neck, setNeck] = useState("round");
   const [rotate, setRotate] = useState(false);
   const [textColor, setTextColor] = useState("#000000");
+
   const [image, setImage] = useState(null);
+  const [imageFile, setImageFile] = useState(null);
+
   const [message, setMessage] = useState("");
+  const [loading, setLoading] = useState(false);
 
   const basePrice = 499;
 
@@ -23,6 +28,7 @@ const Customize = () => {
   if (image) finalPrice += 50;
 
   useEffect(() => {
+
     setRotate(true);
 
     const timer = setTimeout(() => {
@@ -30,68 +36,148 @@ const Customize = () => {
     }, 600);
 
     return () => clearTimeout(timer);
+
   }, [side]);
 
   const handleImageUpload = (e) => {
-    if (e.target.files[0]) {
-      setImage(URL.createObjectURL(e.target.files[0]));
-    }
+
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    setImageFile(file);
+
+    setImage(
+      URL.createObjectURL(file)
+    );
+
   };
 
   const removeImage = () => {
+
     setImage(null);
+    setImageFile(null);
+
   };
 
+ const uploadImageToCloudinary = async () => {
+
+  if (!imageFile) return "";
+
+  const formData = new FormData();
+
+  formData.append("file", imageFile);
+  formData.append("upload_preset", "printitup");
+
+  const response = await fetch(
+    "https://api.cloudinary.com/v1_1/dfq3c3jkm/image/upload",
+    {
+      method: "POST",
+      body: formData
+    }
+  );
+
+  const data = await response.json();
+
+  console.log("Cloudinary Response:", data);
+
+  if (!response.ok) {
+    throw new Error(
+      data.error?.message || "Upload failed"
+    );
+  }
+
+  return data.secure_url;
+};
   const saveDesign = async () => {
+
     try {
-      const uid = localStorage.getItem("uid");
+
+      setLoading(true);
+
+      const uid =
+        localStorage.getItem("uid");
 
       if (!uid) {
-        setMessage("Please login first");
+
+        setMessage(
+          "Please login first"
+        );
+
         return;
       }
 
-      await addDoc(collection(db, "designs"), {
-        uid,
-        text,
-        position,
-        side,
-        tshirtColor,
-        textColor,
-        fontSize,
-        neck,
-        image: image || "",
-        price: finalPrice,
-        createdAt: new Date(),
-      });
+      let imageUrl = "";
 
-      setMessage("✅ Design saved successfully!");
+      if (imageFile) {
+
+        imageUrl =
+          await uploadImageToCloudinary();
+
+      }
+
+      await addDoc(
+        collection(db, "designs"),
+        {
+          uid,
+          text,
+          position,
+          side,
+          tshirtColor,
+          textColor,
+          fontSize,
+          neck,
+          imageUrl,
+          price: finalPrice,
+          createdAt: new Date()
+        }
+      );
+
+      setMessage(
+        "✅ Design saved successfully"
+      );
 
     } catch (error) {
+
       console.log(error);
-      setMessage("❌ Failed to save design");
+
+      setMessage(
+        "❌ Failed to save design"
+      );
+
+    } finally {
+
+      setLoading(false);
+
     }
+
   };
 
   return (
     <div className="customize-container">
 
-      {/* LEFT PANEL */}
-
       <div className="options">
 
-        <h2>🎨 Customize Your T-Shirt</h2>
+        <h2>
+          🎨 Customize Your T-Shirt
+        </h2>
 
-        <label>Enter Text</label>
+        <label>
+          Enter Text
+        </label>
 
         <input
           type="text"
           placeholder="Your text here..."
           value={text}
-          onChange={(e) => setText(e.target.value)}
+          onChange={(e) =>
+            setText(e.target.value)
+          }
         />
 
-        <label>Upload Logo / Image</label>
+        <label>
+          Upload Logo / Image
+        </label>
 
         <input
           type="file"
@@ -108,78 +194,141 @@ const Customize = () => {
           </button>
         )}
 
-        <label>Text Position</label>
+        <label>
+          Text Position
+        </label>
 
         <select
           value={position}
-          onChange={(e) => setPosition(e.target.value)}
+          onChange={(e) =>
+            setPosition(e.target.value)
+          }
         >
-          <option value="center">Center</option>
-          <option value="left">Left Corner</option>
-          <option value="right">Right Corner</option>
+          <option value="center">
+            Center
+          </option>
+
+          <option value="left">
+            Left Corner
+          </option>
+
+          <option value="right">
+            Right Corner
+          </option>
         </select>
 
-        <label>Print Side</label>
+        <label>
+          Print Side
+        </label>
 
         <select
           value={side}
-          onChange={(e) => setSide(e.target.value)}
+          onChange={(e) =>
+            setSide(e.target.value)
+          }
         >
-          <option value="front">Front</option>
-          <option value="back">Back</option>
+          <option value="front">
+            Front
+          </option>
+
+          <option value="back">
+            Back
+          </option>
         </select>
 
-        <label>T-Shirt Color</label>
+        <label>
+          T-Shirt Color
+        </label>
 
         <input
           type="color"
           value={tshirtColor}
-          onChange={(e) => setTshirtColor(e.target.value)}
+          onChange={(e) =>
+            setTshirtColor(
+              e.target.value
+            )
+          }
         />
 
-        <label>Text Color</label>
+        <label>
+          Text Color
+        </label>
 
         <input
           type="color"
           value={textColor}
-          onChange={(e) => setTextColor(e.target.value)}
+          onChange={(e) =>
+            setTextColor(
+              e.target.value
+            )
+          }
         />
 
-        <label>Font Size</label>
+        <label>
+          Font Size
+        </label>
 
         <input
           type="range"
           min="12"
           max="36"
           value={fontSize}
-          onChange={(e) => setFontSize(e.target.value)}
+          onChange={(e) =>
+            setFontSize(
+              e.target.value
+            )
+          }
         />
 
-        <span className="font-size-display">
+        <span>
           {fontSize}px
         </span>
 
-        <label>Neck Style</label>
+        <label>
+          Neck Style
+        </label>
 
         <select
           value={neck}
-          onChange={(e) => setNeck(e.target.value)}
+          onChange={(e) =>
+            setNeck(
+              e.target.value
+            )
+          }
         >
-          <option value="round">Round Neck</option>
-          <option value="vneck">V-Neck</option>
-          <option value="collar">Collar</option>
+          <option value="round">
+            Round Neck
+          </option>
+
+          <option value="vneck">
+            V-Neck
+          </option>
+
+          <option value="collar">
+            Collar
+          </option>
         </select>
 
         <div className="price-box">
-          <h3>Total Price</h3>
-          <p>₹{finalPrice}</p>
+
+          <h3>
+            Total Price
+          </h3>
+
+          <p>
+            ₹{finalPrice}
+          </p>
+
         </div>
 
         <button
           className="save-btn"
           onClick={saveDesign}
+          disabled={loading}
         >
-          💾 Save Design
+          {loading
+            ? "Saving..."
+            : "💾 Save Design"}
         </button>
 
         {message && (
@@ -190,14 +339,15 @@ const Customize = () => {
 
       </div>
 
-      {/* RIGHT PANEL */}
-
       <div className="preview">
 
         <div
-          className={`tshirt ${neck} ${rotate ? "rotate" : ""}`}
+          className={`tshirt ${neck} ${
+            rotate ? "rotate" : ""
+          }`}
           style={{
-            backgroundColor: tshirtColor,
+            backgroundColor:
+              tshirtColor
           }}
         >
 
@@ -212,8 +362,10 @@ const Customize = () => {
           <span
             className={`tshirt-text ${side} ${position}`}
             style={{
-              fontSize: `${fontSize}px`,
-              color: textColor,
+              fontSize:
+                `${fontSize}px`,
+              color:
+                textColor
             }}
           >
             {text}
@@ -222,33 +374,41 @@ const Customize = () => {
         </div>
 
         <p className="preview-label">
-          Preview ({side === "front" ? "Front" : "Back"})
+          Preview (
+          {side === "front"
+            ? "Front"
+            : "Back"}
+          )
         </p>
 
         <div className="design-summary">
 
-          <h3>Design Summary</h3>
+          <h3>
+            Design Summary
+          </h3>
 
           <p>
-            <strong>Text:</strong>{" "}
-            {text || "No text added"}
+            <strong>Text:</strong>
+            {" "}
+            {text || "No text"}
           </p>
 
           <p>
-            <strong>Neck:</strong> {neck}
+            <strong>Neck:</strong>
+            {" "}
+            {neck}
           </p>
 
           <p>
-            <strong>Side:</strong> {side}
+            <strong>Side:</strong>
+            {" "}
+            {side}
           </p>
 
           <p>
-            <strong>Image:</strong>{" "}
-            {image ? "Uploaded" : "Not Added"}
-          </p>
-
-          <p>
-            <strong>Price:</strong> ₹{finalPrice}
+            <strong>Price:</strong>
+            {" "}
+            ₹{finalPrice}
           </p>
 
         </div>
