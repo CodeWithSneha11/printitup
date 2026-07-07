@@ -6,6 +6,7 @@ import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MyDesigns from "./pages/MyDesigns";
+import Cart from "./pages/cart";
 
 function App() {
   return (
@@ -41,6 +42,7 @@ function App() {
             </ProtectedRoute>
           }
         />
+        <Route path="/cart" element={<Cart />} />
       </Routes>
     </Router>
   );

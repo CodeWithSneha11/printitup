@@ -1,125 +1,140 @@
 import React, { useState, useEffect } from "react";
-
-// Firebase Firestore
 import { collection, addDoc } from "firebase/firestore";
 import { db } from "../firebase";
-
 import "../styles/Customize.css";
 
+
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5mb
+
+
+
+const tshirtColors = [
+  { name: "white", code: "#ffffff" },
+  { name: "black", code: "#111111" },
+  { name: "red", code: "#ef4444" },
+  { name: "navy", code: "#1e3a8a" },
+  { name: "green", code: "#16a34a" },
+  { name: "grey", code: "#9ca3af" },
+];
+
+const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
+
 const Customize = () => {
-  // State variables for customization options
   const [text, setText] = useState("");
   const [position, setPosition] = useState("center");
   const [side, setSide] = useState("front");
-  const [tshirtColor, setTshirtColor] = useState("#ffffff");
+  const [selectedColor, setSelectedColor] = useState("white");
+  const [selectedSize, setSelectedSize] = useState("M");
   const [fontSize, setFontSize] = useState(18);
+  const [textColor, setTextColor] = useState("#000000");
   const [neck, setNeck] = useState("round");
   const [rotate, setRotate] = useState(false);
-  const [textColor, setTextColor] = useState("#000000");
-
-  // State for uploaded image
   const [image, setImage] = useState(null);
   const [imageFile, setImageFile] = useState(null);
 
-  // State for status messages and loading
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
-  // Base price of the T-shirt
-  const basePrice = 499;
-
-  // Calculate final price based on selected options
-  let finalPrice = basePrice;
-
-  if (side === "back") finalPrice += 50;
+  let finalPrice = 499;
   if (image) finalPrice += 100;
+  if (side === "back") finalPrice += 50;
+  if (selectedSize === "XL") finalPrice += 50;
+  if (selectedSize === "XXL") finalPrice += 80;
 
-  // Rotate animation whenever the user switches sides
   useEffect(() => {
     setRotate(true);
-
-    const timer = setTimeout(() => {
-      setRotate(false);
-    }, 600);
-
+    const timer = setTimeout(() => setRotate(false), 600);
     return () => clearTimeout(timer);
   }, [side]);
 
-  // Handles image selection from user's device
+  // Clean up object URL when image changes/unmounts to avoid memory leaks
+  useEffect(() => {
+    return () => {
+      if (image) URL.revokeObjectURL(image);
+    };
+  }, [image]);
+
   const handleImageUpload = (e) => {
     const file = e.target.files[0];
-
     if (!file) return;
 
-    setImageFile(file);
+    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    if (!allowedTypes.includes(file.type)) {
+      setMessage("Only PNG, JPG, JPEG and WEBP images are allowed.");
+      return;
+    }
+    if (file.size > MAX_FILE_SIZE) {
+      setMessage("Maximum image size is 5MB.");
+      return;
+    }
 
-    // Create a temporary preview URL
+    setMessage("");
+    setImageFile(file);
     setImage(URL.createObjectURL(file));
   };
 
-  // Removes the uploaded image
   const removeImage = () => {
+    if (image) URL.revokeObjectURL(image);
     setImage(null);
     setImageFile(null);
   };
 
-  // Uploads the selected image to Cloudinary
+  const resetDesign = () => {
+    if (image) URL.revokeObjectURL(image);
+    setText("");
+    setPosition("center");
+    setSide("front");
+    setSelectedColor("white");
+    setSelectedSize("M");
+    setFontSize(18);
+    setTextColor("#000000");
+    setNeck("round");
+    setImage(null);
+    setImageFile(null);
+    setMessage("");
+  };
+
   const uploadImageToCloudinary = async () => {
     if (!imageFile) return "";
-
     const formData = new FormData();
-
     formData.append("file", imageFile);
     formData.append("upload_preset", "printitup");
 
     const response = await fetch(
       "https://api.cloudinary.com/v1_1/dfq3c3jkm/image/upload",
-      {
-        method: "POST",
-        body: formData,
-      },
+      { method: "POST", body: formData }
     );
 
     const data = await response.json();
-
-    console.log("Cloudinary Response:", data);
-
     if (!response.ok) {
-      throw new Error(data.error?.message || "Upload failed");
+      throw new Error(data.error?.message);
     }
-
-    // Return uploaded image URL
     return data.secure_url;
   };
 
-  // Saves the customized design to Firestore
   const saveDesign = async () => {
     try {
       setLoading(true);
+      setMessage("");
 
-      // Get logged-in user's UID
       const uid = localStorage.getItem("uid");
-
       if (!uid) {
-        setMessage("Please login first");
-
+        setMessage("Please login first.");
         return;
       }
 
       let imageUrl = "";
-
-      // Upload image if available
       if (imageFile) {
         imageUrl = await uploadImageToCloudinary();
       }
 
-      // Store design details in Firestore
       await addDoc(collection(db, "designs"), {
         uid,
         text,
         position,
         side,
-        tshirtColor,
+        tshirtColor: selectedColor,
+        size: selectedSize,
         textColor,
         fontSize,
         neck,
@@ -128,86 +143,142 @@ const Customize = () => {
         createdAt: new Date(),
       });
 
-      setMessage("✅ Design saved successfully");
-    } catch (error) {
-      console.log(error);
-
-      setMessage("❌ Failed to save design");
+      setMessage("✅ Design Saved Successfully");
+    } catch (err) {
+      console.log(err);
+      setMessage("❌ Unable to save design.");
     } finally {
-      // Stop loading after saving
       setLoading(false);
     }
   };
 
+const addToCart = async () => {
+  try {
+    setMessage("");
+
+    const uid = localStorage.getItem("uid");
+    if (!uid) {
+      setMessage("Please login first.");
+      return;
+    }
+
+    let imageUrl = "";
+    if (imageFile) {
+      imageUrl = await uploadImageToCloudinary();
+    }
+
+    const cartItem = {
+      uid,
+      text,
+      position,
+      side,
+      tshirtColor: selectedColor,
+      size: selectedSize,
+      textColor,
+      fontSize,
+      neck,
+      imageUrl,
+      price: finalPrice,
+      createdAt: new Date(),
+    };
+
+    // Save in Firebase (Cart collection)
+    await addDoc(collection(db, "cart"), cartItem);
+
+    setMessage("🛒 Added to Cart Successfully!");
+  } catch (err) {
+    console.log(err);
+    setMessage("❌ Failed to add to cart");
+  }
+};
   return (
     <div className="customize-container">
-      {/* Customization Options Panel */}
+      {/* LEFT PANEL */}
       <div className="options">
         <h2>🎨 Customize Your T-Shirt</h2>
 
-        {/* Text Input */}
-        <label>Enter Text</label>
-
+        <label>Custom Text</label>
         <input
           type="text"
-          placeholder="Your text here..."
+          placeholder="Enter your text..."
+          maxLength={30}
           value={text}
           onChange={(e) => setText(e.target.value)}
         />
+        <small className="character-count">{text.length}/30 Characters</small>
 
-        {/* Image Upload */}
-        <label>Upload Logo / Image</label>
-
+        <label>Upload Image</label>
         <input type="file" accept="image/*" onChange={handleImageUpload} />
 
-        {/* Remove uploaded image */}
         {image && (
-          <button className="remove-image-btn" onClick={removeImage}>
-            Remove Image
-          </button>
+          <div className="uploaded-thumb-row">
+            <img
+              src={image}
+              alt="Uploaded design"
+              className="uploaded-thumb"
+             
+            />
+            <button className="remove-image-btn" onClick={removeImage}>
+              Remove Image
+            </button>
+          </div>
         )}
 
-        {/* Text Position Selection */}
-        <label>Text Position</label>
-
+        <label>Print Position</label>
         <select value={position} onChange={(e) => setPosition(e.target.value)}>
           <option value="center">Center</option>
-
-          <option value="left">Left Corner</option>
-
-          <option value="right">Right Corner</option>
+          <option value="left">Left Chest</option>
+          <option value="right">Right Chest</option>
         </select>
 
-        {/* Print Side Selection */}
         <label>Print Side</label>
-
         <select value={side} onChange={(e) => setSide(e.target.value)}>
           <option value="front">Front</option>
-
           <option value="back">Back</option>
         </select>
 
-        {/* T-Shirt Color Picker */}
         <label>T-Shirt Color</label>
+        <div className="color-grid">
+          {tshirtColors.map((color) => (
+            <div
+              key={color.name}
+              className={`color-circle ${
+                selectedColor === color.name ? "active-color" : ""
+              }`}
+              style={{ background: color.code }}
+              onClick={() => setSelectedColor(color.name)}
+              title={color.name}
+            />
+          ))}
+        </div>
 
-        <input
-          type="color"
-          value={tshirtColor}
-          onChange={(e) => setTshirtColor(e.target.value)}
-        />
+        <label>Size</label>
+        <div className="size-grid">
+          {sizes.map((size) => (
+            <button
+              key={size}
+              type="button"
+              className={
+                selectedSize === size ? "size-btn active-size" : "size-btn"
+              }
+              onClick={() => setSelectedSize(size)}
+            >
+              {size}
+            </button>
+          ))}
+        </div>
 
-        {/* Text Color Picker */}
         <label>Text Color</label>
-
         <input
           type="color"
           value={textColor}
           onChange={(e) => setTextColor(e.target.value)}
         />
 
-        {/* Font Size Slider */}
-        <label>Font Size</label>
-
+        <label>
+          Font Size
+          <span className="font-size">{fontSize}px</span>
+        </label>
         <input
           type="range"
           min="12"
@@ -216,84 +287,86 @@ const Customize = () => {
           onChange={(e) => setFontSize(e.target.value)}
         />
 
-        <span>{fontSize}px</span>
-
-        {/* Neck Style Selection */}
         <label>Neck Style</label>
-
         <select value={neck} onChange={(e) => setNeck(e.target.value)}>
-          <option value="round">Round Neck</option>
-
+          <option value="round">Round</option>
           <option value="vneck">V-Neck</option>
-
           <option value="collar">Collar</option>
         </select>
 
-        {/* Display calculated price */}
         <div className="price-box">
-          <h3>Total Price</h3>
-
-          <p>₹{finalPrice}</p>
+          <h3>Price Details</h3>
+          <div className="price-row">
+            <span>Base Price</span>
+            <span>₹499</span>
+          </div>
+          <div className="price-row">
+            <span>Back Print</span>
+            <span>{side === "back" ? "₹50" : "₹0"}</span>
+          </div>
+          <div className="price-row">
+            <span>Logo Upload</span>
+            <span>{image ? "₹100" : "₹0"}</span>
+          </div>
+          <div className="price-row">
+            <span>Size</span>
+            <span>{selectedSize}</span>
+          </div>
+          <hr />
+          <h2>
+            Total
+            <span>₹{finalPrice}</span>
+          </h2>
+        </div>
+<div className="button-group">
+  <button className="save-btn" onClick={addToCart} disabled={loading}>
+    🛒 Add to Cart
+  </button>
+</div>
+        <div className="button-group">
+          <button className="save-btn" onClick={saveDesign} disabled={loading}>
+            {loading ? "Saving..." : "💾 Save Design"}
+          </button>
+          <button className="reset-btn" onClick={resetDesign}>
+            Reset
+          </button>
         </div>
 
-        {/* Save Design Button */}
-        <button className="save-btn" onClick={saveDesign} disabled={loading}>
-          {loading ? "Saving..." : "💾 Save Design"}
-        </button>
-
-        {/* Save status message */}
         {message && <p className="save-message">{message}</p>}
       </div>
 
-      {/* Live Preview Section */}
-      <div className="preview">
-        <div
-          className={`tshirt ${neck} ${rotate ? "rotate" : ""}`}
-          style={{
-            backgroundColor: tshirtColor,
-          }}
-        >
-          {/* Display uploaded image */}
-          {image && <img src={image} alt="Design" className="design-image" />}
+      {/* RIGHT PANEL */}
+<div className={`preview-card ${rotate ? "rotate" : ""}`}>
+  <div
+    className={`tshirt-preview ${neck}`}
+    style={{
+      background: tshirtColors.find(c => c.name === selectedColor)?.code,
+    }}
+  >
+    <div className="neck"></div>
+    <div className="stitch"></div>
 
-          {/* Display customized text */}
-          <span
-            className={`tshirt-text ${side} ${position}`}
-            style={{
-              fontSize: `${fontSize}px`,
-              color: textColor,
-            }}
-          >
-            {text}
-          </span>
-        </div>
+    {image && (
+      <img
+        src={image}
+        className={`logo-preview ${position}`}
+        alt="Logo"
+      />
+    )}
 
-        {/* Preview Label */}
-        <p className="preview-label">
-          Preview ({side === "front" ? "Front" : "Back"})
-        </p>
-
-        {/* Design Summary */}
-        <div className="design-summary">
-          <h3>Design Summary</h3>
-
-          <p>
-            <strong>Text:</strong> {text || "No text"}
-          </p>
-
-          <p>
-            <strong>Neck:</strong> {neck}
-          </p>
-
-          <p>
-            <strong>Side:</strong> {side}
-          </p>
-
-          <p>
-            <strong>Price:</strong> ₹{finalPrice}
-          </p>
-        </div>
+    {text && (
+      <div
+        className={`text-preview ${position}`}
+        style={{
+          color: textColor,
+          fontSize: fontSize,
+        }}
+      >
+        {text}
       </div>
+    )}
+  </div>
+</div>
     </div>
   );
 };
