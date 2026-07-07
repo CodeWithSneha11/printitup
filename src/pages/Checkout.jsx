@@ -114,6 +114,7 @@ const Checkout = () => {
   };
 
   const placeOrder = async () => {
+    
     if (!validateForm()) return;
 
     try {

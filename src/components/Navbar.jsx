@@ -1,13 +1,8 @@
 import React, { useState, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
-import { signOut } from "firebase/auth";
+import { signOut, onAuthStateChanged } from "firebase/auth";
 import { auth, db } from "../firebase";
-import {
-  collection,
-  query,
-  where,
-  onSnapshot
-} from "firebase/firestore";
+import { collection, query, where, onSnapshot } from "firebase/firestore";
 import "../styles/Navbar.css";
 
 const Navbar = () => {
@@ -16,20 +11,27 @@ const Navbar = () => {
 
   const [cartCount, setCartCount] = useState(0);
 
-  const uid = localStorage.getItem("uid");
-  const loggedIn = localStorage.getItem("uid");
+  const [user, setUser] = useState(null);
 
-  // 🛒 REAL-TIME CART COUNTER
+  const uid = user?.uid;
+  const loggedIn = !!user;
+
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
+      setUser(currentUser);
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  //  REAL-TIME CART COUNTER
   useEffect(() => {
     if (!uid) {
       setCartCount(0);
       return;
     }
 
-    const q = query(
-      collection(db, "cart"),
-      where("uid", "==", uid)
-    );
+    const q = query(collection(db, "cart"), where("uid", "==", uid));
 
     // 🔥 LIVE LISTENER
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -42,34 +44,30 @@ const Navbar = () => {
 
   // 🚪 LOGOUT
   const handleLogout = async () => {
-    try {
-      await signOut(auth);
-      localStorage.removeItem("uid");
-      navigate("/login");
-    } catch (error) {
-      console.log(error);
-    }
+    await signOut(auth);
+
+localStorage.removeItem("uid");
+localStorage.removeItem("email");
+localStorage.removeItem("adminUid");
+localStorage.removeItem("adminEmail");
+
+navigate("/login");
   };
 
   return (
     <nav className="navbar">
-
       {/* LOGO */}
       <div className="logo">
         <Link to="/">PrintItUp</Link>
       </div>
 
       {/* HAMBURGER */}
-      <div
-        className="hamburger"
-        onClick={() => setMenuOpen(!menuOpen)}
-      >
+      <div className="hamburger" onClick={() => setMenuOpen(!menuOpen)}>
         ☰
       </div>
 
       {/* NAV LINKS */}
       <ul className={menuOpen ? "nav-links active" : "nav-links"}>
-
         {/* HOME */}
         <li>
           <Link to="/">Home</Link>
@@ -86,15 +84,12 @@ const Navbar = () => {
               <Link to="/my-designs">My Designs</Link>
             </li>
 
-            {/* 🛒 CART WITH LIVE BADGE */}
+            {/*  CART WITH LIVE BADGE */}
             <li>
               <Link to="/cart" className="cart-link">
                 🛒 Cart
-
                 {cartCount > 0 && (
-                  <span className="cart-badge">
-                    {cartCount}
-                  </span>
+                  <span className="cart-badge">{cartCount}</span>
                 )}
               </Link>
             </li>
@@ -114,17 +109,12 @@ const Navbar = () => {
           </>
         ) : (
           <li>
-            <button
-              className="logout-btn"
-              onClick={handleLogout}
-            >
+            <button className="logout-btn" onClick={handleLogout}>
               Logout
             </button>
           </li>
         )}
-
       </ul>
-
     </nav>
   );
 };

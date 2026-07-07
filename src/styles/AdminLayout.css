@@ -1,0 +1,49 @@
+*{
+    box-sizing:border-box;
+}
+
+.admin-layout{
+    display:flex;
+    min-height:100vh;
+    background:#f4f7fb;
+}
+
+.admin-main{
+    flex:1;
+    margin-left:260px;
+    min-height:100vh;
+    background:#f4f7fb;
+    transition:0.3s;
+}
+
+/* This is where Dashboard, Orders, Products, Users will appear */
+.admin-content{
+    padding:30px;
+}
+
+/* Tablet */
+@media(max-width:992px){
+
+.admin-main{
+    margin-left:220px;
+}
+
+}
+
+/* Mobile */
+@media(max-width:768px){
+
+.admin-layout{
+    flex-direction:column;
+}
+
+.admin-main{
+    margin-left:0;
+    width:100%;
+}
+
+.admin-content{
+    padding:20px;
+}
+
+}
