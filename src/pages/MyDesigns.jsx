@@ -3,184 +3,215 @@ import {
   collection,
   query,
   where,
-  getDocs,
+  onSnapshot,
   deleteDoc,
-  doc
+  doc,
+  addDoc,
 } from "firebase/firestore";
 
 import { db } from "../firebase";
 import "../styles/MyDesigns.css";
 
 const MyDesigns = () => {
-
   const [designs, setDesigns] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showPopup, setShowPopup] = useState(false);
+const [selectedId, setSelectedId] = useState(null);
 
+  const uid = localStorage.getItem("uid");
+
+  // ===============================
+  // LIVE FIRESTORE LISTENER
+  // ===============================
   useEffect(() => {
-    fetchDesigns();
-  }, []);
+    if (!uid) {
+      setLoading(false);
+      return;
+    }
 
-  const fetchDesigns = async () => {
+    const q = query(collection(db, "designs"), where("uid", "==", uid));
 
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        setDesigns(data);
+        setLoading(false);
+      },
+      (error) => {
+        console.log(error);
+        setLoading(false);
+      },
+    );
+
+    return () => unsubscribe();
+  }, [uid]);
+
+  // ===============================
+  // DELETE DESIGN
+  // ===============================
+const deleteDesign = async () => {
+  try {
+    await deleteDoc(doc(db, "designs", selectedId));
+
+    setDesigns((prev) =>
+      prev.filter((design) => design.id !== selectedId)
+    );
+
+    setShowPopup(false);
+    setSelectedId(null);
+  } catch (error) {
+    console.log(error);
+  }
+};
+  // ===============================
+  // MOVE TO CART
+  // ===============================
+  const moveToCart = async (design) => {
     try {
+      await addDoc(collection(db, "cart"), {
+        uid: design.uid,
 
-      const uid = localStorage.getItem("uid");
+        text: design.text || "",
 
-      if (!uid) return;
+        position: design.position || "center",
 
-      const q = query(
-        collection(db, "designs"),
-        where("uid", "==", uid)
-      );
+        side: design.side || "front",
 
-      const querySnapshot =
-        await getDocs(q);
+        tshirtColor: design.tshirtColor || "#ffffff",
 
-      const designsData = [];
+        size: design.size || "M",
 
-      querySnapshot.forEach((docSnap) => {
+        textColor: design.textColor || "#000000",
 
-        designsData.push({
-          id: docSnap.id,
-          ...docSnap.data()
-        });
+        fontSize: Number(design.fontSize) || 18,
 
+        neck: design.neck || "round",
+
+        imageUrl: design.imageUrl || "",
+
+        price: design.price || 499,
+
+        createdAt: new Date(),
       });
 
-      setDesigns(designsData);
+      await deleteDoc(doc(db, "designs", design.id));
 
     } catch (error) {
-
-      console.log(error);
-
-    } finally {
-
-      setLoading(false);
-
+      console.error(error);
+      alert("Failed to move design.");
     }
-
   };
 
-  const deleteDesign = async (id) => {
-
-    try {
-
-      await deleteDoc(
-        doc(db, "designs", id)
-      );
-
-      setDesigns(
-        designs.filter(
-          (design) => design.id !== id
-        )
-      );
-
-    } catch (error) {
-
-      console.log(error);
-
-    }
-
-  };
-
+  // ===============================
+  // LOADING
+  // ===============================
   if (loading) {
-    return (
-      <h2 className="loading">
-        Loading Designs...
-      </h2>
-    );
+    return <h2 className="loading">Loading Designs...</h2>;
   }
 
   return (
     <div className="designs-container">
-
       <h1>🎨 My Designs</h1>
 
       {designs.length === 0 ? (
-
         <div className="empty-state">
-
           <h3>No Designs Found</h3>
 
-          <p>
-            Create your first T-Shirt
-            design from the Customize Page.
-          </p>
-
+          <p>Create your first T-Shirt design from the Customize Page.</p>
         </div>
-
       ) : (
-
         <div className="design-grid">
-
           {designs.map((design) => (
-
-            <div
-              key={design.id}
-              className="design-card"
-            >
-
+            <div key={design.id} className="design-card">
               {design.imageUrl ? (
-
                 <img
                   src={design.imageUrl}
                   alt="Design"
                   className="design-preview"
                 />
-
               ) : (
-
                 <div
                   className="color-preview"
                   style={{
-                    background:
-                      design.tshirtColor
+                    background: design.tshirtColor,
                   }}
                 ></div>
-
               )}
 
-              <h3>
-                {design.text ||
-                  "Custom Design"}
-              </h3>
+              <h3>{design.text || "Custom Design"}</h3>
 
               <p>
-                <strong>Neck:</strong>{" "}
-                {design.neck}
+                <strong>Color:</strong> {design.tshirtColor}
               </p>
 
               <p>
-                <strong>Side:</strong>{" "}
-                {design.side}
+                <strong>Neck:</strong> {design.neck}
               </p>
 
               <p>
-                <strong>Position:</strong>{" "}
-                {design.position}
+                <strong>Side:</strong> {design.side}
               </p>
 
-              <p className="price">
-                ₹{design.price}
+              <p>
+                <strong>Position:</strong> {design.position}
               </p>
 
-              <button
-                className="delete-btn"
-                onClick={() =>
-                  deleteDesign(design.id)
-                }
-              >
-                Delete Design
+              <p>
+                <strong>Size:</strong> {design.size}
+              </p>
+
+              <p className="price">₹{design.price}</p>
+
+              <button className="cart-btn" onClick={() => moveToCart(design)}>
+                 Move to Cart
               </button>
 
+              <button
+  className="delete-btn"
+  onClick={() => {
+    setSelectedId(design.id);
+    setShowPopup(true);
+  }}
+>
+   Delete Design
+</button>
             </div>
-
           ))}
-
         </div>
-
       )}
+      {showPopup && (
+  <div className="popup-overlay">
+    <div className="popup-box">
+      <h3>Delete Design?</h3>
 
+      <p>This action cannot be undone.</p>
+
+      <div className="popup-buttons">
+        <button
+          className="confirm-btn"
+          onClick={deleteDesign}
+        >
+          Delete
+        </button>
+
+        <button
+          className="cancel-btn"
+          onClick={() => {
+            setShowPopup(false);
+            setSelectedId(null);
+          }}
+        >
+          Cancel
+        </button>
+      </div>
+    </div>
+  </div>
+)}
     </div>
   );
 };

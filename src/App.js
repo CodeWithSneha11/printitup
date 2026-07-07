@@ -7,6 +7,7 @@ import Signup from "./pages/Signup";
 import ProtectedRoute from "./components/ProtectedRoute";
 import MyDesigns from "./pages/MyDesigns";
 import Cart from "./pages/cart";
+import Checkout from "./pages/Checkout";
 
 function App() {
   return (
@@ -43,6 +44,7 @@ function App() {
           }
         />
         <Route path="/cart" element={<Cart />} />
+        <Route path="/checkout" element={<Checkout />} />
       </Routes>
     </Router>
   );

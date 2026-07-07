@@ -3,10 +3,7 @@ import { collection, addDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import "../styles/Customize.css";
 
-
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5mb
-
-
 
 const tshirtColors = [
   { name: "white", code: "#ffffff" },
@@ -102,7 +99,7 @@ const Customize = () => {
 
     const response = await fetch(
       "https://api.cloudinary.com/v1_1/dfq3c3jkm/image/upload",
-      { method: "POST", body: formData }
+      { method: "POST", body: formData },
     );
 
     const data = await response.json();
@@ -111,84 +108,83 @@ const Customize = () => {
     }
     return data.secure_url;
   };
+  const buildDesignData = async () => {
+  const uid = localStorage.getItem("uid");
 
-  const saveDesign = async () => {
-    try {
-      setLoading(true);
-      setMessage("");
+  if (!uid) {
+    throw new Error("Please login first.");
+  }
 
-      const uid = localStorage.getItem("uid");
-      if (!uid) {
-        setMessage("Please login first.");
-        return;
-      }
+  let imageUrl = "";
 
-      let imageUrl = "";
-      if (imageFile) {
-        imageUrl = await uploadImageToCloudinary();
-      }
+  if (imageFile) {
+    imageUrl = await uploadImageToCloudinary();
+  }
 
-      await addDoc(collection(db, "designs"), {
-        uid,
-        text,
-        position,
-        side,
-        tshirtColor: selectedColor,
-        size: selectedSize,
-        textColor,
-        fontSize,
-        neck,
-        imageUrl,
-        price: finalPrice,
-        createdAt: new Date(),
-      });
-
-      setMessage("✅ Design Saved Successfully");
-    } catch (err) {
-      console.log(err);
-      setMessage("❌ Unable to save design.");
-    } finally {
-      setLoading(false);
-    }
+  return {
+    uid,
+    text,
+    position,
+    side,
+    tshirtColor: selectedColor,
+    size: selectedSize,
+    textColor,
+    fontSize: Number(fontSize),
+    neck,
+    imageUrl,
+    price: finalPrice,
+    createdAt: new Date(),
   };
+};
+const saveDesign = async () => {
+  try {
+    setLoading(true);
+    setMessage("");
+
+    const designData = await buildDesignData();
+
+    await addDoc(
+      collection(db, "designs"),
+      designData
+    );
+
+    setMessage(" Design Saved Successfully");
+
+  } catch (err) {
+    console.log(err);
+
+    setMessage(
+      err.message || " Unable to save design."
+    );
+
+  } finally {
+    setLoading(false);
+  }
+};
 
 const addToCart = async () => {
   try {
+    setLoading(true);
     setMessage("");
 
-    const uid = localStorage.getItem("uid");
-    if (!uid) {
-      setMessage("Please login first.");
-      return;
-    }
+    const designData = await buildDesignData();
 
-    let imageUrl = "";
-    if (imageFile) {
-      imageUrl = await uploadImageToCloudinary();
-    }
-
-    const cartItem = {
-      uid,
-      text,
-      position,
-      side,
-      tshirtColor: selectedColor,
-      size: selectedSize,
-      textColor,
-      fontSize,
-      neck,
-      imageUrl,
-      price: finalPrice,
-      createdAt: new Date(),
-    };
-
-    // Save in Firebase (Cart collection)
-    await addDoc(collection(db, "cart"), cartItem);
+    await addDoc(
+      collection(db, "cart"),
+      designData
+    );
 
     setMessage("🛒 Added to Cart Successfully!");
+
   } catch (err) {
     console.log(err);
-    setMessage("❌ Failed to add to cart");
+
+    setMessage(
+      err.message || "❌ Failed to add to cart"
+    );
+
+  } finally {
+    setLoading(false);
   }
 };
   return (
@@ -212,12 +208,7 @@ const addToCart = async () => {
 
         {image && (
           <div className="uploaded-thumb-row">
-            <img
-              src={image}
-              alt="Uploaded design"
-              className="uploaded-thumb"
-             
-            />
+            <img src={image} alt="Uploaded design" className="uploaded-thumb" />
             <button className="remove-image-btn" onClick={removeImage}>
               Remove Image
             </button>
@@ -284,7 +275,7 @@ const addToCart = async () => {
           min="12"
           max="36"
           value={fontSize}
-          onChange={(e) => setFontSize(e.target.value)}
+          onChange={(e) => setFontSize(Number(e.target.value))}
         />
 
         <label>Neck Style</label>
@@ -294,38 +285,14 @@ const addToCart = async () => {
           <option value="collar">Collar</option>
         </select>
 
-        <div className="price-box">
-          <h3>Price Details</h3>
-          <div className="price-row">
-            <span>Base Price</span>
-            <span>₹499</span>
-          </div>
-          <div className="price-row">
-            <span>Back Print</span>
-            <span>{side === "back" ? "₹50" : "₹0"}</span>
-          </div>
-          <div className="price-row">
-            <span>Logo Upload</span>
-            <span>{image ? "₹100" : "₹0"}</span>
-          </div>
-          <div className="price-row">
-            <span>Size</span>
-            <span>{selectedSize}</span>
-          </div>
-          <hr />
-          <h2>
-            Total
-            <span>₹{finalPrice}</span>
-          </h2>
+        <div className="button-group">
+          <button className="save-btn" onClick={addToCart} disabled={loading}>
+            🛒 Add to Cart
+          </button>
         </div>
-<div className="button-group">
-  <button className="save-btn" onClick={addToCart} disabled={loading}>
-    🛒 Add to Cart
-  </button>
-</div>
         <div className="button-group">
           <button className="save-btn" onClick={saveDesign} disabled={loading}>
-            {loading ? "Saving..." : "💾 Save Design"}
+            {loading ? "Saving..." : " Save Design"}
           </button>
           <button className="reset-btn" onClick={resetDesign}>
             Reset
@@ -336,37 +303,72 @@ const addToCart = async () => {
       </div>
 
       {/* RIGHT PANEL */}
-<div className={`preview-card ${rotate ? "rotate" : ""}`}>
-  <div
-    className={`tshirt-preview ${neck}`}
-    style={{
-      background: tshirtColors.find(c => c.name === selectedColor)?.code,
-    }}
-  >
-    <div className="neck"></div>
-    <div className="stitch"></div>
+      <div className="preview">
+        <div className={`preview-card ${rotate ? "rotate" : ""}`}>
+          <div
+            className={`tshirt-preview ${neck}`}
+            style={{
+              background: tshirtColors.find((c) => c.name === selectedColor)
+                ?.code,
+            }}
+          >
+            <div className="neck"></div>
+            <div className="stitch"></div>
 
-    {image && (
-      <img
-        src={image}
-        className={`logo-preview ${position}`}
-        alt="Logo"
-      />
-    )}
+            {image && (
+              <img
+                src={image}
+                className={`logo-preview ${position}`}
+                alt="Logo"
+              />
+            )}
 
-    {text && (
-      <div
-        className={`text-preview ${position}`}
-        style={{
-          color: textColor,
-          fontSize: fontSize,
-        }}
-      >
-        {text}
+            {text && (
+              <div
+                className={`text-preview ${position}`}
+                style={{
+                  color: textColor,
+                  fontSize: `${fontSize}px`,
+                }}
+              >
+                {text}
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* PRICE DETAILS BELOW PREVIEW */}
+        <div className="price-box preview-price">
+          <h3>Price Details</h3>
+
+          <div className="price-row">
+            <span>Base Price</span>
+            <span>₹499</span>
+          </div>
+
+          <div className="price-row">
+            <span>Back Print</span>
+            <span>{side === "back" ? "₹50" : "₹0"}</span>
+          </div>
+
+          <div className="price-row">
+            <span>Logo Upload</span>
+            <span>{image ? "₹100" : "₹0"}</span>
+          </div>
+
+          <div className="price-row">
+            <span>Size</span>
+            <span>{selectedSize}</span>
+          </div>
+
+          <hr />
+
+          <h2>
+            Total
+            <span>₹{finalPrice}</span>
+          </h2>
+        </div>
       </div>
-    )}
-  </div>
-</div>
     </div>
   );
 };

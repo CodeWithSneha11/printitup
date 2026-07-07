@@ -1,4 +1,6 @@
 import React, { useEffect, useState } from "react";
+import "../styles/Cart.css";
+import { useNavigate } from "react-router-dom";
 import {
   collection,
   getDocs,
@@ -19,6 +21,12 @@ const Cart = () => {
   const [selectedId, setSelectedId] = useState(null);
 
   const uid = localStorage.getItem("uid");
+const navigate = useNavigate();
+
+const total = cartItems.reduce(
+  (sum, item) => sum + Number(item.price || 0),
+  0
+);
 
   //  FETCH CART
   useEffect(() => {
@@ -97,232 +105,125 @@ const Cart = () => {
     }
   };
 
-  // NOT LOGGED IN
-  if (!uid) {
-    return (
-      <div style={styles.center}>
-        <h2> Please login to view your cart</h2>
-      </div>
-    );
-  }
 
-  // ⏳ LOADING
-  if (loading) {
-    return (
-      <div style={styles.center}>
+return (
+  <div className="cart-container">
+    <h1 className="cart-title">🛒 My Cart</h1>
+
+    {/* NOT LOGGED IN */}
+    {!uid ? (
+      <div className="cart-center">
+        <h2>Please login to view your cart</h2>
+      </div>
+    ) : loading ? (
+      /* LOADING */
+      <div className="cart-center">
         <h2>⏳ Loading cart...</h2>
       </div>
-    );
-  }
-
-  return (
-    <div style={styles.container}>
-      <h1 style={styles.title}>🛒 My Cart</h1>
-
-      {/* EMPTY */}
-      {cartItems.length === 0 ? (
-        <div style={styles.center}>
-          <h3>Your cart is empty </h3>
-        </div>
-      ) : (
-        <div style={styles.grid}>
+    ) : cartItems.length === 0 ? (
+      /* EMPTY */
+      <div className="cart-center">
+        <h3>Your cart is empty</h3>
+      </div>
+    ) : (
+      <>
+        <div className="cart-grid">
           {cartItems.map((item) => (
-            <div key={item.id} style={styles.card}>
-
+            <div key={item.id} className="cart-card">
               {/* IMAGE */}
               {item.imageUrl ? (
                 <img
                   src={item.imageUrl}
                   alt="design"
-                  style={styles.image}
+                  className="cart-image"
                 />
               ) : (
-                <div style={styles.noImage}>No Image</div>
+                <div className="cart-no-image">No Image</div>
               )}
 
-              {/* DETAILS */}
-              <h3>{item.text || "Custom Design"}</h3>
+              <div className="cart-details">
+                <h3>{item.text || "Custom Design"}</h3>
 
-              <p> Color: <b>{item.tshirtColor}</b></p>
-              <p> Size: <b>{item.size}</b></p>
-              <p> Position: <b>{item.position}</b></p>
-              <p> Side: <b>{item.side}</b></p>
+                <p>
+                  Color: <b>{item.tshirtColor}</b>
+                </p>
 
-              <h3 style={styles.price}> ₹{item.price}</h3>
+                <p>
+                  Size: <b>{item.size}</b>
+                </p>
 
-              {/* 🗑 REMOVE */}
-              <button
-                onClick={() => {
-                  setSelectedId(item.id);
-                  setShowPopup(true);
-                }}
-                style={styles.removeBtn}
-              >
-                Remove 
-              </button>
+                <p>
+                  Position: <b>{item.position}</b>
+                </p>
 
-              {/* SAVE TO MY DESIGNS */}
-              <button
-                onClick={() => moveToMyDesigns(item)}
-                style={styles.saveBtn}
-              >
-                 Save to My Designs
-              </button>
+                <p>
+                  Side: <b>{item.side}</b>
+                </p>
 
+                <h3 className="cart-price">₹{item.price}</h3>
+
+                <button
+                  className="remove-btn"
+                  onClick={() => {
+                    setSelectedId(item.id);
+                    setShowPopup(true);
+                  }}
+                >
+                  Remove
+                </button>
+
+                <button
+                  className="save-btn"
+                  onClick={() => moveToMyDesigns(item)}
+                >
+                  Save to My Designs
+                </button>
+              </div>
             </div>
           ))}
         </div>
-      )}
 
-      {/* POPUP */}
-      {showPopup && (
-        <div style={styles.overlay}>
-          <div style={styles.popup}>
-            <h3>Remove Item?</h3>
+        {/* Checkout */}
+        <div className="checkout-box">
+          <h2>Total: ₹{total}</h2>
 
-            <button onClick={deleteItem} style={styles.confirmBtn}>
-               Yes Remove
-            </button>
-
-            <button
-              onClick={() => {
-                setShowPopup(false);
-                setSelectedId(null);
-              }}
-              style={styles.cancelBtn}
-            >
-               Cancel
-            </button>
-          </div>
+          <button
+            className="checkout-btn"
+            onClick={() => navigate("/checkout")}
+          >
+            Proceed to Checkout
+          </button>
         </div>
-      )}
-    </div>
-  );
+      </>
+    )}
+
+    {/* POPUP */}
+    {showPopup && (
+      <div className="overlay">
+        <div className="popup">
+          <h3>Remove Item?</h3>
+
+          <button
+            className="confirm-btn"
+            onClick={deleteItem}
+          >
+            Yes Remove
+          </button>
+
+          <button
+            className="cancel-btn"
+            onClick={() => {
+              setShowPopup(false);
+              setSelectedId(null);
+            }}
+          >
+            Cancel
+          </button>
+        </div>
+      </div>
+    )}
+  </div>
+);
 };
 
 export default Cart;
-
-/* =======================
-        STYLES
-======================= */
-
-const styles = {
-  container: {
-    padding: "30px",
-    fontFamily: "Poppins, sans-serif",
-    background: "#f8fafc",
-    minHeight: "100vh",
-  },
-
-  title: {
-    textAlign: "center",
-    marginBottom: "20px",
-  },
-
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fit, minmax(260px, 1fr))",
-    gap: "20px",
-    marginTop: "20px",
-  },
-
-  card: {
-    background: "#fff",
-    padding: "15px",
-    borderRadius: "15px",
-    boxShadow: "0 10px 25px rgba(0,0,0,0.08)",
-  },
-
-  image: {
-    width: "100%",
-    height: "180px",
-    objectFit: "contain",
-    borderRadius: "10px",
-    marginBottom: "10px",
-    background: "#f3f4f6",
-  },
-
-  noImage: {
-    height: "180px",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    background: "#f3f4f6",
-    borderRadius: "10px",
-    marginBottom: "10px",
-    color: "#6b7280",
-  },
-
-  price: {
-    marginTop: "10px",
-    color: "#16a34a",
-  },
-
-  removeBtn: {
-    marginTop: "10px",
-    padding: "8px",
-    background: "#ef4444",
-    color: "#fff",
-    border: "none",
-    borderRadius: "8px",
-    width: "100%",
-    fontWeight: "600",
-    cursor: "pointer",
-  },
-
-  saveBtn: {
-    marginTop: "10px",
-    padding: "8px",
-    background: "#f97316",
-    color: "#fff",
-    border: "none",
-    borderRadius: "8px",
-    width: "100%",
-    fontWeight: "600",
-    cursor: "pointer",
-  },
-
-  center: {
-    height: "60vh",
-    display: "flex",
-    alignItems: "center",
-    justifyContent: "center",
-    flexDirection: "column",
-  },
-
-  overlay: {
-    position: "fixed",
-    inset: 0,
-    background: "rgba(0,0,0,0.5)",
-    display: "flex",
-    justifyContent: "center",
-    alignItems: "center",
-  },
-
-  popup: {
-    background: "#fff",
-    padding: "20px",
-    borderRadius: "12px",
-    width: "280px",
-    textAlign: "center",
-  },
-
-  confirmBtn: {
-    marginTop: "10px",
-    width: "100%",
-    padding: "10px",
-    background: "#ef4444",
-    color: "#fff",
-    border: "none",
-    borderRadius: "8px",
-  },
-
-  cancelBtn: {
-    marginTop: "10px",
-    width: "100%",
-    padding: "10px",
-    background: "#e5e7eb",
-    border: "none",
-    borderRadius: "8px",
-  },
-};
