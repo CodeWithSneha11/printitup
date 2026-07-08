@@ -33,7 +33,7 @@ const Navbar = () => {
 
     const q = query(collection(db, "cart"), where("uid", "==", uid));
 
-    // 🔥 LIVE LISTENER
+    //  LIVE LISTENER
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setCartCount(snapshot.size);
     });
@@ -42,7 +42,7 @@ const Navbar = () => {
     return () => unsubscribe();
   }, [uid]);
 
-  // 🚪 LOGOUT
+  //  LOGOUT
   const handleLogout = async () => {
     await signOut(auth);
 

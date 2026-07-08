@@ -1,293 +1,47 @@
-/* ===========================
-   PRINTITUP ADMIN DASHBOARD
-=========================== */
-
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
 
-* {
-  box-sizing: border-box;
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:"Poppins",sans-serif;
 }
 
-.admin-dashboard {
-  min-height: 100vh;
-
-  background: #f8fafc;
-
-  padding: 40px 7%;
-
-  font-family: "Poppins", sans-serif;
+body{
+    background:#f4f7fc;
 }
 
-/* ===========================
-      HEADER
-=========================== */
-
-.admin-dashboard h1 {
-  font-size: 32px;
-
-  color: #111827;
-
-  margin-bottom: 8px;
-}
-
-.dashboard-subtitle {
-  color: #6b7280;
-
-  margin-bottom: 35px;
-}
-
-/* ===========================
-      STAT CARDS
-=========================== */
-
-.stats-container {
-  display: grid;
-
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-
-  gap: 25px;
-
-  margin-bottom: 40px;
-}
-
-.stat-card {
-  background: white;
-
-  padding: 25px;
-
-  border-radius: 18px;
-
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-
-  transition: 0.3s;
-
-  border-left: 5px solid #2563eb;
-}
-
-.stat-card:hover {
-  transform: translateY(-5px);
-}
-
-.stat-card h3 {
-  color: #6b7280;
-
-  font-size: 15px;
-
-  font-weight: 500;
-}
-
-.stat-card h2 {
-  margin-top: 15px;
-
-  font-size: 32px;
-
-  color: #111827;
-}
-
-/* Different card colors */
-
-.stat-card:nth-child(2) {
-  border-color: #f59e0b;
-}
-
-.stat-card:nth-child(3) {
-  border-color: #16a34a;
-}
-
-.stat-card:nth-child(4) {
-  border-color: #7c3aed;
-}
-
-/* ===========================
-       ORDERS SECTION
-=========================== */
-
-.orders-section {
-  background: white;
-
-  padding: 30px;
-
-  border-radius: 20px;
-
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
-}
-
-.orders-section h2 {
-  margin-bottom: 25px;
-
-  color: #111827;
-}
-
-/* ===========================
-        TABLE
-=========================== */
-
-.table-wrapper {
-  width: 100%;
-
-  overflow-x: auto;
-}
-
-table {
-  width: 100%;
-
-  border-collapse: collapse;
-}
-
-thead {
-  background: #f1f5f9;
-}
-
-th {
-  text-align: left;
-
-  padding: 15px;
-
-  color: #374151;
-
-  font-size: 14px;
-}
-
-td {
-  padding: 15px;
-
-  border-bottom: 1px solid #e5e7eb;
-
-  color: #4b5563;
-
-  font-size: 14px;
-}
-
-tbody tr {
-  transition: 0.2s;
-}
-
-tbody tr:hover {
-  background: #f8fafc;
-}
-
-/* ===========================
-       STATUS BADGES
-=========================== */
-
-.status {
-  padding: 6px 14px;
-
-  border-radius: 20px;
-
-  font-size: 13px;
-
-  font-weight: 600;
-
-  display: inline-block;
-}
-
-.status.Pending {
-  background: #fef3c7;
-
-  color: #92400e;
-}
-
-.status.Processing {
-  background: #dbeafe;
-
-  color: #1d4ed8;
-}
-
-.status.Shipped {
-  background: #ede9fe;
-
-  color: #6d28d9;
-}
-
-.status.Delivered {
-  background: #dcfce7;
-
-  color: #166534;
-}
-
-.status.Cancelled {
-  background: #fee2e2;
-
-  color: #991b1b;
-}
-
-/* ===========================
-        LOADING
-=========================== */
-
-.admin-loading {
-  height: 80vh;
-
-  display: flex;
-
-  justify-content: center;
-
-  align-items: center;
-
-  font-size: 22px;
-
-  font-weight: 600;
-
-  color: #2563eb;
-}
-
-/* ===========================
-        RESPONSIVE
-=========================== */
-
-@media (max-width: 768px) {
-  .admin-dashboard {
-    padding: 25px 20px;
-  }
-
-  .admin-dashboard h1 {
-    font-size: 26px;
-  }
-
-  .orders-section {
-    padding: 20px;
-  }
-
-  th,
-  td {
-    padding: 12px;
-
-    white-space: nowrap;
-  }
-}
-.loading-box{
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    height:300px;
-    font-size:22px;
-    font-weight:600;
-    color:#2563eb;
-}
-.admin-page{
-    display:flex;
-    min-height:100vh;
-    background:#f5f7fb;
-}
+/* Dashboard Content */
 
 .admin-content{
-    margin-left:260px;
-    width:calc(100% - 260px);
-    padding:35px;
+    width:100%;
+    padding:30px;
 }
 
 .admin-title{
     font-size:34px;
     font-weight:700;
+    color:#111827;
     margin-bottom:30px;
 }
-@media (max-width: 480px) {
-  .stats-container {
-    grid-template-columns: 1fr;
-  }
 
-  .admin-dashboard h1 {
-    font-size: 23px;
-  }
+.dashboard-section{
+    margin-top:35px;
+}
+
+.dashboard-section h2{
+    color:#111827;
+    margin-bottom:20px;
+}
+
+@media(max-width:768px){
+
+.admin-content{
+    padding:20px;
+}
+
+.admin-title{
+    font-size:28px;
+}
+
 }

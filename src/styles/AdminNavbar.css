@@ -1,0 +1,158 @@
+.admin-navbar{
+    width:100%;
+    max-width:100%;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    gap:20px;
+
+    padding:20px 30px;
+    margin-bottom:30px;
+
+    background:#fff;
+    border-radius:18px;
+    box-shadow:0 8px 25px rgba(0,0,0,.08);
+
+    overflow:hidden;
+}
+
+.navbar-left h2{
+    font-size:28px;
+    color:#111827;
+    margin-bottom:5px;
+}
+
+.navbar-left p{
+    color:#6b7280;
+    font-size:14px;
+}
+
+/* Search */
+
+.navbar-center{
+    flex:1;
+    display:flex;
+    justify-content:center;
+    min-width:0;
+}
+
+.search-box{
+    width:100%;
+    max-width:420px;
+}
+
+.search-box{
+    width:420px;
+    display:flex;
+    align-items:center;
+    gap:12px;
+    background:#f3f4f6;
+    padding:12px 18px;
+    border-radius:12px;
+}
+
+.search-box svg{
+    color:#6b7280;
+}
+
+.search-box input{
+    flex:1;
+    border:none;
+    outline:none;
+    background:transparent;
+    font-size:15px;
+}
+
+/* Right */
+
+.navbar-right{
+    display:flex;
+    align-items:center;
+    gap:25px;
+}
+
+.notification-btn{
+    position:relative;
+    border:none;
+    background:#f3f4f6;
+    width:50px;
+    height:50px;
+    border-radius:50%;
+    cursor:pointer;
+    font-size:20px;
+    transition:.3s;
+}
+
+.notification-btn:hover{
+    background:#2563eb;
+    color:white;
+}
+
+.notification-dot{
+    position:absolute;
+    top:10px;
+    right:12px;
+
+    width:10px;
+    height:10px;
+
+    background:#ef4444;
+    border-radius:50%;
+}
+
+.admin-profile{
+    display:flex;
+    align-items:center;
+    gap:12px;
+}
+
+.profile-icon{
+    font-size:42px;
+    color:#2563eb;
+}
+
+.admin-profile h4{
+    color:#111827;
+    font-size:16px;
+}
+
+.admin-profile p{
+    color:#6b7280;
+    font-size:13px;
+}
+
+/* Responsive */
+
+@media(max-width:992px){
+
+.admin-navbar{
+    flex-direction:column;
+    gap:20px;
+}
+
+.navbar-center{
+    width:100%;
+}
+
+.search-box{
+    width:100%;
+}
+
+}
+
+@media(max-width:768px){
+
+.admin-navbar{
+    padding:18px;
+}
+
+.navbar-right{
+    width:100%;
+    justify-content:space-between;
+}
+
+.navbar-left h2{
+    font-size:22px;
+}
+
+}

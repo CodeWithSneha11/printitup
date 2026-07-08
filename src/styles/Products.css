@@ -1,0 +1,38 @@
+.products-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:30px;
+}
+
+.products-header h1{
+    font-size:32px;
+    color:#111827;
+}
+
+.products-header p{
+    color:#6b7280;
+    margin-top:5px;
+}
+
+.add-product-btn{
+    background:#2563eb;
+    color:white;
+    border:none;
+    padding:14px 24px;
+    border-radius:10px;
+    cursor:pointer;
+    font-weight:600;
+}
+
+.products-card{
+    background:white;
+    border-radius:18px;
+    padding:40px;
+    text-align:center;
+    box-shadow:0 10px 25px rgba(0,0,0,.08);
+}
+
+.products-card h3{
+    color:#6b7280;
+}

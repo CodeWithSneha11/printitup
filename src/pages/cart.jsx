@@ -9,6 +9,8 @@ import {
   doc,
   deleteDoc,
   addDoc,
+  updateDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -22,9 +24,9 @@ const Cart = () => {
 
   const uid = localStorage.getItem("uid");
 const navigate = useNavigate();
-
 const total = cartItems.reduce(
-  (sum, item) => sum + Number(item.price || 0),
+  (sum, item) =>
+    sum + Number(item.price || 0) * Number(item.quantity || 1),
   0
 );
 
@@ -60,36 +62,52 @@ const total = cartItems.reduce(
   }, [uid]);
 
   //  SAVE TO MY DESIGNS
-  const moveToMyDesigns = async (item) => {
-    try {
-      await addDoc(collection(db, "designs"), {
-        uid,
-        text: item.text,
-        position: item.position,
-        side: item.side,
-        tshirtColor: item.tshirtColor,
-        size: item.size,
-        textColor: item.textColor || "#000000",
-        fontSize: item.fontSize || 18,
-        neck: item.neck || "round",
-        imageUrl: item.imageUrl || "",
-        price: item.price,
-        createdAt: new Date(),
-      });
+const moveToMyDesigns = async (item) => {
 
-      await deleteDoc(doc(db, "cart", item.id));
+  try {
 
-      setCartItems((prev) =>
-        prev.filter((i) => i.id !== item.id)
-      );
+    const designData = {
+      uid: item.uid,
+      text: item.text,
+      position: item.position,
+      side: item.side,
+      tshirtColor: item.tshirtColor,
+      size: item.size,
+      textColor: item.textColor || "#000000",
+      fontSize: item.fontSize || 18,
+      neck: item.neck || "round",
+      imageUrl: item.imageUrl || "",
+      price: item.price,
+      quantity: item.quantity || 1,
+      createdAt: serverTimestamp(),
+    };
 
-    
-    } catch (err) {
-      console.log("Move error:", err);
+    if (item.designId) {
+      designData.designId = item.designId;
     }
-  };
 
-  // 🗑 DELETE FROM CART
+    await addDoc(
+      collection(db, "designs"),
+      designData
+    );
+
+    await deleteDoc(
+      doc(db, "cart", item.id)
+    );
+
+    setCartItems(prev =>
+      prev.filter(i => i.id !== item.id)
+    );
+
+  } catch (err) {
+
+    console.log(err);
+
+  }
+
+};
+
+  //  DELETE FROM CART
   const deleteItem = async () => {
     try {
       await deleteDoc(doc(db, "cart", selectedId));
@@ -105,7 +123,65 @@ const total = cartItems.reduce(
     }
   };
 
+const increaseQuantity = async (item) => {
 
+  try {
+
+    const newQty = (item.quantity || 1) + 1;
+
+    await updateDoc(
+      doc(db, "cart", item.id),
+      {
+        quantity: newQty,
+      }
+    );
+
+    setCartItems((prev) =>
+      prev.map((cartItem) =>
+        cartItem.id === item.id
+          ? { ...cartItem, quantity: newQty }
+          : cartItem
+      )
+    );
+
+  } catch (error) {
+
+    console.log(error);
+
+  }
+
+};
+
+const decreaseQuantity = async (item) => {
+
+  if ((item.quantity || 1) === 1) return;
+
+  try {
+
+    const newQty = item.quantity - 1;
+
+    await updateDoc(
+      doc(db, "cart", item.id),
+      {
+        quantity: newQty,
+      }
+    );
+
+    setCartItems((prev) =>
+      prev.map((cartItem) =>
+        cartItem.id === item.id
+          ? { ...cartItem, quantity: newQty }
+          : cartItem
+      )
+    );
+
+  } catch (error) {
+
+    console.log(error);
+
+  }
+
+};
 return (
   <div className="cart-container">
     <h1 className="cart-title">🛒 My Cart</h1>
@@ -161,6 +237,32 @@ return (
                 </p>
 
                 <h3 className="cart-price">₹{item.price}</h3>
+                <div className="quantity-box">
+
+  <button
+    onClick={() => decreaseQuantity(item)}
+  >
+    −
+  </button>
+
+  <span>
+    {item.quantity || 1}
+  </span>
+
+  <button
+    onClick={() => increaseQuantity(item)}
+  >
+    +
+  </button>
+
+</div>
+
+<h4 className="item-total">
+
+  Total : ₹
+  {(item.price || 0) * (item.quantity || 1)}
+
+</h4>
 
                 <button
                   className="remove-btn"

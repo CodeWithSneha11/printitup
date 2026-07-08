@@ -247,7 +247,67 @@
     opacity: 1;
   }
 }
+.quantity-box{
 
+display:flex;
+
+align-items:center;
+
+gap:12px;
+
+margin:15px 0;
+
+}
+
+.quantity-box button{
+
+width:35px;
+
+height:35px;
+
+border:none;
+
+background:#2563eb;
+
+color:#fff;
+
+font-size:20px;
+
+border-radius:8px;
+
+cursor:pointer;
+
+transition:.3s;
+
+}
+
+.quantity-box button:hover{
+
+background:#1d4ed8;
+
+}
+
+.quantity-box span{
+
+font-size:18px;
+
+font-weight:700;
+
+min-width:30px;
+
+text-align:center;
+
+}
+
+.item-total{
+
+margin-bottom:15px;
+
+color:#16a34a;
+
+font-size:18px;
+
+}
 /* ===========================
    RESPONSIVE
 =========================== */

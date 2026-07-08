@@ -1,4 +1,11 @@
 import React from "react";
+import {
+  FaShoppingCart,
+  FaRupeeSign,
+  FaUsers,
+  FaClock,
+} from "react-icons/fa";
+
 import "../styles/DashboardCards.css";
 
 const DashboardCards = ({
@@ -10,38 +17,58 @@ const DashboardCards = ({
 
   const cards = [
     {
-      title: "Orders",
+      title: "Total Orders",
       value: orders,
-      icon: "📦",
+      icon: <FaShoppingCart />,
+      className: "orders-card",
     },
     {
       title: "Revenue",
       value: `₹${revenue}`,
-      icon: "💰",
+      icon: <FaRupeeSign />,
+      className: "revenue-card",
     },
     {
-      title: "Users",
-      value: users,
-      icon: "👥",
-    },
+  title: "Total Users",
+  value: users,
+  icon: <FaUsers />,
+  className: "users-card",
+},
     {
-      title: "Pending",
+      title: "Pending Orders",
       value: pending,
-      icon: "⏳",
+      icon: <FaClock />,
+      className: "pending-card",
     },
   ];
 
   return (
     <div className="cards-grid">
+
       {cards.map((card, index) => (
-        <div className="dashboard-card" key={index}>
-          <div className="card-icon">{card.icon}</div>
+
+        <div
+          key={index}
+          className={`dashboard-card ${card.className}`}
+        >
+
+          <div className="card-top">
+
+            <div className="card-icon">
+              {card.icon}
+            </div>
+
+          </div>
 
           <h3>{card.title}</h3>
 
-          <h2>{card.value}</h2>
+          <h2>{card.value.toLocaleString()}</h2>
+          
+
         </div>
+
       ))}
+
     </div>
   );
 };

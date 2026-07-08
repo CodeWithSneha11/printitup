@@ -1,0 +1,138 @@
+.collections-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:30px;
+    gap:20px;
+}
+
+.collections-header h1{
+    font-size:32px;
+    color:#111827;
+}
+
+.collections-header p{
+    color:#6b7280;
+    margin-top:5px;
+}
+
+.add-btn{
+    background:#2563eb;
+    color:white;
+    border:none;
+    padding:14px 24px;
+    border-radius:10px;
+    cursor:pointer;
+    font-size:15px;
+    font-weight:600;
+    transition:.3s;
+}
+
+.add-btn:hover{
+    background:#1d4ed8;
+}
+
+.collections-card{
+    background:white;
+    border-radius:18px;
+    padding:40px;
+    box-shadow:0 10px 25px rgba(0,0,0,.08);
+    text-align:center;
+}
+
+.collections-card h3{
+    color:#6b7280;
+}
+
+@media(max-width:768px){
+
+.collections-header{
+    flex-direction:column;
+    align-items:flex-start;
+}
+
+.add-btn{
+    width:100%;
+}
+
+}
+/* Popup */
+
+.popup-overlay{
+    position:fixed;
+    inset:0;
+    background:rgba(0,0,0,.45);
+    display:flex;
+    justify-content:center;
+    align-items:center;
+    z-index:999;
+}
+
+.collection-popup{
+    width:550px;
+    max-width:95%;
+    background:#fff;
+    border-radius:18px;
+    padding:30px;
+    box-shadow:0 20px 40px rgba(0,0,0,.2);
+}
+
+.popup-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:25px;
+}
+
+.popup-body{
+    display:flex;
+    flex-direction:column;
+    gap:15px;
+}
+
+.popup-body label{
+    font-weight:600;
+    color:#374151;
+}
+
+.popup-body input,
+.popup-body textarea{
+    width:100%;
+    padding:12px;
+    border:1px solid #d1d5db;
+    border-radius:10px;
+    outline:none;
+    font-size:15px;
+}
+
+.popup-body textarea{
+    resize:none;
+}
+
+.popup-footer{
+    margin-top:25px;
+    display:flex;
+    justify-content:flex-end;
+    gap:15px;
+}
+
+.cancel-btn{
+    background:#e5e7eb;
+    border:none;
+    padding:12px 20px;
+    border-radius:10px;
+    cursor:pointer;
+}
+
+.save-btn{
+    background:#2563eb;
+    color:white;
+    border:none;
+    padding:12px 22px;
+    border-radius:10px;
+    cursor:pointer;
+}
+
+.save-btn:hover{
+    background:#1d4ed8;
+}

@@ -1,8 +1,16 @@
 import React, { useState, useEffect } from "react";
-import { collection, addDoc } from "firebase/firestore";
 import { db } from "../firebase";
 import "../styles/Customize.css";
-
+import {
+  collection,
+  addDoc,
+  serverTimestamp,
+  query,
+  where,
+  getDocs,
+  updateDoc,
+  doc,
+} from "firebase/firestore";
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5mb
 
 const tshirtColors = [
@@ -28,9 +36,16 @@ const Customize = () => {
   const [rotate, setRotate] = useState(false);
   const [image, setImage] = useState(null);
   const [imageFile, setImageFile] = useState(null);
-
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const [uploadProgress, setUploadProgress] = useState("");
   const [message, setMessage] = useState("");
-  const [loading, setLoading] = useState(false);
+
+  // Separate loading states
+  const [savingDesign, setSavingDesign] = useState(false);
+  const [addingCart, setAddingCart] = useState(false);
+
+  // Store uploaded Cloudinary URL
+  const [cloudinaryUrl, setCloudinaryUrl] = useState("");
 
   let finalPrice = 499;
   if (image) finalPrice += 100;
@@ -51,33 +66,77 @@ const Customize = () => {
     };
   }, [image]);
 
-  const handleImageUpload = (e) => {
+  const handleImageUpload = async (e) => {
+    setCloudinaryUrl("");
     const file = e.target.files[0];
+
     if (!file) return;
 
-    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    const allowedTypes = [
+      "image/png",
+      "image/jpeg",
+      "image/jpg",
+      "image/webp",
+    ];
+
     if (!allowedTypes.includes(file.type)) {
+
       setMessage("Only PNG, JPG, JPEG and WEBP images are allowed.");
+
       return;
+
     }
+
     if (file.size > MAX_FILE_SIZE) {
+
       setMessage("Maximum image size is 5MB.");
+
       return;
+
     }
 
     setMessage("");
+
     setImageFile(file);
+
     setImage(URL.createObjectURL(file));
+
+    // Upload immediately in background
+
+    try {
+
+      await uploadImageToCloudinary(file);
+
+    } catch (error) {
+
+      console.log(error);
+
+      setMessage("Image upload failed.");
+
+    }
+
   };
 
   const removeImage = () => {
-    if (image) URL.revokeObjectURL(image);
+
+    if (image) {
+      URL.revokeObjectURL(image);
+    }
+
     setImage(null);
     setImageFile(null);
+
+    // Remove uploaded URL also
+    setCloudinaryUrl("");
+
   };
 
   const resetDesign = () => {
-    if (image) URL.revokeObjectURL(image);
+
+    if (image) {
+      URL.revokeObjectURL(image);
+    }
+
     setText("");
     setPosition("center");
     setSide("front");
@@ -86,107 +145,260 @@ const Customize = () => {
     setFontSize(18);
     setTextColor("#000000");
     setNeck("round");
+
     setImage(null);
     setImageFile(null);
+
+    setCloudinaryUrl("");
+
     setMessage("");
+
   };
+  const uploadImageToCloudinary = async (file) => {
 
-  const uploadImageToCloudinary = async () => {
-    if (!imageFile) return "";
-    const formData = new FormData();
-    formData.append("file", imageFile);
-    formData.append("upload_preset", "printitup");
+    if (!file) return "";
 
-    const response = await fetch(
-      "https://api.cloudinary.com/v1_1/dfq3c3jkm/image/upload",
-      { method: "POST", body: formData },
+    setUploadingImage(true);
+    setUploadProgress("Uploading image...");
+
+    try {
+
+      const formData = new FormData();
+
+      formData.append("file", file);
+
+      formData.append("upload_preset", "printitup");
+
+      const response = await fetch(
+        "https://api.cloudinary.com/v1_1/dfq3c3jkm/image/upload",
+        {
+          method: "POST",
+          body: formData,
+        }
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error?.message);
+      }
+
+      setCloudinaryUrl(data.secure_url);
+
+      setUploadProgress("Image uploaded ✅");
+
+      return data.secure_url;
+
+    } catch (error) {
+
+      setUploadProgress("Upload failed");
+
+      throw error;
+
+    } finally {
+
+      setUploadingImage(false);
+
+    }
+
+  };
+  const generateDesignId = async (design) => {
+
+    const encoder = new TextEncoder();
+
+    const data = encoder.encode(JSON.stringify(design));
+
+    const hashBuffer = await crypto.subtle.digest(
+      "SHA-256",
+      data
     );
 
-    const data = await response.json();
-    if (!response.ok) {
-      throw new Error(data.error?.message);
-    }
-    return data.secure_url;
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+
+    const hashHex = hashArray
+      .map(b => b.toString(16).padStart(2, "0"))
+      .join("");
+
+    // Return first 20 characters
+    return hashHex.substring(0, 20);
+
   };
   const buildDesignData = async () => {
-  const uid = localStorage.getItem("uid");
 
-  if (!uid) {
-    throw new Error("Please login first.");
-  }
+    const uid = localStorage.getItem("uid");
 
-  let imageUrl = "";
+    if (!uid) {
+      throw new Error("Please login first.");
+    }
 
-  if (imageFile) {
-    imageUrl = await uploadImageToCloudinary();
-  }
+    let imageUrl = cloudinaryUrl;
 
-  return {
-    uid,
-    text,
-    position,
-    side,
-    tshirtColor: selectedColor,
-    size: selectedSize,
-    textColor,
-    fontSize: Number(fontSize),
-    neck,
-    imageUrl,
-    price: finalPrice,
-    createdAt: new Date(),
+    if (imageFile && !imageUrl) {
+
+      imageUrl = await uploadImageToCloudinary(imageFile);
+
+      setCloudinaryUrl(imageUrl);
+
+    }
+
+    const designId = await generateDesignId({
+
+      text,
+
+      position,
+
+      side,
+
+      tshirtColor: selectedColor,
+
+      size: selectedSize,
+
+      textColor,
+
+      fontSize: Number(fontSize),
+
+      neck,
+
+      imageName: imageFile?.name || "",
+
+      imageSize: imageFile?.size || 0,
+
+      imageModified: imageFile?.lastModified || 0,
+
+    });
+
+    return {
+      uid,
+      designId,
+      text,
+      position,
+      side,
+      tshirtColor: selectedColor,
+      size: selectedSize,
+      textColor,
+      fontSize: Number(fontSize),
+      neck,
+      imageUrl,
+      price: finalPrice,
+      createdAt: serverTimestamp(),
+    };
   };
-};
-const saveDesign = async () => {
-  try {
-    setLoading(true);
-    setMessage("");
+  const saveDesign = async () => {
 
-    const designData = await buildDesignData();
+    try {
 
-    await addDoc(
-      collection(db, "designs"),
-      designData
-    );
+      setSavingDesign(true);
 
-    setMessage(" Design Saved Successfully");
+      setMessage("");
 
-  } catch (err) {
-    console.log(err);
+      const designData = await buildDesignData();
 
-    setMessage(
-      err.message || " Unable to save design."
-    );
+      await addDoc(
+        collection(db, "designs"),
+        designData
+      );
 
-  } finally {
-    setLoading(false);
-  }
-};
+      setMessage("✅ Design Saved Successfully!");
 
-const addToCart = async () => {
-  try {
-    setLoading(true);
-    setMessage("");
+    } catch (err) {
 
-    const designData = await buildDesignData();
+      console.log(err);
 
-    await addDoc(
-      collection(db, "cart"),
-      designData
-    );
+      setMessage(
+        err.message || "❌ Unable to save design."
+      );
 
-    setMessage("🛒 Added to Cart Successfully!");
+    } finally {
 
-  } catch (err) {
-    console.log(err);
+      setSavingDesign(false);
 
-    setMessage(
-      err.message || "❌ Failed to add to cart"
-    );
+    }
 
-  } finally {
-    setLoading(false);
-  }
-};
+  };
+
+  const addToCart = async () => {
+
+    try {
+
+      setAddingCart(true);
+
+      setMessage("");
+
+      const uid = localStorage.getItem("uid");
+
+      if (!uid) {
+        throw new Error("Please login first.");
+      }
+
+      const designData = await buildDesignData();
+      console.log("Design ID:", designData.designId);
+      console.log(designData);
+
+      // Fetch all user's cart items
+      const q = query(
+        collection(db, "cart"),
+        where("uid", "==", uid),
+        where("designId", "==", designData.designId)
+      );
+
+      const snapshot = await getDocs(q);
+      console.log("Matching docs:", snapshot.docs.length);
+
+      snapshot.docs.forEach((d) => {
+        console.log(d.id, d.data().designId);
+      });
+
+      // Find same design
+      const existingDoc = snapshot.docs.find((docSnap) => {
+
+        return docSnap.data().designId === designData.designId;
+
+      });
+
+      // Already exists
+      if (existingDoc) {
+
+        const existingData = existingDoc.data();
+
+        await updateDoc(
+          doc(db, "cart", existingDoc.id),
+          {
+            quantity: (existingData.quantity || 1) + 1,
+          }
+        );
+
+        setMessage("🛒 Quantity Updated!");
+
+        return;
+
+      }
+
+      // New Item
+      await addDoc(
+        collection(db, "cart"),
+        {
+          ...designData,
+          quantity: 1,
+        }
+      );
+
+      setMessage("✅ Added To Cart!");
+
+    } catch (err) {
+
+      console.log(err);
+
+      setMessage(
+        err.message || "Failed to add to cart."
+      );
+
+    } finally {
+
+      setAddingCart(false);
+
+    }
+
+  };
   return (
     <div className="customize-container">
       {/* LEFT PANEL */}
@@ -233,9 +445,8 @@ const addToCart = async () => {
           {tshirtColors.map((color) => (
             <div
               key={color.name}
-              className={`color-circle ${
-                selectedColor === color.name ? "active-color" : ""
-              }`}
+              className={`color-circle ${selectedColor === color.name ? "active-color" : ""
+                }`}
               style={{ background: color.code }}
               onClick={() => setSelectedColor(color.name)}
               title={color.name}
@@ -286,13 +497,35 @@ const addToCart = async () => {
         </select>
 
         <div className="button-group">
-          <button className="save-btn" onClick={addToCart} disabled={loading}>
-            🛒 Add to Cart
+          <button
+            className="cart-btn"
+            onClick={addToCart}
+            disabled={addingCart || savingDesign}
+          >
+            {addingCart ? (
+              <>
+                <span className="spinner"></span>
+                Adding...
+              </>
+            ) : (
+              "🛒 Add to Cart"
+            )}
           </button>
         </div>
         <div className="button-group">
-          <button className="save-btn" onClick={saveDesign} disabled={loading}>
-            {loading ? "Saving..." : " Save Design"}
+          <button
+            className="save-btn"
+            onClick={saveDesign}
+            disabled={savingDesign || addingCart}
+          >
+            {savingDesign ? (
+              <>
+                <span className="spinner"></span>
+                Saving...
+              </>
+            ) : (
+              " Save Design"
+            )}
           </button>
           <button className="reset-btn" onClick={resetDesign}>
             Reset

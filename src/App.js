@@ -1,4 +1,9 @@
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import {
+  BrowserRouter as Router,
+  Routes,
+  Route,
+  useLocation,
+} from "react-router-dom";
 
 import Navbar from "./components/Navbar";
 
@@ -14,15 +19,29 @@ import ProtectedRoute from "./components/ProtectedRoute";
 
 import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
-import AdminRoute from "./components/AdminRoute";
 import Orders from "./pages/Orders";
+import Users from "./pages/Users";
+import Collections from "./pages/Collections";
 
-function App() {
+import AdminLayout from "./layouts/AdminLayout";
+import AdminRoute from "./components/AdminRoute";
+import Products from "./pages/Products";
+function AppContent() {
+  const location = useLocation();
+
+  // Hide customer navbar on all admin pages
+  const hideNavbar = location.pathname.startsWith("/admin");
+
   return (
-    <Router>
-      <Navbar />
+    <>
+      {!hideNavbar && <Navbar />}
 
       <Routes>
+
+        {/* ==========================
+            CUSTOMER ROUTES
+        =========================== */}
+
         <Route path="/" element={<Home />} />
 
         <Route path="/login" element={<Login />} />
@@ -47,30 +66,97 @@ function App() {
           }
         />
 
-        <Route path="/cart" element={<Cart />} />
+        <Route
+          path="/cart"
+          element={
+            <ProtectedRoute>
+              <Cart />
+            </ProtectedRoute>
+          }
+        />
 
-        <Route path="/checkout" element={<Checkout />} />
+        <Route
+          path="/checkout"
+          element={
+            <ProtectedRoute>
+              <Checkout />
+            </ProtectedRoute>
+          }
+        />
 
-        <Route path="/admin-login" element={<AdminLogin />} />
+        {/* ==========================
+              ADMIN LOGIN
+        =========================== */}
+
+        <Route
+          path="/admin-login"
+          element={<AdminLogin />}
+        />
+
+        {/* ==========================
+             ADMIN DASHBOARD
+        =========================== */}
+
+        <Route
+          path="/admin-dashboard"
+          element={
+            <AdminRoute>
+              <AdminLayout />
+            </AdminRoute>
+          }
+        >
+          {/* Dashboard */}
+          <Route
+            index
+            element={<AdminDashboard />}
+          />
+
+          {/* Orders */}
+          <Route
+            path="orders"
+            element={<Orders />}
+          />
+
+          {/* Collections */}
+          <Route
+            path="collections"
+            element={<Collections />}
+          />
+
+          {/* Users */}
+          <Route
+            path="users"
+            element={<Users />}
+          />
 
        <Route
-  path="/admin-dashboard"
-  element={
-    <AdminRoute>
-      <AdminDashboard />
-    </AdminRoute>
-  }
+  path="products/:collectionId"
+  element={<Products />}
 />
 
-<Route
-  path="/admin-dashboard/orders"
-  element={
-    <AdminRoute>
-      <Orders />
-    </AdminRoute>
-  }
-/>
+          {/* Analytics */}
+          {/* <Route
+            path="analytics"
+            element={<Analytics />}
+          /> */}
+
+          {/* Settings */}
+          {/* <Route
+            path="settings"
+            element={<Settings />}
+          /> */}
+
+        </Route>
+
       </Routes>
+    </>
+  );
+}
+
+function App() {
+  return (
+    <Router>
+      <AppContent />
     </Router>
   );
 }

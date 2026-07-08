@@ -1,354 +1,508 @@
 import React, { useEffect, useState } from "react";
 import {
-    collection,
-    onSnapshot,
-    doc,
-    updateDoc,
-     deleteDoc,
+  collection,
+  onSnapshot,
+  doc,
+  updateDoc,
+  deleteDoc,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import "../styles/Orders.css";
 
 const Orders = () => {
-    const [orders, setOrders] = useState([]);
-    const [selectedOrder, setSelectedOrder] = useState(null);
-    const [loading, setLoading] = useState(true);
 
-    useEffect(() => {
-        const unsubscribe = onSnapshot(collection(db, "orders"), (snapshot) => {
-            const data = snapshot.docs.map((doc) => ({
-                id: doc.id,
-                ...doc.data(),
-            }));
+  const [orders, setOrders] = useState([]);
+  const [selectedOrder, setSelectedOrder] = useState(null);
+  const [loading, setLoading] = useState(true);
 
-            data.sort((a, b) => {
-                const first = a.createdAt?.seconds || 0;
-                const second = b.createdAt?.seconds || 0;
+  // Search & Filter
+  const [search, setSearch] = useState("");
+  const [statusFilter, setStatusFilter] = useState("All");
 
-                return second - first;
-            });
+  useEffect(() => {
 
-            setOrders(data);
-            setLoading(false);
+    const unsubscribe = onSnapshot(
+      collection(db, "orders"),
+      (snapshot) => {
+
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
+
+        data.sort((a, b) => {
+
+          const first = a.createdAt?.seconds || 0;
+          const second = b.createdAt?.seconds || 0;
+
+          return second - first;
+
         });
 
-        return () => unsubscribe();
-    }, []);
+        setOrders(data);
+        setLoading(false);
 
-    if (loading) {
-        return <div className="orders-loading">Loading Orders...</div>;
-    } const updateStatus = async (id, newStatus) => {
+      }
+    );
 
-        try {
+    return () => unsubscribe();
 
-            await updateDoc(
-                doc(db, "orders", id),
-                {
-                    status: newStatus,
-                }
-            );
+  }, []);
 
-        } catch (error) {
+  const updateStatus = async (id, newStatus) => {
 
-            console.log(error);
+    try {
 
-            alert("Unable to update status.");
-
+      await updateDoc(
+        doc(db, "orders", id),
+        {
+          status: newStatus,
         }
+      );
 
-    };
-    const deleteOrder = async (id) => {
+    } catch (error) {
 
-  const confirmDelete = window.confirm(
-    "Are you sure you want to delete this order?"
-  );
+      console.log(error);
 
-  if (!confirmDelete) return;
+      alert("Unable to update status.");
 
-  try {
+    }
 
-    await deleteDoc(doc(db, "orders", id));
+  };
 
-    alert("Order deleted successfully.");
+  const deleteOrder = async (id) => {
 
-  } catch (error) {
+    const confirmDelete = window.confirm(
+      "Are you sure you want to delete this order?"
+    );
 
-    console.log(error);
+    if (!confirmDelete) return;
 
-    alert("Failed to delete order.");
+    try {
+
+      await deleteDoc(doc(db, "orders", id));
+
+      alert("Order deleted successfully.");
+
+    } catch (error) {
+
+      console.log(error);
+
+      alert("Failed to delete order.");
+
+    }
+
+  };
+
+  // Search + Status Filter
+  const filteredOrders = orders.filter((order) => {
+
+    const customerName =
+      order.customer?.name?.toLowerCase() || "";
+
+    const customerPhone =
+      order.customer?.phone || "";
+
+    const matchesSearch =
+      customerName.includes(search.toLowerCase()) ||
+      customerPhone.includes(search);
+
+    const matchesStatus =
+      statusFilter === "All" ||
+      order.status === statusFilter;
+
+    return matchesSearch && matchesStatus;
+
+  });
+
+  if (loading) {
+
+    return (
+
+
+        <div className="admin-content">
+
+          <h2>Loading Orders...</h2>
+
+        </div>
+
+    );
 
   }
 
-};
-    return (
+  return (
+        <div className="admin-page">
+
+      <div className="admin-content">
+
         <div className="orders-page">
-            <div className="orders-header">
-                <h1>Orders</h1>
-                <p>Total Orders : {orders.length}</p>
+
+          <div className="orders-header">
+
+            <div>
+
+              <h1>Orders</h1>
+
+              <p>
+                Total Orders : {filteredOrders.length}
+              </p>
+
             </div>
 
-            <div className="orders-card">
-              <table className="orders-table">
+            <div className="orders-filters">
 
-  <thead>
+              <input
+                type="text"
+                placeholder="Search by name or phone..."
+                className="search-input"
+                value={search}
+                onChange={(e) =>
+                  setSearch(e.target.value)
+                }
+              />
 
-    <tr>
+              <select
+                className="filter-select"
+                value={statusFilter}
+                onChange={(e) =>
+                  setStatusFilter(e.target.value)
+                }
+              >
 
-      <th>Customer</th>
+                <option value="All">
+                  All Orders
+                </option>
 
-      <th>Phone</th>
+                <option value="Pending">
+                  Pending
+                </option>
 
-      <th>Total</th>
+                <option value="Processing">
+                  Processing
+                </option>
 
-      <th>Status</th>
+                <option value="Shipped">
+                  Shipped
+                </option>
 
-      <th>Action</th>
+                <option value="Delivered">
+                  Delivered
+                </option>
 
-    </tr>
+              </select>
 
-  </thead>
+            </div>
 
-  <tbody>
+          </div>
 
-    {orders.length === 0 ? (
+          <div className="orders-card">
 
-      <tr>
+            <table className="orders-table">
 
-        <td
-          colSpan="5"
-          style={{
-            textAlign: "center",
-            padding: "30px",
-          }}
-        >
-          No Orders Found
-        </td>
+              <thead>
 
-      </tr>
+                <tr>
 
-    ) : (
+                  <th>Customer</th>
 
-      orders.map((order) => (
+                  <th>Phone</th>
 
-        <tr key={order.id}>
+                  <th>Total</th>
 
-          {/* Customer */}
+                  <th>Status</th>
 
-          <td>
-            {order.customer?.name}
-          </td>
+                  <th>Actions</th>
 
-          {/* Phone */}
+                </tr>
 
-          <td>
-            {order.customer?.phone}
-          </td>
+              </thead>
 
-          {/* Total */}
+              <tbody>
 
-          <td>
-            ₹{order.total}
-          </td>
+                {filteredOrders.length === 0 ? (
 
-          {/* Status Dropdown */}
+                  <tr>
 
-          <td>
-
-            <select
-              className="status-select"
-              value={order.status}
-              onChange={(e) =>
-                updateStatus(
-                  order.id,
-                  e.target.value
-                )
-              }
-            >
-
-              <option value="Pending">
-                Pending
-              </option>
-
-              <option value="Processing">
-                Processing
-              </option>
-
-              <option value="Shipped">
-                Shipped
-              </option>
-
-              <option value="Delivered">
-                Delivered
-              </option>
-
-            </select>
-
-          </td>
-
-          {/* View Button */}
-
-       <td>
-
-  <div className="action-buttons">
-
-    <button
-      className="view-btn"
-      onClick={() =>
-        setSelectedOrder(order)
-      }
-    >
-      View
-    </button>
-
-    <button
-      className="delete-btn"
-      onClick={() =>
-        deleteOrder(order.id)
-      }
-    >
-      Delete
-    </button>
-
-  </div>
-
-</td>
-
-        </tr>
-
-      ))
-
-    )}
-
-  </tbody>
-
-</table>
-                {selectedOrder && (
-
-                    <div
-                        className="modal-overlay"
-                        onClick={() => setSelectedOrder(null)}
+                    <td
+                      colSpan="5"
+                      style={{
+                        textAlign: "center",
+                        padding: "30px",
+                      }}
                     >
 
-                        <div
-                            className="order-modal"
-                            onClick={(e) => e.stopPropagation()}
+                      No Orders Found
+
+                    </td>
+
+                  </tr>
+
+                ) : (
+
+                  filteredOrders.map((order) => (
+
+                    <tr key={order.id}>
+
+                      <td>
+                        {order.customer?.name}
+                      </td>
+
+                      <td>
+                        {order.customer?.phone}
+                      </td>
+
+                      <td>
+                        ₹{order.total}
+                      </td>
+
+                      <td>
+
+                        <select
+                          className="status-select"
+                          value={order.status}
+                          onChange={(e) =>
+                            updateStatus(
+                              order.id,
+                              e.target.value
+                            )
+                          }
                         >
 
-                            <div className="modal-header">
+                          <option value="Pending">
+                            Pending
+                          </option>
 
-                                <h2>Order Details</h2>
+                          <option value="Processing">
+                            Processing
+                          </option>
 
-                                <button
-                                    className="close-btn"
-                                    onClick={() => setSelectedOrder(null)}
-                                >
-                                    ✕
-                                </button>
+                          <option value="Shipped">
+                            Shipped
+                          </option>
 
-                            </div>
+                          <option value="Delivered">
+                            Delivered
+                          </option>
 
-                            <div className="customer-section">
+                        </select>
 
-                                <h3>Customer Information</h3>
+                      </td>
 
-                                <p><strong>Name :</strong> {selectedOrder.customer.name}</p>
+                      <td>
 
-                                <p><strong>Phone :</strong> {selectedOrder.customer.phone}</p>
+                        <div className="action-buttons">
 
-                                <p><strong>Email :</strong> {selectedOrder.customer.email}</p>
+                          <button
+                            className="view-btn"
+                            onClick={() =>
+                              setSelectedOrder(order)
+                            }
+                          >
 
-                                <p><strong>Address :</strong> {selectedOrder.customer.address}</p>
+                            View
 
-                                <p><strong>City :</strong> {selectedOrder.customer.city}</p>
+                          </button>
 
-                                <p><strong>State :</strong> {selectedOrder.customer.state}</p>
+                          <button
+                            className="delete-btn"
+                            onClick={() =>
+                              deleteOrder(order.id)
+                            }
+                          >
 
-                                <p><strong>Pincode :</strong> {selectedOrder.customer.pincode}</p>
+                            Delete
 
-                                <p><strong>Payment :</strong> {selectedOrder.customer.payment}</p>
-
-                                <p><strong>Status :</strong> {selectedOrder.status}</p>
-
-                            </div>
-
-                            <hr />
-
-                            <h3 className="items-title">
-                                Ordered Products
-                            </h3>
-
-                            <div className="items-list">
-
-                                {selectedOrder.items.map((item, index) => (
-
-                                    <div
-                                        className="item-card"
-                                        key={index}
-                                    >
-
-                                        <div className="item-image">
-
-                                            {item.imageUrl ? (
-
-                                                <img
-                                                    src={item.imageUrl}
-                                                    alt="Design"
-                                                />
-
-                                            ) : (
-
-                                                <div className="no-image">
-                                                    No Image
-                                                </div>
-
-                                            )}
-
-                                        </div>
-
-                                        <div className="item-details">
-
-                                            <h4>
-                                                {item.text || "Custom T-Shirt"}
-                                            </h4>
-
-                                            <p>Color : {item.tshirtColor}</p>
-
-                                            <p>Size : {item.size}</p>
-
-                                            <p>Neck : {item.neck}</p>
-
-                                            <p>Side : {item.side}</p>
-
-                                            <p>Position : {item.position}</p>
-
-                                        </div>
-
-                                        <div className="item-price">
-
-                                            ₹{item.price}
-
-                                        </div>
-
-                                    </div>
-
-                                ))}
-
-                            </div>
-
-                            <div className="modal-total">
-
-                                Grand Total : ₹{selectedOrder.total}
-
-                            </div>
+                          </button>
 
                         </div>
 
-                    </div>
+                      </td>
+
+                    </tr>
+
+                  ))
 
                 )}
-            </div>
+
+              </tbody>
+
+            </table>
+                        {selectedOrder && (
+
+              <div
+                className="modal-overlay"
+                onClick={() => setSelectedOrder(null)}
+              >
+
+                <div
+                  className="order-modal"
+                  onClick={(e) => e.stopPropagation()}
+                >
+
+                  <div className="modal-header">
+
+                    <h2>Order Details</h2>
+
+                    <button
+                      className="close-btn"
+                      onClick={() => setSelectedOrder(null)}
+                    >
+                      ✕
+                    </button>
+
+                  </div>
+
+                  <div className="customer-section">
+
+                    <h3>Customer Information</h3>
+
+                    <p>
+                      <strong>Name :</strong>{" "}
+                      {selectedOrder.customer?.name}
+                    </p>
+
+                    <p>
+                      <strong>Phone :</strong>{" "}
+                      {selectedOrder.customer?.phone}
+                    </p>
+
+                    <p>
+                      <strong>Email :</strong>{" "}
+                      {selectedOrder.customer?.email}
+                    </p>
+
+                    <p>
+                      <strong>Address :</strong>{" "}
+                      {selectedOrder.customer?.address}
+                    </p>
+
+                    <p>
+                      <strong>City :</strong>{" "}
+                      {selectedOrder.customer?.city}
+                    </p>
+
+                    <p>
+                      <strong>State :</strong>{" "}
+                      {selectedOrder.customer?.state}
+                    </p>
+
+                    <p>
+                      <strong>Pincode :</strong>{" "}
+                      {selectedOrder.customer?.pincode}
+                    </p>
+
+                    <p>
+                      <strong>Payment :</strong>{" "}
+                      {selectedOrder.customer?.payment}
+                    </p>
+
+                    <p>
+                      <strong>Status :</strong>{" "}
+                      {selectedOrder.status}
+                    </p>
+
+                  </div>
+
+                  <hr />
+
+                  <h3 className="items-title">
+                    Ordered Products
+                  </h3>
+
+                  <div className="items-list">
+
+                    {selectedOrder.items?.map((item, index) => (
+
+                      <div
+                        className="item-card"
+                        key={index}
+                      >
+
+                        <div className="item-image">
+
+                          {item.imageUrl ? (
+
+                            <img
+                              src={item.imageUrl}
+                              alt="Design"
+                            />
+
+                          ) : (
+
+                            <div className="no-image">
+                              No Image
+                            </div>
+
+                          )}
+
+                        </div>
+
+                        <div className="item-details">
+
+                          <h4>
+                            {item.text || "Custom T-Shirt"}
+                          </h4>
+
+                          <p>
+                            <strong>Color:</strong> {item.tshirtColor}
+                          </p>
+
+                          <p>
+                            <strong>Size:</strong> {item.size}
+                          </p>
+
+                          <p>
+                            <strong>Neck:</strong> {item.neck}
+                          </p>
+
+                          <p>
+                            <strong>Side:</strong> {item.side}
+                          </p>
+
+                          <p>
+                            <strong>Position:</strong> {item.position}
+                          </p>
+
+                          <p>
+                            <strong>Quantity:</strong>{" "}
+                            {item.quantity || 1}
+                          </p>
+
+                        </div>
+
+                        <div className="item-price">
+
+                          ₹{item.price}
+
+                        </div>
+
+                      </div>
+
+                    ))}
+
+                  </div>
+
+                  <div className="modal-total">
+
+                    Grand Total : ₹{selectedOrder.total}
+
+                  </div>
+
+                </div>
+
+              </div>
+
+            )}
+                      </div>
+
         </div>
-    );
+
+      </div>
+
+    </div>
+
+  );
+
 };
 
 export default Orders;

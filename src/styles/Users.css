@@ -1,0 +1,72 @@
+.users-header{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:25px;
+}
+
+.users-card{
+    background:#fff;
+    padding:25px;
+    border-radius:18px;
+    box-shadow:0 10px 25px rgba(0,0,0,.08);
+    overflow-x:auto;
+}
+
+.users-table{
+    width:100%;
+    border-collapse:collapse;
+}
+
+.users-table thead{
+    background:#2563eb;
+}
+
+.users-table th{
+    color:#fff;
+    text-align:left;
+    padding:16px;
+}
+
+.users-table td{
+    padding:16px;
+    border-bottom:1px solid #e5e7eb;
+}
+
+.users-table tbody tr:hover{
+    background:#f8fafc;
+}
+.user-modal{
+    width:600px;
+    max-width:95%;
+    background:#fff;
+    border-radius:18px;
+    padding:30px;
+    box-shadow:0 15px 40px rgba(0,0,0,.2);
+}
+
+.user-info{
+    margin-top:20px;
+    line-height:2.2;
+}
+
+.user-info p{
+    color:#374151;
+    font-size:16px;
+}
+.user-order-card{
+    margin-top:15px;
+    padding:18px;
+    border:1px solid #e5e7eb;
+    border-radius:12px;
+    background:#f9fafb;
+}
+
+.user-order-card h4{
+    margin-bottom:8px;
+    color:#111827;
+}
+
+.user-order-card p{
+    margin:4px 0;
+}
