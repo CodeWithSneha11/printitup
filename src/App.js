@@ -14,6 +14,7 @@ import Signup from "./pages/Signup";
 import MyDesigns from "./pages/MyDesigns";
 import Cart from "./pages/cart";
 import Checkout from "./pages/Checkout";
+import MyOrders from "./pages/MyOrders";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -26,15 +27,19 @@ import Collections from "./pages/Collections";
 import AdminLayout from "./layouts/AdminLayout";
 import AdminRoute from "./components/AdminRoute";
 import Products from "./pages/Products";
+import Footer from "./components/Footer";
+import Profile from "./pages/Profile";
+import AdminProfile from "./pages/AdminProfile";
+
 function AppContent() {
   const location = useLocation();
 
-  // Hide customer navbar on all admin pages
-  const hideNavbar = location.pathname.startsWith("/admin");
+  const isAdminPage =
+  location.pathname.startsWith("/admin");
 
   return (
     <>
-      {!hideNavbar && <Navbar />}
+      {!isAdminPage && <Navbar />}
 
       <Routes>
 
@@ -83,7 +88,21 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
-
+<Route
+  path="/my-orders"
+  element={
+    <ProtectedRoute>
+      <MyOrders />
+    </ProtectedRoute>
+  }
+/><Route
+  path="/profile"
+  element={
+    <ProtectedRoute>
+      <Profile />
+    </ProtectedRoute>
+  }
+/>
         {/* ==========================
               ADMIN LOGIN
         =========================== */}
@@ -97,58 +116,28 @@ function AppContent() {
              ADMIN DASHBOARD
         =========================== */}
 
-        <Route
-          path="/admin-dashboard"
-          element={
-            <AdminRoute>
-              <AdminLayout />
-            </AdminRoute>
-          }
-        >
-          {/* Dashboard */}
-          <Route
-            index
-            element={<AdminDashboard />}
-          />
+      <Route
+  path="/admin-dashboard"
+  element={
+    <AdminRoute>
+      <AdminLayout />
+    </AdminRoute>
+  }
+>
+  <Route index element={<AdminDashboard />} />
+  <Route path="orders" element={<Orders />} />
+  <Route path="collections" element={<Collections />} />
+  <Route path="users" element={<Users />} />
+  <Route path="products/:collectionId" element={<Products />} />
 
-          {/* Orders */}
-          <Route
-            path="orders"
-            element={<Orders />}
-          />
-
-          {/* Collections */}
-          <Route
-            path="collections"
-            element={<Collections />}
-          />
-
-          {/* Users */}
-          <Route
-            path="users"
-            element={<Users />}
-          />
-
-       <Route
-  path="products/:collectionId"
-  element={<Products />}
-/>
-
-          {/* Analytics */}
-          {/* <Route
-            path="analytics"
-            element={<Analytics />}
-          /> */}
-
-          {/* Settings */}
-          {/* <Route
-            path="settings"
-            element={<Settings />}
-          /> */}
-
-        </Route>
+  <Route
+    path="profile"
+    element={<AdminProfile />}
+  />
+</Route>
 
       </Routes>
+       {!isAdminPage && <Footer />}
     </>
   );
 }

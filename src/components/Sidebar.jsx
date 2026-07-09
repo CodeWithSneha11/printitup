@@ -1,5 +1,5 @@
 import React from "react";
-import { NavLink, useNavigate } from "react-router-dom";
+import { NavLink } from "react-router-dom";
 import {
   FaHome,
   FaBoxOpen,
@@ -7,29 +7,14 @@ import {
   FaUsers,
   FaChartBar,
   FaCog,
-  FaSignOutAlt,
 } from "react-icons/fa";
 
-import { signOut } from "firebase/auth";
-import { auth } from "../firebase";
+
 
 import "../styles/Sidebar.css";
 
 const Sidebar = () => {
-  const navigate = useNavigate();
-
-  const handleLogout = async () => {
-    try {
-      await signOut(auth);
-
-      localStorage.removeItem("admin");
-
-      navigate("/admin-login");
-    } catch (err) {
-      console.log(err);
-    }
-  };
-
+  
   return (
     <aside className="sidebar">
 
@@ -114,13 +99,7 @@ const Sidebar = () => {
 
       </nav>
 
-      <button
-        className="logout-sidebar"
-        onClick={handleLogout}
-      >
-        <FaSignOutAlt />
-        Logout
-      </button>
+    
 
     </aside>
   );

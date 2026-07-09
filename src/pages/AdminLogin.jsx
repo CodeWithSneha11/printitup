@@ -51,6 +51,7 @@ const AdminLogin = () => {
 
       // Read admin document
       const adminData = snapshot.docs[0].data();
+localStorage.setItem("adminName", adminData.name || "Admin");
 
       if (adminData.role !== "admin") {
         setMessage("Invalid admin account.");

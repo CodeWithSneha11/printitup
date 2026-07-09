@@ -1,0 +1,228 @@
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
+
+*{
+    margin:0;
+    padding:0;
+    box-sizing:border-box;
+    font-family:"Poppins",sans-serif;
+}
+
+/* ===========================
+   PAGE
+=========================== */
+
+.admin-profile-header{
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-bottom:30px;
+}
+
+.admin-profile-header h1{
+    font-size:30px;
+    color:#111827;
+    font-weight:700;
+}
+
+.back-btn{
+    display:flex;
+    align-items:center;
+    gap:10px;
+
+    padding:12px 22px;
+
+    border:none;
+    border-radius:10px;
+
+    background:#2563eb;
+    color:#fff;
+
+    cursor:pointer;
+    font-size:15px;
+    font-weight:500;
+
+    transition:.3s;
+}
+
+.back-btn:hover{
+    background:#1d4ed8;
+}
+
+/* ===========================
+   CARD
+=========================== */
+
+.admin-profile-card{
+    max-width:700px;
+    margin:auto;
+
+    background:#fff;
+
+    border-radius:22px;
+
+    overflow:hidden;
+
+    box-shadow:0 15px 40px rgba(0,0,0,.08);
+}
+
+/* ===========================
+   TOP
+=========================== */
+
+.admin-profile-top{
+    background:linear-gradient(135deg,#2563eb,#3b82f6);
+
+    color:#fff;
+
+    text-align:center;
+
+    padding:50px 30px;
+}
+
+.profile-circle{
+    width:120px;
+    height:120px;
+
+    margin:auto;
+    margin-bottom:20px;
+
+    border-radius:50%;
+
+    background:#fff;
+
+    color:#2563eb;
+
+    display:flex;
+    justify-content:center;
+    align-items:center;
+
+    font-size:50px;
+    font-weight:700;
+
+    box-shadow:0 10px 25px rgba(0,0,0,.2);
+}
+
+.admin-profile-top h2{
+    font-size:30px;
+    margin-bottom:10px;
+}
+
+.admin-profile-top p{
+    font-size:16px;
+    opacity:.9;
+}
+
+/* ===========================
+   INFO
+=========================== */
+
+.admin-info{
+    padding:40px;
+}
+
+.info-row{
+    display:flex;
+    align-items:center;
+    gap:20px;
+
+    padding:20px;
+
+    margin-bottom:18px;
+
+    border-radius:15px;
+
+    background:#f8fafc;
+
+    transition:.3s;
+}
+
+.info-row:hover{
+    background:#eff6ff;
+    transform:translateX(5px);
+}
+
+.info-row svg{
+    width:55px;
+    height:55px;
+
+    border-radius:50%;
+
+    background:#2563eb;
+    color:#fff;
+
+    padding:15px;
+
+    font-size:24px;
+
+    flex-shrink:0;
+}
+
+.info-row span{
+    display:block;
+    color:#6b7280;
+    font-size:14px;
+    margin-bottom:6px;
+}
+
+.info-row h4{
+    color:#111827;
+    font-size:18px;
+    font-weight:600;
+    word-break:break-word;
+}
+
+/* ===========================
+   RESPONSIVE
+=========================== */
+
+@media(max-width:768px){
+
+.admin-profile-header{
+    flex-direction:column;
+    align-items:flex-start;
+    gap:15px;
+}
+
+.admin-profile-header h1{
+    font-size:24px;
+}
+
+.admin-profile-card{
+    border-radius:18px;
+}
+
+.admin-profile-top{
+    padding:40px 20px;
+}
+
+.profile-circle{
+    width:90px;
+    height:90px;
+    font-size:38px;
+}
+
+.admin-profile-top h2{
+    font-size:24px;
+}
+
+.admin-info{
+    padding:25px;
+}
+
+.info-row{
+    gap:15px;
+    padding:16px;
+}
+
+.info-row svg{
+    width:45px;
+    height:45px;
+    padding:12px;
+    font-size:18px;
+}
+
+.info-row h4{
+    font-size:16px;
+}
+
+}
