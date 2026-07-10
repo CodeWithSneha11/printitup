@@ -9,12 +9,18 @@ import {
   doc,
   serverTimestamp,
 } from "firebase/firestore";
+
 import { useNavigate } from "react-router-dom";
-import { db } from "../firebase";
+
+import { db, auth } from "../firebase";
+
+import AddAddressModal from "../components/AddAddressModal";
+
 import "../styles/Checkout.css";
 
 const Checkout = () => {
   const navigate = useNavigate();
+
   const uid = localStorage.getItem("uid");
 
   const [cartItems, setCartItems] = useState([]);
@@ -23,29 +29,29 @@ const Checkout = () => {
 
   const [message, setMessage] = useState("");
 
-  const [form, setForm] = useState({
-    name: "",
-    phone: "",
-    email: "",
-    address: "",
-    city: "",
-    state: "",
-    pincode: "",
-    payment: "Cash on Delivery",
-  });
+  const [savedAddresses, setSavedAddresses] = useState([]);
+  const [selectedAddress, setSelectedAddress] = useState(null);
+
+  const [showAddressModal, setShowAddressModal] = useState(false);
+
+  const [paymentMethod, setPaymentMethod] = useState(
+    "Cash on Delivery"
+  );
 
   useEffect(() => {
     fetchCart();
+    fetchSavedAddresses();
   }, []);
+
+  // ==========================
+  // FETCH CART
+  // ==========================
 
   const fetchCart = async () => {
     try {
       setLoading(true);
 
-      if (!uid) {
-        setLoading(false);
-        return;
-      }
+      if (!uid) return;
 
       const q = query(
         collection(db, "cart"),
@@ -67,83 +73,143 @@ const Checkout = () => {
     }
   };
 
+  // ==========================
+  // FETCH SAVED ADDRESSES
+  // ==========================
+
+  const fetchSavedAddresses = async () => {
+    try {
+      if (!uid) return;
+
+      const snapshot = await getDocs(
+        collection(
+          db,
+          "users",
+          uid,
+          "addresses"
+        )
+      );
+
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setSavedAddresses(data);
+
+      const defaultAddress = data.find(
+        (item) => item.isDefault
+      );
+
+      if (defaultAddress) {
+        setSelectedAddress(defaultAddress);
+      } else if (data.length > 0) {
+        setSelectedAddress(data[0]);
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // ==========================
+  // SAVE ADDRESS
+  // ==========================
+
+  const handleSaveAddress = async (address) => {
+    try {
+      await addDoc(
+        collection(
+          db,
+          "users",
+          uid,
+          "addresses"
+        ),
+        address
+      );
+
+      setShowAddressModal(false);
+
+      await fetchSavedAddresses();
+
+      setMessage("Address added successfully.");
+    } catch (error) {
+      console.log(error);
+    }
+  };
+
+  // ==========================
+  // TOTAL
+  // ==========================
+
   const total = cartItems.reduce(
     (sum, item) => sum + Number(item.price || 0),
     0
   );
 
-  const handleChange = (e) => {
-    setForm({
-      ...form,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const validateForm = () => {
-    if (
-      !form.name.trim() ||
-      !form.phone.trim() ||
-      !form.address.trim() ||
-      !form.city.trim() ||
-      !form.state.trim() ||
-      !form.pincode.trim()
-    ) {
-      setMessage("Please fill all required fields.");
-      return false;
-    }
-
-    if (!/^[0-9]{10}$/.test(form.phone)) {
-      setMessage("Phone number must contain 10 digits.");
-      return false;
-    }
-
-    if (!/^[0-9]{6}$/.test(form.pincode)) {
-      setMessage("Pincode must contain 6 digits.");
-      return false;
-    }
-
-    if (
-      form.email &&
-      !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)
-    ) {
-      setMessage("Please enter a valid email address.");
-      return false;
-    }
-
-    return true;
-  };
+  // ==========================
+  // PLACE ORDER
+  // ==========================
 
   const placeOrder = async () => {
-    
-    if (!validateForm()) return;
+    if (!selectedAddress) {
+      setMessage(
+        "Please select or add a delivery address."
+      );
+      return;
+    }
 
     try {
       setPlacingOrder(true);
+
       setMessage("");
 
-      await addDoc(collection(db, "orders"), {
-        uid,
-        customer: form,
-        items: cartItems,
-        total,
-        status: "Pending",
-        createdAt: serverTimestamp(),
-      });
+      await addDoc(
+        collection(db, "orders"),
+        {
+          uid,
 
-      // Delete all cart items
+          customer: {
+            name: selectedAddress.fullName,
+            phone: selectedAddress.phone,
+            email:
+              auth.currentUser?.email || "",
+          },
+
+          deliveryAddress: selectedAddress,
+
+          payment: paymentMethod,
+
+          items: cartItems,
+
+          total,
+
+          status: "Pending",
+
+          createdAt: serverTimestamp(),
+        }
+      );
+
+      // Empty Cart
+
       for (const item of cartItems) {
-        await deleteDoc(doc(db, "cart", item.id));
+        await deleteDoc(
+          doc(db, "cart", item.id)
+        );
       }
 
-      setMessage("✅ Order placed successfully!");
+      setMessage(
+        "✅ Order placed successfully!"
+      );
 
       setTimeout(() => {
-        navigate("/");
-      }, 1500);
-
+        navigate("/my-orders");
+      }, 1200);
     } catch (error) {
       console.log(error);
-      setMessage("❌ Failed to place order.");
+
+      setMessage(
+        "❌ Failed to place order."
+      );
     } finally {
       setPlacingOrder(false);
     }
@@ -160,214 +226,177 @@ const Checkout = () => {
   if (!uid) {
     return (
       <div className="checkout-loading">
-        Please login to continue.
+        Please login first.
       </div>
     );
   }
-  return (
-  <div className="checkout-container">
-    <h1>Secure Checkout</h1>
+    return (
+    <div className="checkout-container">
 
-    <div className="checkout-grid">
+      <h1>Checkout</h1>
 
-      {/* ===========================
-            DELIVERY FORM
-      =========================== */}
+      {message && (
+        <div className="checkout-message">
+          {message}
+        </div>
+      )}
 
-      <div className="checkout-form">
+      {/* =========================
+          DELIVERY ADDRESS
+      ========================== */}
 
-        <h2>📦 Delivery Details</h2>
+      <div className="checkout-card">
 
-        {message && (
-          <div className="checkout-message">
-            {message}
+        <div className="checkout-card-header">
+
+          <h2>Delivery Address</h2>
+
+          <button
+            className="add-address-btn"
+            onClick={() => setShowAddressModal(true)}
+          >
+            + Add New Address
+          </button>
+
+        </div>
+
+        {savedAddresses.length === 0 ? (
+
+          <div className="no-address">
+            <p>Please add your first address.</p>
+
           </div>
+
+        ) : (
+
+          <div className="saved-address-list">
+
+            {savedAddresses.map((address) => (
+
+              <div
+                key={address.id}
+                className={
+                  selectedAddress?.id === address.id
+                    ? "saved-address-card active"
+                    : "saved-address-card"
+                }
+                onClick={() => setSelectedAddress(address)}
+              >
+
+                <div className="address-top">
+
+                  <strong>{address.label}</strong>
+
+                  {address.isDefault && (
+                    <span className="default-badge">
+                      Default
+                    </span>
+                  )}
+
+                </div>
+
+                <h4>{address.fullName}</h4>
+
+                <p>{address.phone}</p>
+
+                <p>
+                  {address.house},
+                  {" "}
+                  {address.area}
+                </p>
+
+                <p>
+                  {address.city},
+                  {" "}
+                  {address.state}
+                </p>
+
+                <p>{address.pincode}</p>
+
+                {address.landmark && (
+                  <p>
+                    Landmark :
+                    {" "}
+                    {address.landmark}
+                  </p>
+                )}
+
+              </div>
+
+            ))}
+
+          </div>
+
         )}
-
-        <label>
-          Full Name <span>*</span>
-        </label>
-
-        <input
-          type="text"
-          name="name"
-          placeholder="Enter your full name"
-          value={form.name}
-          onChange={handleChange}
-        />
-
-        <div className="form-row">
-
-          <div>
-
-            <label>
-              Phone Number <span>*</span>
-            </label>
-
-            <input
-              type="tel"
-              name="phone"
-              placeholder="9876543210"
-              value={form.phone}
-              onChange={handleChange}
-            />
-
-          </div>
-
-          <div>
-
-            <label>Email Address</label>
-
-            <input
-              type="email"
-              name="email"
-              placeholder="example@gmail.com"
-              value={form.email}
-              onChange={handleChange}
-            />
-
-          </div>
-
-        </div>
-
-        <label>
-          Delivery Address <span>*</span>
-        </label>
-
-        <textarea
-          name="address"
-          placeholder="House No, Street, Landmark..."
-          value={form.address}
-          onChange={handleChange}
-        />
-
-        <div className="form-row">
-
-          <div>
-
-            <label>
-              City <span>*</span>
-            </label>
-
-            <input
-              type="text"
-              name="city"
-              placeholder="Ahmedabad"
-              value={form.city}
-              onChange={handleChange}
-            />
-
-          </div>
-
-          <div>
-
-            <label>
-              State <span>*</span>
-            </label>
-
-            <input
-              type="text"
-              name="state"
-              placeholder="Gujarat"
-              value={form.state}
-              onChange={handleChange}
-            />
-
-          </div>
-
-        </div>
-
-        <div className="form-row">
-
-          <div>
-
-            <label>
-              Pincode <span>*</span>
-            </label>
-
-            <input
-              type="text"
-              name="pincode"
-              placeholder="380001"
-              value={form.pincode}
-              onChange={handleChange}
-            />
-
-          </div>
-
-          <div>
-
-            <label>Payment Method</label>
-
-            <select
-              name="payment"
-              value={form.payment}
-              onChange={handleChange}
-            >
-              <option>Cash on Delivery</option>
-              <option>UPI</option>
-              <option>Credit Card</option>
-              <option>Debit Card</option>
-            </select>
-
-          </div>
-
-        </div>
 
       </div>
 
-      {/* ===========================
-            ORDER SUMMARY
-      =========================== */}
+      {/* =========================
+          PAYMENT
+      ========================== */}
 
-      <div className="order-summary">
+      <div className="checkout-card">
 
-        <h2>🧾 Order Summary</h2>
+        <h2>Payment Method</h2>
+
+        <select
+          value={paymentMethod}
+          onChange={(e) =>
+            setPaymentMethod(e.target.value)
+          }
+        >
+
+          <option>
+            Cash on Delivery
+          </option>
+
+          <option>
+            UPI
+          </option>
+
+          <option>
+            Credit Card
+          </option>
+
+          <option>
+            Debit Card
+          </option>
+
+        </select>
+
+      </div>
+
+      {/* =========================
+          ORDER SUMMARY
+      ========================== */}
+
+      <div className="checkout-card">
+
+        <h2>Order Summary</h2>
 
         {cartItems.map((item) => (
 
           <div
-            className="summary-item"
             key={item.id}
+            className="checkout-item"
           >
 
-            <div className="summary-left">
+            <div>
 
-              {item.imageUrl ? (
-                <img
-                  src={item.imageUrl}
-                  alt="Design"
-                />
-              ) : (
-                <div className="summary-placeholder">
-                  No Image
-                </div>
-              )}
+              <h4>{item.productName}</h4>
 
-              <div>
-
-                <h4>
-                  {item.text || "Custom T-Shirt"}
-                </h4>
-
-                <p>
-                  Size : {item.size}
-                </p>
-
-                <p>
-                  Color : {item.tshirtColor}
-                </p>
-
-                <p>
-                  {item.side} • {item.position}
-                </p>
-
-              </div>
+              <p>
+                Qty :
+                {" "}
+                {item.quantity || 1}
+              </p>
 
             </div>
 
             <strong>
+
               ₹{item.price}
+
             </strong>
 
           </div>
@@ -376,30 +405,51 @@ const Checkout = () => {
 
         <hr />
 
-        <div className="total-row">
+        <div className="checkout-total">
 
           <h3>Total</h3>
 
-          <h2>
-            ₹{total}
-          </h2>
+          <h2>₹{total}</h2>
 
         </div>
 
-        <button
-          className="place-order-btn"
-          onClick={placeOrder}
-          disabled={placingOrder}
-        >
-          {placingOrder
-            ? "Placing Order..."
-            : "Place Order"}
-        </button>
-
       </div>
+
+      {/* =========================
+          PLACE ORDER
+      ========================== */}
+
+      <button
+        className="place-order-btn"
+        disabled={
+          placingOrder ||
+          cartItems.length === 0
+        }
+        onClick={placeOrder}
+      >
+
+        {placingOrder
+          ? "Placing Order..."
+          : "Place Order"}
+
+      </button>
+
+      {/* =========================
+          ADDRESS MODAL
+      ========================== */}
+
+      {showAddressModal && (
+
+        <AddAddressModal
+          onClose={() =>
+            setShowAddressModal(false)
+          }
+          onSave={handleSaveAddress}
+        />
+
+      )}
 
     </div>
-      </div>
   );
 };
 

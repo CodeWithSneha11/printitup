@@ -1,25 +1,50 @@
-import React, { useState } from "react";
-import "./AddAddressModal.css";
+import React, { useEffect, useState } from "react";
 
-const AddAddressModal = ({ onClose, onSave }) => {
-  const [address, setAddress] = useState({
-    label: "Home",
-    fullName: "",
-    phone: "",
-    house: "",
-    area: "",
-    city: "",
-    state: "",
-    pincode: "",
-    landmark: "",
-    isDefault: false,
-  });
+import "../styles/AddAddressModal.css";
+import { FaPlus } from "react-icons/fa";
+const emptyAddress = {
+  label: "Home",
+
+  fullName: "",
+
+  phone: "",
+
+  house: "",
+
+  area: "",
+
+  city: "",
+
+  state: "",
+
+  pincode: "",
+
+  landmark: "",
+
+  isDefault: false,
+};
+
+const AddAddressModal = ({ onClose, onSave, editAddress }) => {
+  const [address, setAddress] = useState(emptyAddress);
+
+  // ==========================
+  // LOAD EDIT DATA
+  // ==========================
+
+  useEffect(() => {
+    if (editAddress) {
+      setAddress(editAddress);
+    } else {
+      setAddress(emptyAddress);
+    }
+  }, [editAddress]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
 
     setAddress({
       ...address,
+
       [name]: type === "checkbox" ? checked : value,
     });
   };
@@ -34,6 +59,7 @@ const AddAddressModal = ({ onClose, onSave }) => {
       !address.pincode
     ) {
       alert("Please fill all required fields.");
+
       return;
     }
 
@@ -43,49 +69,52 @@ const AddAddressModal = ({ onClose, onSave }) => {
   return (
     <div className="address-overlay">
       <div className="address-modal">
-
+        {/* HEADER */}
+    
         <div className="address-header">
-          <h2>Add New Address</h2>
+          <h2>{editAddress ? "Edit Address" : "Add New Address"}</h2>
 
           <button onClick={onClose}>✕</button>
         </div>
 
-        <div className="address-body">
+        {/* BODY */}
 
+        <div className="address-body">
           <label>Address Label</label>
 
-          <select
-            name="label"
-            value={address.label}
-            onChange={handleChange}
-          >
+          <select name="label" value={address.label} onChange={handleChange}>
             <option>Home</option>
+
             <option>Office</option>
+
             <option>Other</option>
           </select>
 
-          <label>Full Name</label>
+          <label>Full Name *</label>
 
           <input
             name="fullName"
             value={address.fullName}
             onChange={handleChange}
+            placeholder="Enter full name"
           />
 
-          <label>Phone Number</label>
+          <label>Phone Number *</label>
 
           <input
             name="phone"
             value={address.phone}
             onChange={handleChange}
+            placeholder="9876543210"
           />
 
-          <label>House / Flat</label>
+          <label>House / Flat *</label>
 
           <input
             name="house"
             value={address.house}
             onChange={handleChange}
+            placeholder="Flat no, House no"
           />
 
           <label>Area</label>
@@ -94,25 +123,18 @@ const AddAddressModal = ({ onClose, onSave }) => {
             name="area"
             value={address.area}
             onChange={handleChange}
+            placeholder="Area / Street"
           />
 
-          <label>City</label>
+          <label>City *</label>
 
-          <input
-            name="city"
-            value={address.city}
-            onChange={handleChange}
-          />
+          <input name="city" value={address.city} onChange={handleChange} />
 
-          <label>State</label>
+          <label>State *</label>
 
-          <input
-            name="state"
-            value={address.state}
-            onChange={handleChange}
-          />
+          <input name="state" value={address.state} onChange={handleChange} />
 
-          <label>Pincode</label>
+          <label>Pincode *</label>
 
           <input
             name="pincode"
@@ -129,38 +151,27 @@ const AddAddressModal = ({ onClose, onSave }) => {
           />
 
           <label className="checkbox-row">
-
             <input
               type="checkbox"
               name="isDefault"
               checked={address.isDefault}
               onChange={handleChange}
             />
-
             Set as Default Address
-
           </label>
-
         </div>
 
-        <div className="address-footer">
+        {/* FOOTER */}
 
-          <button
-            className="cancel-btn"
-            onClick={onClose}
-          >
+        <div className="address-footer">
+          <button className="cancel-btn" onClick={onClose}>
             Cancel
           </button>
 
-          <button
-            className="save-btn"
-            onClick={handleSubmit}
-          >
-            Save Address
+          <button className="save-btn" onClick={handleSubmit}>
+            {editAddress ? "Update Address" : "Save Address"}
           </button>
-
         </div>
-
       </div>
     </div>
   );

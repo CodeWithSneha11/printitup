@@ -1,25 +1,28 @@
 import React, { useEffect, useState } from "react";
+import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
+
 import {
-  doc,
-  getDoc,
-  setDoc,
-  updateDoc,
-} from "firebase/firestore";
-import { db } from "../firebase";
-import { FaUserCircle, FaSave } from "react-icons/fa";
+  FaUserCircle,
+  FaSave,
+  FaPhone,
+  FaEnvelope,
+  FaCalendarAlt,
+} from "react-icons/fa";
+
+import { db, auth } from "../firebase";
+
 import "../styles/Profile.css";
 
 const Profile = () => {
+  const uid = localStorage.getItem("uid");
+
   const [loading, setLoading] = useState(true);
 
   const [userData, setUserData] = useState({
     name: "",
     email: "",
     phone: "",
-    address: "",
-    city: "",
-    state: "",
-    pincode: "",
+    createdAt: "",
   });
 
   useEffect(() => {
@@ -28,8 +31,6 @@ const Profile = () => {
 
   const fetchProfile = async () => {
     try {
-      const uid = localStorage.getItem("uid");
-
       if (!uid) {
         setLoading(false);
         return;
@@ -40,34 +41,43 @@ const Profile = () => {
       const docSnap = await getDoc(docRef);
 
       if (docSnap.exists()) {
+        const data = docSnap.data();
+
+        let memberSince = "";
+
+        if (data.createdAt) {
+          // Firestore Timestamp
+          if (typeof data.createdAt.toDate === "function") {
+            memberSince = data.createdAt.toDate().toLocaleDateString("en-IN", {
+              day: "numeric",
+              month: "long",
+              year: "numeric",
+            });
+          }
+          // Old string value
+          else {
+            memberSince = data.createdAt;
+          }
+        }
+
         setUserData({
-          name: docSnap.data().name || "",
-          email: docSnap.data().email || "",
-          phone: docSnap.data().phone || "",
-          address: docSnap.data().address || "",
-          city: docSnap.data().city || "",
-          state: docSnap.data().state || "",
-          pincode: docSnap.data().pincode || "",
+          name: data.name || "",
+          email: data.email || auth.currentUser?.email || "",
+          phone: data.phone || "",
+          createdAt: memberSince,
         });
       } else {
         await setDoc(docRef, {
           name: "",
-          email: "",
+          email: auth.currentUser?.email || "",
           phone: "",
-          address: "",
-          city: "",
-          state: "",
-          pincode: "",
         });
 
         setUserData({
           name: "",
-          email: "",
+          email: auth.currentUser?.email || "",
           phone: "",
-          address: "",
-          city: "",
-          state: "",
-          pincode: "",
+          createdAt: "",
         });
       }
     } catch (error) {
@@ -86,15 +96,9 @@ const Profile = () => {
 
   const saveProfile = async () => {
     try {
-      const uid = localStorage.getItem("uid");
-
       await updateDoc(doc(db, "users", uid), {
         name: userData.name,
         phone: userData.phone,
-        address: userData.address,
-        city: userData.city,
-        state: userData.state,
-        pincode: userData.pincode,
       });
 
       alert("Profile Updated Successfully!");
@@ -111,19 +115,21 @@ const Profile = () => {
   return (
     <div className="profile-page">
       <div className="profile-card">
+        <div className="profile-header">
+          <div className="profile-avatar">
+            {userData.name ? (
+              userData.name.charAt(0).toUpperCase()
+            ) : (
+              <FaUserCircle />
+            )}
+          </div>
 
-        <div className="profile-avatar">
-          <FaUserCircle />
+          <h2>{userData.name || "Customer"}</h2>
+
+          <p>{userData.email}</p>
         </div>
 
-        <h2>{userData.name || "Customer"}</h2>
-
-        <p className="profile-email">
-          {userData.email}
-        </p>
-
         <div className="profile-form">
-
           <div className="input-group">
             <label>Full Name</label>
 
@@ -138,78 +144,47 @@ const Profile = () => {
           <div className="input-group">
             <label>Email</label>
 
-            <input
-              type="email"
-              value={userData.email}
-              disabled
-            />
+            <div className="profile-info">
+              <FaEnvelope />
+
+              <input type="email" value={userData.email} disabled />
+            </div>
           </div>
 
           <div className="input-group">
             <label>Phone Number</label>
 
-            <input
-              type="text"
-              name="phone"
-              value={userData.phone}
-              onChange={handleChange}
-            />
+            <div className="profile-info">
+              <FaPhone />
+
+              <input
+                type="text"
+                name="phone"
+                value={userData.phone}
+                onChange={handleChange}
+              />
+            </div>
           </div>
 
-          <div className="input-group">
-            <label>Address</label>
+          <div className="profile-extra">
+            <div className="extra-card">
+              <FaCalendarAlt />
 
-            <textarea
-              rows="3"
-              name="address"
-              value={userData.address}
-              onChange={handleChange}
-            />
+              <div>
+                <span>Member Since</span>
+
+                <h4>{userData.createdAt || "Not Available"}</h4>
+              </div>
+            </div>
+
+           
           </div>
 
-          <div className="input-group">
-            <label>City</label>
-
-            <input
-              type="text"
-              name="city"
-              value={userData.city}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="input-group">
-            <label>State</label>
-
-            <input
-              type="text"
-              name="state"
-              value={userData.state}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="input-group">
-            <label>Pincode</label>
-
-            <input
-              type="text"
-              name="pincode"
-              value={userData.pincode}
-              onChange={handleChange}
-            />
-          </div>
-
-          <button
-            className="save-profile-btn"
-            onClick={saveProfile}
-          >
+          <button className="save-profile-btn" onClick={saveProfile}>
             <FaSave />
             Save Changes
           </button>
-
         </div>
-
       </div>
     </div>
   );

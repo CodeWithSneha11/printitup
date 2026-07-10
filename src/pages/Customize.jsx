@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { db } from "../firebase";
 import "../styles/Customize.css";
+import TShirt3DPreview, { isWebGLAvailable } from "../components/TShirt3DPreview";
 import {
   collection,
   addDoc,
@@ -28,7 +29,7 @@ const Customize = () => {
   const [text, setText] = useState("");
   const [position, setPosition] = useState("center");
   const [side, setSide] = useState("front");
-  const [selectedColor, setSelectedColor] = useState("white");
+  const [selectedColor, setSelectedColor] = useState("#ffffff");
   const [selectedSize, setSelectedSize] = useState("M");
   const [fontSize, setFontSize] = useState(18);
   const [textColor, setTextColor] = useState("#000000");
@@ -46,6 +47,15 @@ const Customize = () => {
 
   // Store uploaded Cloudinary URL
   const [cloudinaryUrl, setCloudinaryUrl] = useState("");
+
+  // 3D / 2D preview toggle. Defaults to 3D only if the browser actually
+  // supports WebGL — otherwise falls back to the CSS preview automatically.
+  const [use3D, setUse3D] = useState(true);
+  useEffect(() => {
+    if (!isWebGLAvailable()) {
+      setUse3D(false);
+    }
+  }, []);
 
   let finalPrice = 499;
   if (image) finalPrice += 100;
@@ -140,7 +150,7 @@ const Customize = () => {
     setText("");
     setPosition("center");
     setSide("front");
-    setSelectedColor("white");
+    setSelectedColor("#ffffff");
     setSelectedSize("M");
     setFontSize(18);
     setTextColor("#000000");
@@ -427,6 +437,10 @@ const Customize = () => {
           </div>
         )}
 
+        {uploadingImage && (
+          <small className="upload-status">{uploadProgress}</small>
+        )}
+
         <label>Print Position</label>
         <select value={position} onChange={(e) => setPosition(e.target.value)}>
           <option value="center">Center</option>
@@ -445,10 +459,11 @@ const Customize = () => {
           {tshirtColors.map((color) => (
             <div
               key={color.name}
-              className={`color-circle ${selectedColor === color.name ? "active-color" : ""
-                }`}
+              className={`color-circle ${
+                selectedColor === color.code ? "active-color" : ""
+              }`}
               style={{ background: color.code }}
-              onClick={() => setSelectedColor(color.name)}
+              onClick={() => setSelectedColor(color.code)}
               title={color.name}
             />
           ))}
@@ -537,38 +552,57 @@ const Customize = () => {
 
       {/* RIGHT PANEL */}
       <div className="preview">
-        <div className={`preview-card ${rotate ? "rotate" : ""}`}>
-          <div
-            className={`tshirt-preview ${neck}`}
-            style={{
-              background: tshirtColors.find((c) => c.name === selectedColor)
-                ?.code,
-            }}
+        <div style={{ display: "flex", justifyContent: "flex-end", marginBottom: "8px" }}>
+          <button
+            type="button"
+            className="reset-btn"
+            style={{ padding: "4px 12px", fontSize: "13px" }}
+            onClick={() => setUse3D((prev) => !prev)}
           >
-            <div className="neck"></div>
-            <div className="stitch"></div>
-
-            {image && (
-              <img
-                src={image}
-                className={`logo-preview ${position}`}
-                alt="Logo"
-              />
-            )}
-
-            {text && (
-              <div
-                className={`text-preview ${position}`}
-                style={{
-                  color: textColor,
-                  fontSize: `${fontSize}px`,
-                }}
-              >
-                {text}
-              </div>
-            )}
-          </div>
+            {use3D ? "Switch to 2D preview" : "Switch to 3D preview"}
+          </button>
         </div>
+
+        {use3D ? (
+          <TShirt3DPreview
+            color={selectedColor}
+            text={text}
+            textColor={textColor}
+            fontSize={fontSize}
+            imageUrl={image}
+            side={side}
+          />
+        ) : (
+          <div className={`preview-card ${rotate ? "rotate" : ""}`}>
+            <div
+              className={`tshirt-preview ${neck}`}
+              style={{ background: selectedColor }}
+            >
+              <div className="neck"></div>
+              <div className="stitch"></div>
+
+              {image && (
+                <img
+                  src={image}
+                  className={`logo-preview ${position}`}
+                  alt="Logo"
+                />
+              )}
+
+              {text && (
+                <div
+                  className={`text-preview ${position}`}
+                  style={{
+                    color: textColor,
+                    fontSize: `${fontSize}px`,
+                  }}
+                >
+                  {text}
+                </div>
+              )}
+            </div>
+          </div>
+        )}
 
         {/* PRICE DETAILS BELOW PREVIEW */}
         <div className="price-box preview-price">

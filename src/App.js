@@ -30,6 +30,7 @@ import Products from "./pages/Products";
 import Footer from "./components/Footer";
 import Profile from "./pages/Profile";
 import AdminProfile from "./pages/AdminProfile";
+import ManageAddress from "./pages/ManageAddress";
 
 function AppContent() {
   const location = useLocation();
@@ -102,6 +103,10 @@ function AppContent() {
       <Profile />
     </ProtectedRoute>
   }
+/>
+<Route
+path="/manage-address"
+element={<ManageAddress/>}
 />
         {/* ==========================
               ADMIN LOGIN

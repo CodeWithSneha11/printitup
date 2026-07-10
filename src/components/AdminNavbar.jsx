@@ -46,10 +46,7 @@ const AdminNavbar = () => {
       }
     };
 
-    document.addEventListener(
-      "mousedown",
-      handleClickOutside
-    );
+  document.addEventListener("click", handleClickOutside);
 
     return () => {
       document.removeEventListener(
