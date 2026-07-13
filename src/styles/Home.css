@@ -208,7 +208,9 @@ body{
 .hero-left h1 span{
     background:linear-gradient(90deg,#2563eb,#ec4899);
     -webkit-background-clip:text;
+    background-clip:text;
     -webkit-text-fill-color:transparent;
+    color:transparent;
 }
 
 .hero-left p{
@@ -360,11 +362,16 @@ box-shadow:
         #7c3aed,
         #ec4899
     );
+    /* Standard mask for broader browser compatibility */
+    mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    /* WebKit-specific mask for older Safari/Chrome */
     -webkit-mask:
         linear-gradient(#fff 0 0) content-box,
         linear-gradient(#fff 0 0);
-    -webkit-mask-composite:xor;
-    mask-composite:exclude;
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
 }
 
 .shirt-card img{

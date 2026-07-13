@@ -101,7 +101,7 @@ const MyOrders = () => {
                 <div className="order-info">
                   <span>Payment</span>
 
-                  <strong>{order.customer?.payment}</strong>
+                  <strong>{order.payment}</strong>
                 </div>
 
                 <div className="order-info">
@@ -174,23 +174,39 @@ const MyOrders = () => {
                 </div>
 
                 <div className="info-card">
-                  <h3>
-                    <FaMapMarkerAlt />
-                    Delivery Address
-                  </h3>
+  <h3>
+    <FaMapMarkerAlt />
+    Delivery Address
+  </h3>
 
-                  <p>{selectedOrder.customer?.address}</p>
+  <p>
+    <strong>{selectedOrder.deliveryAddress?.fullName}</strong>
+  </p>
 
-                  <p>{selectedOrder.customer?.city}</p>
+  <p>{selectedOrder.deliveryAddress?.phone}</p>
 
-                  <p>
-                    {selectedOrder.customer?.state}
+  <p>
+    {selectedOrder.deliveryAddress?.house},
+    {" "}
+    {selectedOrder.deliveryAddress?.area}
+  </p>
 
-                    {" - "}
+  {selectedOrder.deliveryAddress?.landmark && (
+    <p>
+      Landmark :
+      {" "}
+      {selectedOrder.deliveryAddress.landmark}
+    </p>
+  )}
 
-                    {selectedOrder.customer?.pincode}
-                  </p>
-                </div>
+  <p>
+    {selectedOrder.deliveryAddress?.city},
+    {" "}
+    {selectedOrder.deliveryAddress?.state}
+  </p>
+
+  <p>{selectedOrder.deliveryAddress?.pincode}</p>
+</div>
 
                 <div className="info-card">
                   <h3>
@@ -198,8 +214,7 @@ const MyOrders = () => {
                     Payment
                   </h3>
 
-                  <p>{selectedOrder.customer?.payment}</p>
-
+               <p>{selectedOrder.payment}</p>
                   <p>
                     {selectedOrder.status === "Delivered"
                       ? "Payment Successful"

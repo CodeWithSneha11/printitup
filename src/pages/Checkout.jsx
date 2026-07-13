@@ -138,11 +138,48 @@ const Checkout = () => {
   };
 
   // ==========================
+  // ITEM DISPLAY HELPERS
+  // ==========================
+  // Cart items can come from two different sources:
+  //   1) Customize.jsx  -> custom design (isCustom is undefined/true, has `text`, `tshirtColor`, etc.)
+  //   2) ShopCollections.jsx -> pre-made product (isCustom: false, has `name`, `color`, etc.)
+  // These helpers normalize both shapes for display, instead of relying
+  // on a single `productName` field that neither actually has.
+
+  const getItemName = (item) => {
+    if (item.isCustom === false) {
+      return item.name || "Collection Item";
+    }
+    return item.text ? `Custom: "${item.text}"` : "Custom T-Shirt Design";
+  };
+
+  const getItemImage = (item) => item.imageUrl || item.image || "";
+
+  const getItemMeta = (item) => {
+    if (item.isCustom === false) {
+      const parts = [];
+      if (item.size) parts.push(item.size);
+      if (item.colorName) parts.push(item.colorName);
+      return parts.join(" • ");
+    }
+
+    const parts = [];
+    if (item.size) parts.push(item.size);
+    if (item.side) parts.push(item.side === "back" ? "Back Print" : "Front Print");
+    return parts.join(" • ");
+  };
+
+  const getLineTotal = (item) =>
+    Number(item.price || 0) * Number(item.quantity || 1);
+
+  // ==========================
   // TOTAL
   // ==========================
+  // Fixed: previously summed unit price only and ignored quantity,
+  // which would undercharge for any item with quantity > 1.
 
   const total = cartItems.reduce(
-    (sum, item) => sum + Number(item.price || 0),
+    (sum, item) => sum + getLineTotal(item),
     0
   );
 
@@ -155,6 +192,11 @@ const Checkout = () => {
       setMessage(
         "Please select or add a delivery address."
       );
+      return;
+    }
+
+    if (cartItems.length === 0) {
+      setMessage("Your cart is empty.");
       return;
     }
 
@@ -374,34 +416,52 @@ const Checkout = () => {
 
         <h2>Order Summary</h2>
 
-        {cartItems.map((item) => (
+        {cartItems.length === 0 ? (
+          <p className="no-address">Your cart is empty.</p>
+        ) : (
+          cartItems.map((item) => (
 
-          <div
-            key={item.id}
-            className="checkout-item"
-          >
+            <div
+              key={item.id}
+              className="checkout-item"
+            >
 
-            <div>
+              <div className="checkout-item-left">
+                {getItemImage(item) && (
+                  <img
+                    src={getItemImage(item)}
+                    alt={getItemName(item)}
+                    className="checkout-item-thumb"
+                  />
+                )}
 
-              <h4>{item.productName}</h4>
+                <div>
 
-              <p>
-                Qty :
-                {" "}
-                {item.quantity || 1}
-              </p>
+                  <h4>{getItemName(item)}</h4>
+
+                  {getItemMeta(item) && (
+                    <p className="checkout-item-meta">{getItemMeta(item)}</p>
+                  )}
+
+                  <p>
+                    Qty :
+                    {" "}
+                    {item.quantity || 1}
+                  </p>
+
+                </div>
+              </div>
+
+              <strong>
+
+                ₹{getLineTotal(item)}
+
+              </strong>
 
             </div>
 
-            <strong>
-
-              ₹{item.price}
-
-            </strong>
-
-          </div>
-
-        ))}
+          ))
+        )}
 
         <hr />
 

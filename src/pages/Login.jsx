@@ -1,105 +1,220 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-// Firebase Authentication
-import { signInWithEmailAndPassword } from "firebase/auth";
+import {
+  signInWithEmailAndPassword,
+  signInWithPopup,
+} from "firebase/auth";
 
-import { auth } from "../firebase";
+import {
+  auth,
+  db,
+  googleProvider,
+} from "../firebase";
+
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+} from "firebase/firestore";
+
+import { FaGoogle } from "react-icons/fa";
 
 import "../styles/Auth.css";
 
 function Login() {
-  // State variables for form inputs
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
-
-  // Controls password visibility
-  const [showPassword, setShowPassword] = useState(false);
-
-  // State for loading and error handling
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState("");
-
-  // Used to navigate after successful login
   const navigate = useNavigate();
 
-  // Handles user login
-  const handleLogin = async (e) => {
-    e.preventDefault(); // Prevent page refresh
+  const [email, setEmail] = useState("");
 
-    setError("");
+  const [password, setPassword] = useState("");
+
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [loading, setLoading] = useState(false);
+
+  const [error, setError] = useState("");
+
+  // -------------------------
+  // Email Login
+  // -------------------------
+
+  const handleLogin = async (e) => {
+    e.preventDefault();
+
     setLoading(true);
 
+    setError("");
+
     try {
-      // Authenticate user with Firebase
-      const userCredential = await signInWithEmailAndPassword(
-        auth,
-        email,
-        password,
-      );
+      const userCredential =
+        await signInWithEmailAndPassword(
+          auth,
+          email,
+          password
+        );
 
-      // Store logged-in user's UID in local storage
-      localStorage.setItem("uid", userCredential.user.uid);
+      const user = userCredential.user;
 
-      // Redirect to home page
+      localStorage.setItem("uid", user.uid);
+
       navigate("/");
     } catch (err) {
-      // Display login error message
-      setError("Invalid email or password");
+      console.log(err);
+
+      setError("Invalid email or password.");
     } finally {
-      // Stop loading after login attempt
+      setLoading(false);
+    }
+  };
+
+  // -------------------------
+  // Google Login
+  // -------------------------
+
+  const handleGoogleLogin = async () => {
+    try {
+      setLoading(true);
+
+      setError("");
+
+      const result = await signInWithPopup(
+        auth,
+        googleProvider
+      );
+
+      const user = result.user;
+
+      localStorage.setItem("uid", user.uid);
+
+      // Check Firestore
+      const userRef = doc(db, "users", user.uid);
+
+      const userSnap = await getDoc(userRef);
+
+      if (!userSnap.exists()) {
+        await setDoc(userRef, {
+          uid: user.uid,
+
+          name: user.displayName || "",
+
+          email: user.email,
+
+          phone: "",
+
+          createdAt: serverTimestamp(),
+        });
+      }
+
+      navigate("/");
+    } catch (err) {
+      console.log(err);
+
+      setError("Google Sign-In failed.");
+    } finally {
       setLoading(false);
     }
   };
 
   return (
     <div className="auth-container">
-      <form className="auth-card" onSubmit={handleLogin}>
-        {/* Page Heading */}
+      <form
+        className="auth-card"
+        onSubmit={handleLogin}
+      >
         <h2>Welcome Back 👋</h2>
 
-        <p className="auth-subtitle">Login to continue designing</p>
+        <p className="auth-subtitle">
+          Login to continue designing
+        </p>
 
-        {/* Display error message if login fails */}
-        {error && <div className="error-box">{error}</div>}
+        {error && (
+          <div className="error-box">
+            {error}
+          </div>
+        )}
 
-        {/* Email Input */}
+        {/* Email */}
+
         <input
           type="email"
           placeholder="Email Address"
           required
           value={email}
-          onChange={(e) => setEmail(e.target.value)}
+          onChange={(e) =>
+            setEmail(e.target.value)
+          }
         />
 
-        {/* Password Input with Show/Hide Toggle */}
+        {/* Password */}
+
         <div className="password-wrapper">
           <input
-            type={showPassword ? "text" : "password"}
+            type={
+              showPassword
+                ? "text"
+                : "password"
+            }
             placeholder="Password"
             required
             value={password}
-            onChange={(e) => setPassword(e.target.value)}
+            onChange={(e) =>
+              setPassword(e.target.value)
+            }
           />
 
-          {/* Toggle password visibility */}
           <span
             className="toggle-password"
-            onClick={() => setShowPassword(!showPassword)}
+            onClick={() =>
+              setShowPassword(
+                !showPassword
+              )
+            }
           >
             {showPassword ? "🙈" : "👁"}
           </span>
         </div>
 
-        {/* Login Button */}
-        <button type="submit" disabled={loading}>
-          {loading ? "Logging In..." : "Login"}
+        {/* Email Login */}
+
+        <button
+          type="submit"
+          disabled={loading}
+        >
+          {loading
+            ? "Logging In..."
+            : "Login"}
         </button>
 
-        {/* Link to Signup Page */}
+        {/* Divider */}
+
+        <div className="auth-divider">
+          <span>OR</span>
+        </div>
+
+        {/* Google Login */}
+
+        <button
+          type="button"
+          className="google-login-btn"
+          onClick={handleGoogleLogin}
+          disabled={loading}
+        >
+          <FaGoogle />
+
+          Continue with Google
+        </button>
+
+        {/* Signup */}
+
         <p className="auth-switch">
           Don't have an account?
-          <Link to="/signup"> Sign Up</Link>
+
+          <Link to="/signup">
+            {" "}
+            Sign Up
+          </Link>
         </p>
       </form>
     </div>

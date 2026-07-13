@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useMemo, Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
-import { OrbitControls, useGLTF } from "@react-three/drei";
+import { OrbitControls, useGLTF, Center } from "@react-three/drei";
 import * as THREE from "three";
 import { DecalGeometry } from "three/examples/jsm/geometries/DecalGeometry.js";
 
@@ -166,8 +166,10 @@ function TshirtModel({ color, onReady }) {
       meshes.push(child);
     });
 
-    // Wait a tick so the primitive's scale/position (set on the JSX below)
-    // are baked into matrixWorld before we measure the bounding box.
+    // Wait a tick so <Center>'s auto-centering offset (applied on the
+    // primitive below) is baked into matrixWorld before we measure the
+    // bounding box — otherwise the box would reflect the pre-centered
+    // position and the decal raycast would miss the model.
     requestAnimationFrame(() => {
       scene.updateMatrixWorld(true);
       const box = new THREE.Box3();
@@ -176,7 +178,11 @@ function TshirtModel({ color, onReady }) {
     });
   }, [scene, color, onReady]);
 
-  return <primitive object={scene} scale={2} position={[0, -1, 0]} />;
+  return (
+    <Center>
+      <primitive object={scene} scale={2} />
+    </Center>
+  );
 }
 
 /* ------------------------------------------------------------------ */
@@ -264,7 +270,7 @@ function TShirt3DPreview({
         </div>
       )}
 
-      <Canvas camera={{ position: [0, 1, 5], fov: 45 }}>
+      <Canvas camera={{ position: [0, 0, 6.5], fov: 40 }}>
         <ambientLight intensity={1} />
         <directionalLight position={[5, 5, 5]} intensity={2} />
         <Suspense fallback={null}>

@@ -15,6 +15,7 @@ import MyDesigns from "./pages/MyDesigns";
 import Cart from "./pages/cart";
 import Checkout from "./pages/Checkout";
 import MyOrders from "./pages/MyOrders";
+import CustomerCollections from "./pages/CustomerCollections";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -22,7 +23,7 @@ import AdminLogin from "./pages/AdminLogin";
 import AdminDashboard from "./pages/AdminDashboard";
 import Orders from "./pages/Orders";
 import Users from "./pages/Users";
-import Collections from "./pages/Collections";
+
 
 import AdminLayout from "./layouts/AdminLayout";
 import AdminRoute from "./components/AdminRoute";
@@ -31,6 +32,8 @@ import Footer from "./components/Footer";
 import Profile from "./pages/Profile";
 import AdminProfile from "./pages/AdminProfile";
 import ManageAddress from "./pages/ManageAddress";
+import Collections from "./pages/Collections";
+
 
 function AppContent() {
   const location = useLocation();
@@ -63,6 +66,8 @@ function AppContent() {
           }
         />
 
+
+
         <Route
           path="/my-designs"
           element={
@@ -89,6 +94,10 @@ function AppContent() {
             </ProtectedRoute>
           }
         />
+        <Route
+ path="/collections"
+ element={<CustomerCollections/>}
+/>
 <Route
   path="/my-orders"
   element={

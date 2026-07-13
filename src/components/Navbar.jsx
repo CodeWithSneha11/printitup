@@ -44,38 +44,45 @@ const Navbar = () => {
 
   const loggedIn = !!user;
 
-  /* ===========================
+  /*
+  ===========================
       AUTH LISTENER
-  =========================== */
+  ===========================
+  */
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, (currentUser) => {
       setUser(currentUser);
 
-      // Always close profile popup after login/logout
       setShowProfileMenu(false);
     });
 
     return unsubscribe;
   }, []);
 
-  /* ===========================
-      CLOSE DROPDOWN ON ROUTE CHANGE
-  =========================== */
+  /*
+  ===========================
+      CLOSE MENU ON ROUTE CHANGE
+  ===========================
+  */
 
   useEffect(() => {
     setShowProfileMenu(false);
+
     setMenuOpen(false);
   }, [location]);
 
-  /* ===========================
+  /*
+  ===========================
       FETCH USER NAME
-  =========================== */
+  ===========================
+  */
 
   useEffect(() => {
     const fetchUser = async () => {
       if (!user) {
         setUserName("");
+
         return;
       }
 
@@ -95,20 +102,20 @@ const Navbar = () => {
     fetchUser();
   }, [user]);
 
-  /* ===========================
+  /*
+  ===========================
       CART COUNT
-  =========================== */
+  ===========================
+  */
 
   useEffect(() => {
     if (!uid) {
       setCartCount(0);
+
       return;
     }
 
-    const q = query(
-      collection(db, "cart"),
-      where("uid", "==", uid)
-    );
+    const q = query(collection(db, "cart"), where("uid", "==", uid));
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
       setCartCount(snapshot.size);
@@ -117,40 +124,42 @@ const Navbar = () => {
     return unsubscribe;
   }, [uid]);
 
-  /* ===========================
-      CLOSE PROFILE WHEN CLICKING OUTSIDE
-  =========================== */
+  /*
+  ===========================
+      CLOSE PROFILE OUTSIDE CLICK
+  ===========================
+  */
 
   useEffect(() => {
     const handleClickOutside = (e) => {
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(e.target)
-      ) {
+      if (profileRef.current && !profileRef.current.contains(e.target)) {
         setShowProfileMenu(false);
       }
     };
 
     document.addEventListener("mousedown", handleClickOutside);
 
-    return () =>
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside
-      );
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
   }, []);
 
-  /* ===========================
+  /*
+  ===========================
       LOGOUT
-  =========================== */
+  ===========================
+  */
 
   const handleLogout = async () => {
     try {
       await signOut(auth);
 
       localStorage.removeItem("uid");
+
       localStorage.removeItem("email");
+
       localStorage.removeItem("adminUid");
+
       localStorage.removeItem("adminEmail");
 
       setShowProfileMenu(false);
@@ -171,16 +180,19 @@ const Navbar = () => {
 
       {/* MOBILE MENU */}
 
-      <div
-        className="hamburger"
-        onClick={() => setMenuOpen(!menuOpen)}
-      >
+      <div className="hamburger" onClick={() => setMenuOpen(!menuOpen)}>
         ☰
       </div>
 
       <ul className={menuOpen ? "nav-links active" : "nav-links"}>
         <li>
           <Link to="/">Home</Link>
+        </li>
+
+        {/* CUSTOMER COLLECTIONS */}
+
+        <li>
+          <Link to="/collections">Collections</Link>
         </li>
 
         {loggedIn && (
@@ -196,11 +208,8 @@ const Navbar = () => {
             <li>
               <Link to="/cart" className="cart-link">
                 🛒 Cart
-
                 {cartCount > 0 && (
-                  <span className="cart-badge">
-                    {cartCount}
-                  </span>
+                  <span className="cart-badge">{cartCount}</span>
                 )}
               </Link>
             </li>
@@ -218,32 +227,19 @@ const Navbar = () => {
             </li>
           </>
         ) : (
-          <li
-            className="profile-menu"
-            ref={profileRef}
-          >
+          <li className="profile-menu" ref={profileRef}>
             <div
               className="profile-avatar-nav"
-              onClick={() =>
-                setShowProfileMenu((prev) => !prev)
-              }
+              onClick={() => setShowProfileMenu((prev) => !prev)}
             >
-              {userName ? (
-                userName.charAt(0).toUpperCase()
-              ) : (
-                <FaUser />
-              )}
+              {userName ? userName.charAt(0).toUpperCase() : <FaUser />}
             </div>
 
             {showProfileMenu && (
               <div className="profile-dropdown">
                 <div className="dropdown-user">
                   <div className="profile-avatar-large">
-                    {userName ? (
-                      userName.charAt(0).toUpperCase()
-                    ) : (
-                      <FaUser />
-                    )}
+                    {userName ? userName.charAt(0).toUpperCase() : <FaUser />}
                   </div>
 
                   <h4>{userName || "Customer"}</h4>

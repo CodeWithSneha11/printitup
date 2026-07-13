@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import HomeShirt from "./HomeShirt";
 import {
   FaArrowRight,
-  FaPlay,
+
   FaStar,
   FaPalette,
   FaMagic,
@@ -11,6 +11,12 @@ import {
 } from "react-icons/fa";
 
 import "../styles/Home.css";
+
+// Local category images (replaces Unsplash hotlinks)
+import oversizedImg from "../assets/images/categories/oversized.svg";
+import poloImg from "../assets/images/categories/polo.svg";
+import roundNeckImg from "../assets/images/categories/round-neck.svg";
+
 
 function Home() {
   const colors = [
@@ -27,24 +33,17 @@ function Home() {
   const categories = [
     {
       title: "Oversized",
-      image:
-        "https://images.unsplash.com/photo-1521572163474-6864f9cf17ab?w=500",
+      image: oversizedImg,
     },
     {
       title: "Polo",
-      image:
-        "https://images.unsplash.com/photo-1503341504253-dff4815485f1?w=500",
+      image: poloImg,
     },
     {
       title: "Round Neck",
-      image:
-        "https://images.unsplash.com/photo-1576566588028-4147f3842f27?w=500",
+      image: roundNeckImg,
     },
-    {
-      title: "Hoodies",
-      image:
-        "https://images.unsplash.com/photo-1556821840-3a63f95609a7?w=500",
-    },
+    
   ];
 
   return (
@@ -99,15 +98,11 @@ function Home() {
 
             </Link>
 
-            
-
           </div>
 
           {/* Stats */}
 
           <div className="hero-stats">
-
-           
 
           </div>
 
@@ -218,8 +213,6 @@ function Home() {
 
       </section>
 
-      {/* ================= HOW IT STARTS ================= */}
-
       <section className="design-process">
 
         <div className="section-title">
@@ -247,8 +240,7 @@ function Home() {
             <h3>Select T-Shirt</h3>
 
             <p>
-              Choose from premium cotton,
-              oversized, polo or hoodie styles.
+              Choose from premium cotton.
             </p>
 
           </div>
