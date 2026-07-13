@@ -23,7 +23,7 @@ const AdminNavbar = () => {
   const [adminName] = useState(
     localStorage.getItem("adminName") || "Admin"
   );
-
+const [search, setSearch] = useState("");
   const [adminEmail] = useState(
     localStorage.getItem("adminEmail") || ""
   );
@@ -35,26 +35,22 @@ const AdminNavbar = () => {
     year: "numeric",
   });
 
-  // Close dropdown when clicking outside
   useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(event.target)
-      ) {
-        setShowMenu(false);
-      }
-    };
+  const handleClickOutside = (event) => {
+    if (
+      profileRef.current &&
+      !profileRef.current.contains(event.target)
+    ) {
+      setShowMenu(false);
+    }
+  };
 
-  document.addEventListener("click", handleClickOutside);
+  document.addEventListener("mousedown", handleClickOutside);
 
-    return () => {
-      document.removeEventListener(
-        "mousedown",
-        handleClickOutside
-      );
-    };
-  }, []);
+  return () => {
+    document.removeEventListener("mousedown", handleClickOutside);
+  };
+}, []);
 
   // Logout
   const handleLogout = async () => {
@@ -87,7 +83,17 @@ const AdminNavbar = () => {
 
         <div className="search-box">
           <FaSearch />
-
+<input
+  type="text"
+  placeholder="Search Products, Orders..."
+  value={search}
+  onChange={(e) => setSearch(e.target.value)}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      navigate(`/admin-dashboard/search?q=${search}`);
+    }
+  }}
+/>
           <input
             type="text"
             placeholder="Search..."

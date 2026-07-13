@@ -1,5 +1,5 @@
-import React from "react";
-import { NavLink } from "react-router-dom";
+import React, { useState, useEffect } from "react";
+import { NavLink, useLocation } from "react-router-dom";
 import {
   FaHome,
   FaBoxOpen,
@@ -7,103 +7,69 @@ import {
   FaUsers,
   FaChartBar,
   FaCog,
+  FaBars,
+  FaTimes,
 } from "react-icons/fa";
-
-
 
 import "../styles/Sidebar.css";
 
 const Sidebar = () => {
-  
+  const [open, setOpen] = useState(false);
+  const location = useLocation();
+
+  // close drawer whenever the route changes
+  useEffect(() => {
+    setOpen(false);
+  }, [location.pathname]);
+
+  const navItems = [
+    { to: "/admin-dashboard", end: true, icon: <FaHome />, label: "Dashboard" },
+    { to: "/admin-dashboard/orders", icon: <FaShoppingCart />, label: "Orders" },
+    { to: "/admin-dashboard/collections", icon: <FaBoxOpen />, label: "Collections" },
+    { to: "/admin-dashboard/users", icon: <FaUsers />, label: "Users" },
+    { to: "/admin-dashboard/analytics", icon: <FaChartBar />, label: "Analytics" },
+    { to: "/admin-dashboard/settings", icon: <FaCog />, label: "Settings" },
+  ];
+
   return (
-    <aside className="sidebar">
+    <>
+      <button
+        className="sidebar-toggle"
+        onClick={() => setOpen((o) => !o)}
+        aria-label={open ? "Close menu" : "Open menu"}
+      >
+        {open ? <FaTimes /> : <FaBars />}
+      </button>
 
-      <div className="sidebar-top">
+      <div
+        className={`sidebar-overlay ${open ? "open" : ""}`}
+        onClick={() => setOpen(false)}
+      />
 
-        <h2 className="sidebar-logo">
-          PrintItUp
-        </h2>
+      <aside className={`sidebar ${open ? "open" : ""}`}>
+        <div className="sidebar-top">
+          <h2 className="sidebar-logo">PrintItUp</h2>
 
-      </div>
+          <nav className="sidebar-menu">
+            {navItems.map((item) => (
+              <NavLink
+                key={item.to}
+                to={item.to}
+                end={item.end}
+                className={({ isActive }) =>
+                  isActive ? "sidebar-link active" : "sidebar-link"
+                }
+              >
+                {item.icon}
+                <span>{item.label}</span>
+              </NavLink>
+            ))}
+          </nav>
+        </div>
 
-      <nav className="sidebar-menu">
-
-        <NavLink
-          to="/admin-dashboard"
-          end
-          className={({ isActive }) =>
-            isActive ? "sidebar-link active" : "sidebar-link"
-          }
-        >
-          <FaHome />
-          <span>Dashboard</span>
-        </NavLink>
-
-        <NavLink
-          to="/admin-dashboard/orders"
-          className={({ isActive }) =>
-            isActive ? "sidebar-link active" : "sidebar-link"
-          }
-        >
-          <FaShoppingCart />
-          <span>Orders</span>
-        </NavLink>
-
-        <NavLink
-          to="/admin-dashboard/collections"
-          className={({ isActive }) =>
-            isActive ? "sidebar-link active" : "sidebar-link"
-          }
-        >
-          <FaBoxOpen />
-          <span>Collections</span>
-        </NavLink>
-<NavLink
-  to="/admin-dashboard/products/all"
-  className={({ isActive }) =>
-    isActive ? "sidebar-link active" : "sidebar-link"
-  }
->
-  <FaBoxOpen />
-  <span>Products</span>
-</NavLink>
-        <NavLink
-          to="/admin-dashboard/users"
-          className={({ isActive }) =>
-            isActive ? "sidebar-link active" : "sidebar-link"
-          }
-        >
-          <FaUsers />
-          <span>Users</span>
-        </NavLink>
-
-        <NavLink
-          to="/admin-dashboard/analytics"
-          className={({ isActive }) =>
-            isActive ? "sidebar-link active" : "sidebar-link"
-          }
-        >
-          <FaChartBar />
-          <span>Analytics</span>
-        </NavLink>
-
-        <NavLink
-          to="/admin-dashboard/settings"
-          className={({ isActive }) =>
-            isActive ? "sidebar-link active" : "sidebar-link"
-          }
-        >
-          <FaCog />
-          <span>Settings</span>
-        </NavLink>
-
-      </nav>
-
-    
-
-    </aside>
+      </aside>
+    </>
   );
 };
 
 export default Sidebar;
-

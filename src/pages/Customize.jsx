@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useLocation } from "react-router-dom";
 import { db } from "../firebase";
 import "../styles/Customize.css";
 import TShirt3DPreview, { isWebGLAvailable } from "../components/TShirt3DPreview";
@@ -37,6 +38,13 @@ const tshirtColors = [
 const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
 
 const Customize = () => {
+  const location = useLocation();
+
+  // Product passed in from Collections page (if any)
+  const incomingProduct = location.state?.product || null;
+  const fromCollection = location.state?.fromCollection || false;
+  const [selectedProduct, setSelectedProduct] = useState(incomingProduct);
+
   const [text, setText] = useState("");
   const [position, setPosition] = useState("center");
   const [side, setSide] = useState("front");
@@ -68,6 +76,26 @@ const Customize = () => {
     }
   }, []);
 
+  // Pre-fill fields from the product passed via Collections page.
+  // Runs once on mount; only overrides fields the product actually
+  // specifies, so a direct visit to /customize is unaffected.
+  useEffect(() => {
+    if (!incomingProduct) return;
+
+    if (incomingProduct.color) setSelectedColor(incomingProduct.color);
+    if (incomingProduct.size) setSelectedSize(incomingProduct.size);
+    if (incomingProduct.neck) setNeck(incomingProduct.neck);
+
+    // Show the product's own image as the starting design image.
+    // This is a remote URL, not a blob, so it's never passed to
+    // URL.revokeObjectURL as a blob (see cleanup effect below).
+    if (incomingProduct.image) {
+      setImage(incomingProduct.image);
+      setCloudinaryUrl(incomingProduct.image);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   let finalPrice = 499;
   if (image) finalPrice += 100;
   if (side === "back") finalPrice += 50;
@@ -80,10 +108,12 @@ const Customize = () => {
     return () => clearTimeout(timer);
   }, [side]);
 
-  // Clean up object URL when image changes/unmounts to avoid memory leaks
+  // Clean up object URL when image changes/unmounts to avoid memory leaks.
+  // Only revoke if it's actually a blob URL we created ourselves —
+  // a remote (http/https) product image must not be revoked.
   useEffect(() => {
     return () => {
-      if (image) URL.revokeObjectURL(image);
+      if (image && image.startsWith("blob:")) URL.revokeObjectURL(image);
     };
   }, [image]);
 
@@ -124,7 +154,7 @@ const Customize = () => {
   };
 
   const removeImage = () => {
-    if (image) {
+    if (image && image.startsWith("blob:")) {
       URL.revokeObjectURL(image);
     }
     setImage(null);
@@ -133,7 +163,7 @@ const Customize = () => {
   };
 
   const resetDesign = () => {
-    if (image) {
+    if (image && image.startsWith("blob:")) {
       URL.revokeObjectURL(image);
     }
 
@@ -150,6 +180,10 @@ const Customize = () => {
     setImageFile(null);
     setCloudinaryUrl("");
     setMessage("");
+
+    // Reset also clears the product association, since the design
+    // no longer reflects the product that was passed in
+    setSelectedProduct(null);
   };
 
   const uploadImageToCloudinary = async (file) => {
@@ -224,11 +258,14 @@ const Customize = () => {
       imageName: imageFile?.name || "",
       imageSize: imageFile?.size || 0,
       imageModified: imageFile?.lastModified || 0,
+      productId: selectedProduct?.id || "",
     });
 
     return {
       uid,
       designId,
+      productId: selectedProduct?.id || null,
+      productName: selectedProduct?.name || null,
       text,
       position,
       side,
@@ -320,7 +357,9 @@ const Customize = () => {
         <div className="options-header">
           <h2>Customize Your T-Shirt</h2>
           <p className="options-subtitle">
-            Build your design in a few simple steps
+            {fromCollection && selectedProduct
+              ? `Customizing: ${selectedProduct.name}`
+              : "Build your design in a few simple steps"}
           </p>
         </div>
 

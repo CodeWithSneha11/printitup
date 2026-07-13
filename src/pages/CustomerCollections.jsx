@@ -6,11 +6,6 @@ import { db, auth } from "../firebase";
 import {
   collection,
   onSnapshot,
-  addDoc,
-  serverTimestamp,
-  query,
-  where,
-  getDocs,
 } from "firebase/firestore";
 
 import "../styles/CustomerCollections.css";
@@ -70,48 +65,15 @@ const CustomerCollections = () => {
       ADD PRODUCT TO CART
   ==========================
   */
+const customizeProduct = (product) => {
+  navigate("/customize", {
+    state: {
+      product,
+      fromCollection: true,
+    },
+  });
+};
 
-  const addToCart = async (product) => {
-    const user = auth.currentUser;
-
-    if (!user) {
-      alert("Please login to add products to cart");
-      navigate("/login");
-      return;
-    }
-
-    try {
-      // Check if product already exists in cart
-      const q = query(
-        collection(db, "cart"),
-        where("uid", "==", user.uid),
-        where("productId", "==", product.id)
-      );
-
-      const existing = await getDocs(q);
-
-      if (!existing.empty) {
-        alert("Product already added to cart");
-        return;
-      }
-
-      await addDoc(collection(db, "cart"), {
-        uid: user.uid,
-        productId: product.id,
-        name: product.name,
-        imageUrl: product.image,
-        description: product.description,
-        price: Number(product.price),
-        quantity: 1,
-        type: "product",
-        createdAt: serverTimestamp(),
-      });
-
-    } catch (error) {
-      console.log(error);
-      alert("Failed to add product");
-    }
-  };
 
   return (
     <div className="customer-page">
@@ -161,15 +123,14 @@ const CustomerCollections = () => {
                         <p className="desc">
                           {product.description}
                         </p>
-
-                        <button
-                          onClick={() => addToCart(product)}
-                          disabled={product.stock === 0}
-                        >
-                          {product.stock === 0
-                            ? "Out of Stock"
-                            : "Add To Cart"}
-                        </button>
+<button
+  onClick={() => customizeProduct(product)}
+  disabled={product.stock === 0}
+>
+  {product.stock === 0
+    ? "Out of Stock"
+    : "Customize & Add to Cart"}
+</button>
                       </div>
                     </div>
                   ))}

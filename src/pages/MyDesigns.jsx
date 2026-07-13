@@ -116,7 +116,7 @@ const deleteDesign = async () => {
 
   return (
     <div className="designs-container">
-      <h1>🎨 My Designs</h1>
+      <h1> My Designs</h1>
 
       {designs.length === 0 ? (
         <div className="empty-state">
