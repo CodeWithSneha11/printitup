@@ -12,6 +12,8 @@ import {
   onSnapshot,
   doc,
   getDoc,
+  orderBy,
+  updateDoc,
 } from "firebase/firestore";
 
 import {
@@ -19,6 +21,7 @@ import {
   FaShoppingBag,
   FaSignOutAlt,
   FaMapMarkerAlt,
+  FaBell,
 } from "react-icons/fa";
 
 import "../styles/Navbar.css";
@@ -33,8 +36,10 @@ const Navbar = () => {
   const [menuOpen, setMenuOpen] = useState(false);
 
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
 
   const [cartCount, setCartCount] = useState(0);
+  const [notifications, setNotifications] = useState([]);
 
   const [user, setUser] = useState(null);
 
@@ -123,6 +128,37 @@ const Navbar = () => {
 
     return unsubscribe;
   }, [uid]);
+  /*
+===========================
+    NOTIFICATIONS
+===========================
+*/
+
+  useEffect(() => {
+    if (!uid) {
+      setNotifications([]);
+      return;
+    }
+
+    const q = query(
+      collection(db, "notifications"),
+
+      where("userId", "==", uid),
+
+      orderBy("createdAt", "desc"),
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setNotifications(data);
+    });
+
+    return unsubscribe;
+  }, [uid]);
 
   /*
   ===========================
@@ -143,6 +179,25 @@ const Navbar = () => {
       document.removeEventListener("mousedown", handleClickOutside);
     };
   }, []);
+  /*
+===========================
+    MARK NOTIFICATIONS READ
+===========================
+*/
+
+  const markNotificationsRead = async () => {
+    try {
+      const unreadNotifications = notifications.filter((item) => !item.read);
+
+      for (const item of unreadNotifications) {
+        await updateDoc(doc(db, "notifications", item.id), {
+          read: true,
+        });
+      }
+    } catch (error) {
+      console.log(error);
+    }
+  };
 
   /*
   ===========================
@@ -203,6 +258,40 @@ const Navbar = () => {
 
             <li>
               <Link to="/my-designs">My Designs</Link>
+            </li>
+            <li className="notification-wrapper">
+              <div
+                className="notification-icon"
+                onClick={() => {
+                  setShowNotifications((prev) => !prev);
+
+                  markNotificationsRead();
+                }}
+              >
+                <FaBell />
+
+                {notifications.filter((item) => !item.read).length > 0 && (
+                  <span className="notification-badge">
+                    {notifications.filter((item) => !item.read).length}
+                  </span>
+                )}
+
+                {showNotifications && (
+                  <div className="notification-dropdown">
+                    {notifications.length === 0 ? (
+                      <p>No notifications</p>
+                    ) : (
+                      notifications.map((item) => (
+                        <div className="notification-item" key={item.id}>
+                          <h4>{item.title}</h4>
+
+                          <p>{item.message}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
             </li>
 
             <li>

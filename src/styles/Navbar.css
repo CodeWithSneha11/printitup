@@ -119,7 +119,10 @@
 
   cursor: pointer;
 
-  transition: background 0.25s ease, transform 0.25s ease, color 0.25s ease;
+  transition:
+    background 0.25s ease,
+    transform 0.25s ease,
+    color 0.25s ease;
 }
 
 .logout-btn:hover {
@@ -205,7 +208,9 @@
 
   cursor: pointer;
   box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35);
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .profile-avatar-nav:hover {
@@ -304,7 +309,9 @@
   text-decoration: none;
 
   cursor: pointer;
-  transition: background 0.2s ease, color 0.2s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
 }
 
 .profile-dropdown a svg,
@@ -392,7 +399,125 @@
     box-shadow: none;
   }
 }
+/* =========================
+   NOTIFICATION BELL
+========================= */
 
+.notification-wrapper {
+  position: relative;
+}
+
+.notification-icon {
+  position: relative;
+
+  cursor: pointer;
+
+  font-size: 20px;
+
+  color: #333;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding: 8px;
+}
+
+.notification-icon:hover {
+  color: #6c5ce7;
+}
+
+.notification-badge {
+  position: absolute;
+
+  top: -4px;
+
+  right: -5px;
+
+  background: #e63946;
+
+  color: white;
+
+  font-size: 11px;
+
+  width: 18px;
+
+  height: 18px;
+
+  border-radius: 50%;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  font-weight: bold;
+}
+
+/* Notification Dropdown */
+
+.notification-dropdown {
+  position: absolute;
+
+  top: 38px;
+
+  right: 0;
+
+  width: 320px;
+
+  background: white;
+
+  border-radius: 12px;
+
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.15);
+
+  padding: 10px;
+
+  z-index: 999;
+
+  max-height: 350px;
+
+  overflow-y: auto;
+}
+
+.notification-item {
+  padding: 12px;
+
+  border-bottom: 1px solid #eee;
+}
+
+.notification-item:last-child {
+  border-bottom: none;
+}
+
+.notification-item h4 {
+  margin: 0 0 5px;
+
+  font-size: 15px;
+
+  color: #191c2c;
+}
+
+.notification-item p {
+  margin: 0;
+
+  font-size: 13px;
+
+  color: #666;
+
+  line-height: 1.4;
+}
+
+.notification-dropdown > p {
+  text-align: center;
+
+  color: #777;
+
+  padding: 15px;
+}
 /* ===========================
    MOTION PREFERENCES
 =========================== */

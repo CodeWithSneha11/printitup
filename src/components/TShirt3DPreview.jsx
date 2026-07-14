@@ -3,7 +3,7 @@ import { Canvas } from "@react-three/fiber";
 import { OrbitControls, useGLTF, Center } from "@react-three/drei";
 import * as THREE from "three";
 import { DecalGeometry } from "three/examples/jsm/geometries/DecalGeometry.js";
-
+import tshirtModel from "../assets/models/tshirt.glb";
 /* ------------------------------------------------------------------ */
 export function isWebGLAvailable() {
   try {
@@ -151,7 +151,8 @@ function DesignDecal({ meshes, box, side, texture }) {
 
 /* ------------------------------------------------------------------ */
 function TshirtModel({ color, onReady }) {
-  const { scene } = useGLTF("/models/tshirt.glb");
+  
+const { scene } = useGLTF(tshirtModel);
 
   useEffect(() => {
     const meshes = [];
@@ -289,4 +290,4 @@ function TShirt3DPreview({
 
 export default TShirt3DPreview;
 
-useGLTF.preload("/models/tshirt.glb");
+useGLTF.preload(tshirtModel);

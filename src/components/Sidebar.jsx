@@ -28,7 +28,7 @@ const Sidebar = () => {
     { to: "/admin-dashboard/collections", icon: <FaBoxOpen />, label: "Collections" },
     { to: "/admin-dashboard/users", icon: <FaUsers />, label: "Users" },
     { to: "/admin-dashboard/analytics", icon: <FaChartBar />, label: "Analytics" },
-    { to: "/admin-dashboard/settings", icon: <FaCog />, label: "Settings" },
+   // { to: "/admin-dashboard/settings", icon: <FaCog />, label: "Settings" },
   ];
 
   return (

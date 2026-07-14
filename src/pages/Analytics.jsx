@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from "react";
+import React, { useEffect, useMemo, useState } from "react";
 import {
   FaReceipt,
   FaShoppingBag,
@@ -6,15 +6,16 @@ import {
   FaCoins,
   FaArrowUp,
   FaArrowDown,
+  FaBoxOpen,
+  FaLayerGroup,
+  FaPalette,
 } from "react-icons/fa";
 
-import "../styles/Analytics.css";
+import { collection, getDocs } from "firebase/firestore";
 
-// ---------------------------------------------------------------------------
-// Mock data generation
-// Swap generateAnalyticsData() out for a real API call (e.g. useEffect + fetch
-// to `/api/admin/analytics?range=${range}`) once the backend endpoint exists.
-// ---------------------------------------------------------------------------
+import { db } from "../firebase";
+
+import "../styles/Analytics.css";
 
 const RANGES = [
   { key: "7d", label: "7D", days: 7 },
@@ -23,312 +24,486 @@ const RANGES = [
   { key: "12m", label: "12M", days: 365 },
 ];
 
-// simple seeded PRNG so numbers stay stable per range instead of jumping
-// around on every re-render
-function seededRandom(seed) {
-  let s = seed % 2147483647;
-  if (s <= 0) s += 2147483646;
-  return () => {
-    s = (s * 16807) % 2147483647;
-    return (s - 1) / 2147483646;
-  };
-}
-
-function generateSeries(days, seed, base, volatility) {
-  const rand = seededRandom(seed);
-  const points = [];
-  let value = base;
-  for (let i = 0; i < days; i++) {
-    const drift = (rand() - 0.42) * volatility;
-    value = Math.max(base * 0.25, value + drift);
-    points.push(Math.round(value));
-  }
-  return points;
-}
-
-function generateAnalyticsData(rangeKey) {
-  const range = RANGES.find((r) => r.key === rangeKey) ?? RANGES[1];
-  const sampleDays = range.key === "12m" ? 12 : range.days;
-  const seed = range.days * 97;
-
-  const revenueSeries = generateSeries(sampleDays, seed, 1400, 260);
-  const ordersSeries = generateSeries(sampleDays, seed + 1, 42, 10);
-
-  const totalRevenue = revenueSeries.reduce((a, b) => a + b, 0);
-  const totalOrders = ordersSeries.reduce((a, b) => a + b, 0);
-  const newCustomers = Math.round(totalOrders * 0.36);
-  const avgOrderValue = totalRevenue / Math.max(1, totalOrders);
-
-  const stats = [
-    {
-      key: "revenue",
-      label: "Total Revenue",
-      value: `$${totalRevenue.toLocaleString()}`,
-      delta: 12.4,
-      icon: <FaCoins />,
-      series: revenueSeries,
-    },
-    {
-      key: "orders",
-      label: "Orders",
-      value: totalOrders.toLocaleString(),
-      delta: 6.8,
-      icon: <FaReceipt />,
-      series: ordersSeries,
-    },
-    {
-      key: "customers",
-      label: "New Customers",
-      value: newCustomers.toLocaleString(),
-      delta: -3.1,
-      icon: <FaUserPlus />,
-      series: generateSeries(sampleDays, seed + 2, 15, 5),
-    },
-    {
-      key: "aov",
-      label: "Avg. Order Value",
-      value: `$${avgOrderValue.toFixed(2)}`,
-      delta: 4.2,
-      icon: <FaShoppingBag />,
-      series: generateSeries(sampleDays, seed + 3, 32, 6),
-    },
-  ];
-
-  return {
-    range,
-    revenueSeries,
-    ordersSeries,
-    stats,
-  };
-}
-
-// ---------------------------------------------------------------------------
-// Small SVG chart primitives (no external chart library required)
-// ---------------------------------------------------------------------------
-
-function Sparkline({ points, positive }) {
-  if (!points.length) return null;
-  const w = 100;
-  const h = 32;
-  const max = Math.max(...points);
-  const min = Math.min(...points);
-  const range = max - min || 1;
-
-  const coords = points.map((v, i) => {
-    const x = (i / (points.length - 1 || 1)) * w;
-    const y = h - ((v - min) / range) * h;
-    return [x, y];
-  });
-
-  const path = coords
-    .map(([x, y], i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`)
-    .join(" ");
-
-  return (
-    <svg className="sparkline" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-      <path
-        d={path}
-        fill="none"
-        stroke={positive ? "var(--an-positive)" : "var(--an-negative)"}
-        strokeWidth="2"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
-  );
-}
-
-function RevenueAreaChart({ points, labels }) {
-  const w = 640;
-  const h = 220;
-  const padding = 24;
-  const max = Math.max(...points);
-  const min = 0;
-  const range = max - min || 1;
-
-  const coords = points.map((v, i) => {
-    const x = padding + (i / (points.length - 1 || 1)) * (w - padding * 2);
-    const y = h - padding - ((v - min) / range) * (h - padding * 2);
-    return [x, y];
-  });
-
-  const linePath = coords
-    .map(([x, y], i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`)
-    .join(" ");
-
-  const areaPath = `${linePath} L ${coords[coords.length - 1][0]} ${h - padding} L ${
-    coords[0][0]
-  } ${h - padding} Z`;
-
-  // pick ~5 evenly spaced label indices so the axis doesn't get crowded
-  const labelStep = Math.max(1, Math.floor(labels.length / 5));
-
-  return (
-    <svg className="revenue-chart" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-      <defs>
-        <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0%" stopColor="var(--an-accent)" stopOpacity="0.28" />
-          <stop offset="100%" stopColor="var(--an-accent)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-
-      {[0.25, 0.5, 0.75].map((f) => (
-        <line
-          key={f}
-          x1={padding}
-          x2={w - padding}
-          y1={padding + f * (h - padding * 2)}
-          y2={padding + f * (h - padding * 2)}
-          className="grid-line"
-        />
-      ))}
-
-      <path d={areaPath} fill="url(#revenueFill)" stroke="none" />
-      <path d={linePath} fill="none" stroke="var(--an-accent)" strokeWidth="2.5" />
-
-      {coords.map(([x, y], i) => (
-        <circle key={i} cx={x} cy={y} r={i === coords.length - 1 ? 4 : 0} fill="var(--an-accent)" />
-      ))}
-
-      {labels.map((l, i) =>
-        i % labelStep === 0 ? (
-          <text
-            key={i}
-            x={coords[i][0]}
-            y={h - 4}
-            textAnchor="middle"
-            className="axis-label"
-          >
-            {l}
-          </text>
-        ) : null
-      )}
-    </svg>
-  );
-}
-
-function OrdersBarChart({ points, labels }) {
-  const w = 640;
-  const h = 220;
-  const padding = 24;
-  const max = Math.max(...points) || 1;
-  const barGap = 4;
-  const barWidth = (w - padding * 2) / points.length - barGap;
-
-  const labelStep = Math.max(1, Math.floor(labels.length / 5));
-
-  return (
-    <svg className="orders-chart" viewBox={`0 0 ${w} ${h}`} preserveAspectRatio="none">
-      {points.map((v, i) => {
-        const barH = ((v / max) * (h - padding * 2)) || 0;
-        const x = padding + i * (barWidth + barGap);
-        const y = h - padding - barH;
-        return (
-          <rect
-            key={i}
-            x={x}
-            y={y}
-            width={Math.max(1, barWidth)}
-            height={barH}
-            rx="2"
-            className="orders-bar"
-          />
-        );
-      })}
-      {labels.map((l, i) =>
-        i % labelStep === 0 ? (
-          <text
-            key={i}
-            x={padding + i * (barWidth + barGap) + barWidth / 2}
-            y={h - 4}
-            textAnchor="middle"
-            className="axis-label"
-          >
-            {l}
-          </text>
-        ) : null
-      )}
-    </svg>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Page
-// ---------------------------------------------------------------------------
-
 const Analytics = () => {
   const [rangeKey, setRangeKey] = useState("30d");
 
-  const data = useMemo(() => generateAnalyticsData(rangeKey), [rangeKey]);
+  const [loading, setLoading] = useState(true);
 
-  const revenueLabels = data.revenueSeries.map((_, i) => `${i + 1}`);
+  const [stats, setStats] = useState({
+    revenue: 0,
+    orders: 0,
+    customers: 0,
+    avgOrder: 0,
+    products: 0,
+    collections: 0,
+    designs: 0,
+  });
 
+  const [revenueSeries, setRevenueSeries] = useState([]);
+  const [ordersSeries, setOrdersSeries] = useState([]);
+  const [labels, setLabels] = useState([]);
+
+  const [recentOrders, setRecentOrders] = useState([]);
+  useEffect(() => {
+    loadAnalytics();
+  }, [rangeKey]);
+
+  const loadAnalytics = async () => {
+    try {
+      setLoading(true);
+
+      const [orderSnap, userSnap, productSnap, collectionSnap, designSnap] =
+        await Promise.all([
+          getDocs(collection(db, "orders")),
+          getDocs(collection(db, "users")),
+          getDocs(collection(db, "products")),
+          getDocs(collection(db, "collections")),
+          getDocs(collection(db, "designs")),
+        ]);
+
+      const allOrders = orderSnap.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      const users = userSnap.docs.map((d) => d.data());
+
+      const range = RANGES.find((r) => r.key === rangeKey);
+
+      const today = new Date();
+
+      const filteredOrders = allOrders.filter((order) => {
+        if (!order.createdAt) return false;
+
+        const orderDate = order.createdAt.toDate();
+
+        if (range.key === "12m") {
+          return orderDate.getFullYear() === today.getFullYear();
+        }
+
+        const diff = (today - orderDate) / (1000 * 60 * 60 * 24);
+
+        return diff <= range.days;
+      });
+
+      const totalRevenue = filteredOrders.reduce(
+        (sum, order) => sum + Number(order.total || 0),
+        0,
+      );
+
+      const totalOrders = filteredOrders.length;
+
+      const avgOrder = totalOrders === 0 ? 0 : totalRevenue / totalOrders;
+
+      setStats({
+        revenue: totalRevenue,
+        orders: totalOrders,
+        customers: users.length,
+        avgOrder,
+        products: productSnap.size,
+        collections: collectionSnap.size,
+        designs: designSnap.size,
+      });
+
+      buildCharts(filteredOrders);
+
+      setRecentOrders(
+        filteredOrders
+          .sort((a, b) => {
+            if (!a.createdAt || !b.createdAt) return 0;
+
+            return b.createdAt.toDate() - a.createdAt.toDate();
+          })
+          .slice(0, 5),
+      );
+    } catch (err) {
+      console.log(err);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const buildCharts = (orders) => {
+    const revenueMap = {};
+    const orderMap = {};
+
+    orders.forEach((order) => {
+      if (!order.createdAt) return;
+
+      const date = order.createdAt.toDate().toLocaleDateString();
+
+      revenueMap[date] = (revenueMap[date] || 0) + Number(order.total || 0);
+
+      orderMap[date] = (orderMap[date] || 0) + 1;
+    });
+
+    const chartLabels = Object.keys(revenueMap);
+
+    setLabels(chartLabels);
+
+    setRevenueSeries(Object.values(revenueMap));
+
+    setOrdersSeries(Object.values(orderMap));
+  };
+  // ==========================================
+  // Sparkline
+  // ==========================================
+
+  function Sparkline({ points, positive = true }) {
+    if (!points || points.length === 0) return null;
+
+    const w = 100;
+    const h = 32;
+
+    const max = Math.max(...points);
+    const min = Math.min(...points);
+    const range = max - min || 1;
+
+    const coords = points.map((v, i) => {
+      const x = (i / (points.length - 1 || 1)) * w;
+      const y = h - ((v - min) / range) * h;
+      return [x, y];
+    });
+
+    const path = coords
+      .map(
+        ([x, y], i) => `${i === 0 ? "M" : "L"} ${x.toFixed(1)} ${y.toFixed(1)}`,
+      )
+      .join(" ");
+
+    return (
+      <svg
+        className="sparkline"
+        viewBox={`0 0 ${w} ${h}`}
+        preserveAspectRatio="none"
+      >
+        <path
+          d={path}
+          fill="none"
+          stroke={positive ? "var(--an-positive)" : "var(--an-negative)"}
+          strokeWidth="2"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+    );
+  }
+  function RevenueAreaChart({ points, labels }) {
+    if (!points.length) return null;
+
+    const w = 650;
+    const h = 220;
+    const padding = 24;
+
+    const max = Math.max(...points);
+    const range = max || 1;
+
+    const coords = points.map((v, i) => {
+      const x = padding + (i / (points.length - 1 || 1)) * (w - padding * 2);
+
+      const y = h - padding - (v / range) * (h - padding * 2);
+
+      return [x, y];
+    });
+
+    const linePath = coords
+      .map(([x, y], i) => `${i === 0 ? "M" : "L"} ${x} ${y}`)
+      .join(" ");
+
+    const areaPath = `${linePath}
+     L ${coords[coords.length - 1][0]} ${h - padding}
+     L ${coords[0][0]} ${h - padding}
+     Z`;
+
+    return (
+      <svg
+        className="revenue-chart"
+        viewBox={`0 0 ${w} ${h}`}
+        preserveAspectRatio="none"
+      >
+        <defs>
+          <linearGradient id="revenueFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="var(--an-accent)" stopOpacity="0.25" />
+            <stop offset="100%" stopColor="var(--an-accent)" stopOpacity="0" />
+          </linearGradient>
+        </defs>
+
+        {[0.25, 0.5, 0.75].map((g) => (
+          <line
+            key={g}
+            x1={padding}
+            x2={w - padding}
+            y1={padding + g * (h - padding * 2)}
+            y2={padding + g * (h - padding * 2)}
+            className="grid-line"
+          />
+        ))}
+
+        <path d={areaPath} fill="url(#revenueFill)" />
+
+        <path
+          d={linePath}
+          fill="none"
+          stroke="var(--an-accent)"
+          strokeWidth="3"
+        />
+
+        {coords.map(([x, y], i) => (
+          <circle key={i} cx={x} cy={y} r={3} fill="var(--an-accent)" />
+        ))}
+
+        {labels.map((label, i) => (
+          <text
+            key={i}
+            x={coords[i][0]}
+            y={h - 6}
+            className="axis-label"
+            textAnchor="middle"
+          >
+            {label}
+          </text>
+        ))}
+      </svg>
+    );
+  }
+  function OrdersBarChart({ points, labels }) {
+    if (!points.length) return null;
+
+    const w = 650;
+    const h = 220;
+    const padding = 24;
+
+    const max = Math.max(...points);
+
+    const barWidth = (w - padding * 2) / points.length - 6;
+
+    return (
+      <svg
+        className="orders-chart"
+        viewBox={`0 0 ${w} ${h}`}
+        preserveAspectRatio="none"
+      >
+        {points.map((value, i) => {
+          const height = (value / max) * (h - padding * 2);
+
+          const x = padding + i * (barWidth + 6);
+
+          const y = h - padding - height;
+
+          return (
+            <rect
+              key={i}
+              x={x}
+              y={y}
+              width={barWidth}
+              height={height}
+              rx="3"
+              className="orders-bar"
+            />
+          );
+        })}
+
+        {labels.map((label, i) => (
+          <text
+            key={i}
+            x={padding + i * (barWidth + 6) + barWidth / 2}
+            y={h - 6}
+            className="axis-label"
+            textAnchor="middle"
+          >
+            {label}
+          </text>
+        ))}
+      </svg>
+    );
+  }
+  if (loading) {
+    return (
+      <div className="analytics-page">
+        <h2>Loading Analytics...</h2>
+      </div>
+    );
+  }
   return (
     <div className="analytics-page">
+      {/* ===========================
+        HEADER
+    ============================ */}
+
       <header className="analytics-header">
         <div>
-          <h1>Analytics</h1>
-          <p className="analytics-subtitle">
-            Store performance overview for the selected period
-          </p>
+          <h1>Analytics Dashboard</h1>
         </div>
 
-        <div className="range-toggle" role="tablist" aria-label="Date range">
-          {RANGES.map((r) => (
+        <div className="range-toggle">
+          {RANGES.map((range) => (
             <button
-              key={r.key}
-              role="tab"
-              aria-selected={rangeKey === r.key}
-              className={rangeKey === r.key ? "range-btn active" : "range-btn"}
-              onClick={() => setRangeKey(r.key)}
+              key={range.key}
+              className={
+                rangeKey === range.key ? "range-btn active" : "range-btn"
+              }
+              onClick={() => setRangeKey(range.key)}
             >
-              {r.label}
+              {range.label}
             </button>
           ))}
         </div>
       </header>
-
       <section className="stats-grid">
-        {data.stats.map((s) => {
-          const positive = s.delta >= 0;
-          return (
-            <div className="stat-card" key={s.key}>
-              <div className="stat-card-top">
-                <span className="stat-icon">{s.icon}</span>
-                <span className={`stat-delta ${positive ? "up" : "down"}`}>
-                  {positive ? <FaArrowUp /> : <FaArrowDown />}
-                  {Math.abs(s.delta).toFixed(1)}%
-                </span>
-              </div>
-              <div className="stat-value">{s.value}</div>
-              <div className="stat-label">{s.label}</div>
-              <Sparkline points={s.series} positive={positive} />
-            </div>
-          );
-        })}
-      </section>
+        {/* Revenue */}
 
-      <section className="charts-row single">
-        <div className="chart-card revenue-card">
-          <div className="chart-card-header">
-            <h2>Revenue Trend</h2>
-            <span className="chart-card-meta">
-              {data.range.label} · {data.revenueSeries.length} data points
+        <div className="stat-card">
+          <div className="stat-card-top">
+            <span className="stat-icon">
+              <FaCoins />
+            </span>
+
+            <span className="stat-delta up">
+              <FaArrowUp />
+              Live
             </span>
           </div>
-          <RevenueAreaChart points={data.revenueSeries} labels={revenueLabels} />
+
+          <div className="stat-value">₹{stats.revenue.toLocaleString("en-IN")}</div>
+
+          <div className="stat-label">Total Revenue</div>
+
+          <Sparkline points={revenueSeries} positive />
+        </div>
+
+        {/* Orders */}
+
+        <div className="stat-card">
+          <div className="stat-card-top">
+            <span className="stat-icon">
+              <FaReceipt />
+            </span>
+
+            <span className="stat-delta up">
+              <FaArrowUp />
+              Live
+            </span>
+          </div>
+
+          <div className="stat-value">{stats.orders}</div>
+
+          <div className="stat-label">Orders</div>
+
+          <Sparkline points={ordersSeries} positive />
+        </div>
+
+        {/* Customers */}
+
+        <div className="stat-card">
+          <div className="stat-card-top">
+            <span className="stat-icon">
+              <FaUserPlus />
+            </span>
+
+            <span className="stat-delta up">
+              <FaArrowUp />
+              Live
+            </span>
+          </div>
+
+          <div className="stat-value">{stats.customers}</div>
+
+          <div className="stat-label">Customers</div>
+
+          <Sparkline points={[2, 4, 5, 6, 8, 10, 12]} positive />
+        </div>
+
+        {/* Average Order */}
+
+        <div className="stat-card">
+          <div className="stat-card-top">
+            <span className="stat-icon">
+              <FaShoppingBag />
+            </span>
+
+            <span className="stat-delta up">
+              <FaArrowUp />
+              Live
+            </span>
+          </div>
+
+          <div className="stat-value">₹{Math.round(stats.avgOrder)}</div>
+
+          <div className="stat-label">Avg Order Value</div>
+
+          <Sparkline points={[5, 8, 6, 10, 9, 12]} positive />
         </div>
       </section>
-
-      <section className="charts-row single">
-        <div className="chart-card orders-card">
-          <div className="chart-card-header">
-            <h2>Orders</h2>
-            <span className="chart-card-meta">
-              {data.ordersSeries.reduce((a, b) => a + b, 0).toLocaleString()} total
+      <section className="stats-grid">
+        <div className="stat-card">
+          <div className="stat-card-top">
+            <span className="stat-icon">
+              <FaBoxOpen />
             </span>
           </div>
-          <OrdersBarChart points={data.ordersSeries} labels={revenueLabels} />
+
+          <div className="stat-value">{stats.products}</div>
+
+          <div className="stat-label">Products</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-card-top">
+            <span className="stat-icon">
+              <FaLayerGroup />
+            </span>
+          </div>
+
+          <div className="stat-value">{stats.collections}</div>
+
+          <div className="stat-label">Collections</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-card-top">
+            <span className="stat-icon">
+              <FaPalette />
+            </span>
+          </div>
+
+          <div className="stat-value">{stats.designs}</div>
+
+          <div className="stat-label">Saved Designs</div>
+        </div>
+
+        <div className="stat-card">
+          <div className="stat-card-top">
+            <span className="stat-icon">
+              <FaReceipt />
+            </span>
+          </div>
+
+          <div className="stat-value">{recentOrders.length}</div>
+
+          <div className="stat-label">Recent Orders</div>
+        </div>
+      </section>
+      <section className="charts-row single">
+        <div className="chart-card">
+          <div className="chart-card-header">
+            <h2>Revenue Trend</h2>
+
+            <span className="chart-card-meta">
+             ₹{stats.revenue.toLocaleString("en-IN")}
+            </span>
+          </div>
+
+          <RevenueAreaChart points={revenueSeries} labels={labels} />
+        </div>
+      </section>
+      <section className="charts-row single">
+        <div className="chart-card">
+          <div className="chart-card-header">
+            <h2>Orders Trend</h2>
+
+            <span className="chart-card-meta">{stats.orders} Orders</span>
+          </div>
+
+          <OrdersBarChart points={ordersSeries} labels={labels} />
         </div>
       </section>
     </div>

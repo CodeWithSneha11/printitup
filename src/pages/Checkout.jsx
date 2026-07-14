@@ -8,6 +8,7 @@ import {
   deleteDoc,
   doc,
   serverTimestamp,
+  setDoc,
 } from "firebase/firestore";
 
 import { useNavigate } from "react-router-dom";
@@ -205,31 +206,34 @@ const Checkout = () => {
 
       setMessage("");
 
-      await addDoc(
-        collection(db, "orders"),
-        {
-          uid,
+  const orderRef = doc(collection(db, "orders"));
 
-          customer: {
-            name: selectedAddress.fullName,
-            phone: selectedAddress.phone,
-            email:
-              auth.currentUser?.email || "",
-          },
+await setDoc(orderRef, {
 
-          deliveryAddress: selectedAddress,
+  orderId: orderRef.id,
 
-          payment: paymentMethod,
+  uid,
 
-          items: cartItems,
+  customer: {
+    name: selectedAddress.fullName,
+    phone: selectedAddress.phone,
+    email:
+      auth.currentUser?.email || "",
+  },
 
-          total,
+  deliveryAddress: selectedAddress,
 
-          status: "Pending",
+  payment: paymentMethod,
 
-          createdAt: serverTimestamp(),
-        }
-      );
+  items: cartItems,
+
+  total,
+
+  status: "Pending",
+
+  createdAt: serverTimestamp(),
+
+});
 
       // Empty Cart
 

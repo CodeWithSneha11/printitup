@@ -1,3 +1,4 @@
+import tshirtModel from "../assets/models/tshirt.glb";
 import { Suspense } from "react";
 import { Canvas } from "@react-three/fiber";
 import {
@@ -10,7 +11,8 @@ import {
 } from "@react-three/drei";
 
 function Shirt() {
-  const { scene } = useGLTF("/models/tshirt.glb");
+  
+const { scene } = useGLTF(tshirtModel);
 
   return (
     <Center>
@@ -31,15 +33,15 @@ export default function HomeShirt() {
       <directionalLight position={[5, 5, 5]} intensity={2} />
 
       <Suspense fallback={null}>
-        <PresentationControls
-          global
-          speed={2}
-          rotation={[0, 0.3, 0]}
-          polar={[-0.2, 0.2]}
-          azimuth={[-Math.PI / 4, Math.PI / 4]}
-        >
-          <Shirt />
-        </PresentationControls>
+  <PresentationControls
+  global
+  speed={2}
+  rotation={[0, 0.3, 0]}
+  polar={[-0.2, 0.2]}
+  azimuth={[-Math.PI / 4, Math.PI / 4]}
+>
+  <Shirt />
+</PresentationControls>
 
         <Environment preset="city" />
       </Suspense>
@@ -61,4 +63,4 @@ export default function HomeShirt() {
   );
 }
 
-useGLTF.preload("/models/tshirt.glb");
+useGLTF.preload(tshirtModel);

@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   collection,
   query,
@@ -13,6 +14,7 @@ import { db } from "../firebase";
 import "../styles/MyDesigns.css";
 
 const MyDesigns = () => {
+  const navigate = useNavigate();
   const [designs, setDesigns] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showPopup, setShowPopup] = useState(false);
@@ -170,7 +172,19 @@ const deleteDesign = async () => {
               <button className="cart-btn" onClick={() => moveToCart(design)}>
                  Move to Cart
               </button>
-
+<button
+  className="edit-btn"
+  onClick={() =>
+    navigate("/customize", {
+      state: {
+        design,
+        editMode: true,
+      },
+    })
+  }
+>
+   Edit Design
+</button>
               <button
   className="delete-btn"
   onClick={() => {

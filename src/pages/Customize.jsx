@@ -2,7 +2,9 @@ import React, { useState, useEffect } from "react";
 import { useLocation } from "react-router-dom";
 import { db } from "../firebase";
 import "../styles/Customize.css";
-import TShirt3DPreview, { isWebGLAvailable } from "../components/TShirt3DPreview";
+import TShirt3DPreview, {
+  isWebGLAvailable,
+} from "../components/TShirt3DPreview";
 import {
   collection,
   addDoc,
@@ -23,6 +25,7 @@ import {
   FaSquare,
   FaTimes,
 } from "react-icons/fa";
+import { Rnd } from "react-rnd";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5mb
 
@@ -44,6 +47,9 @@ const Customize = () => {
   const incomingProduct = location.state?.product || null;
   const fromCollection = location.state?.fromCollection || false;
   const [selectedProduct, setSelectedProduct] = useState(incomingProduct);
+  const incomingDesign = location.state?.design || null;
+  const editMode = location.state?.editMode || false;
+  const designDocId = incomingDesign?.id || null;
 
   const [text, setText] = useState("");
   const [position, setPosition] = useState("center");
@@ -69,7 +75,28 @@ const Customize = () => {
 
   // 3D / 2D preview toggle. Defaults to 3D only if the browser actually
   // supports WebGL — otherwise falls back to the CSS preview automatically.
-  const [use3D, setUse3D] = useState(true);
+  const [use3D, setUse3D] = useState(false);
+  const [selectedElement, setSelectedElement] = useState(null);
+  const [imagePosition, setImagePosition] = useState({
+    x: 100,
+    y: 80,
+  });
+
+  const [imageSize, setImageSize] = useState({
+    width: 100,
+    height: 100,
+  });
+
+  const [textPosition, setTextPosition] = useState({
+    x: 90,
+    y: 220,
+  });
+
+  const [textSize, setTextSize] = useState({
+    width: 150,
+    height: 50,
+  });
+
   useEffect(() => {
     if (!isWebGLAvailable()) {
       setUse3D(false);
@@ -95,6 +122,46 @@ const Customize = () => {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+  useEffect(() => {
+    if (!editMode || !incomingDesign) return;
+
+    setText(incomingDesign.text || "");
+
+    setSide(incomingDesign.side || "front");
+
+    setPosition(incomingDesign.position || "center");
+
+    setSelectedColor(incomingDesign.tshirtColor || "#ffffff");
+
+    setSelectedSize(incomingDesign.size || "M");
+
+    setTextColor(incomingDesign.textColor || "#000000");
+
+    setFontSize(Number(incomingDesign.fontSize) || 18);
+
+    setNeck(incomingDesign.neck || "round");
+
+    if (incomingDesign.imageUrl) {
+      setImage(incomingDesign.imageUrl);
+      setCloudinaryUrl(incomingDesign.imageUrl);
+    }
+
+    if (incomingDesign.imagePosition) {
+      setImagePosition(incomingDesign.imagePosition);
+    }
+
+    if (incomingDesign.imageSize) {
+      setImageSize(incomingDesign.imageSize);
+    }
+
+    if (incomingDesign.textPosition) {
+      setTextPosition(incomingDesign.textPosition);
+    }
+
+    if (incomingDesign.textSize) {
+      setTextSize(incomingDesign.textSize);
+    }
+  }, [editMode, incomingDesign]);
 
   let finalPrice = 499;
   if (image) finalPrice += 100;
@@ -116,19 +183,34 @@ const Customize = () => {
       if (image && image.startsWith("blob:")) URL.revokeObjectURL(image);
     };
   }, [image]);
+useEffect(() => {
+  const handleKeyDown = (e) => {
+    if (e.key !== "Delete") return;
 
+if (selectedElement === "image") {
+  removeImage();
+  setSelectedElement(null);
+}
+
+if (selectedElement === "text") {
+  setText("");
+  setSelectedElement(null);
+}
+  };
+
+  window.addEventListener("keydown", handleKeyDown);
+
+  return () => {
+    window.removeEventListener("keydown", handleKeyDown);
+  };
+}, [selectedElement, image]);
   const handleImageUpload = async (e) => {
     setCloudinaryUrl("");
     const file = e.target.files[0];
 
     if (!file) return;
 
-    const allowedTypes = [
-      "image/png",
-      "image/jpeg",
-      "image/jpg",
-      "image/webp",
-    ];
+    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
 
     if (!allowedTypes.includes(file.type)) {
       setMessage("❌ Only PNG, JPG, JPEG and WEBP images are allowed.");
@@ -202,7 +284,7 @@ const Customize = () => {
         {
           method: "POST",
           body: formData,
-        }
+        },
       );
 
       const data = await response.json();
@@ -228,7 +310,9 @@ const Customize = () => {
     const data = encoder.encode(JSON.stringify(design));
     const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray.map((b) => b.toString(16).padStart(2, "0")).join("");
+    const hashHex = hashArray
+      .map((b) => b.toString(16).padStart(2, "0"))
+      .join("");
     return hashHex.substring(0, 20);
   };
 
@@ -245,19 +329,29 @@ const Customize = () => {
       imageUrl = await uploadImageToCloudinary(imageFile);
       setCloudinaryUrl(imageUrl);
     }
-
     const designId = await generateDesignId({
       text,
       position,
       side,
+
       tshirtColor: selectedColor,
       size: selectedSize,
+
       textColor,
       fontSize: Number(fontSize),
+
       neck,
+
       imageName: imageFile?.name || "",
-      imageSize: imageFile?.size || 0,
+      imageFileSize: imageFile?.size || 0,
       imageModified: imageFile?.lastModified || 0,
+
+      imagePosition,
+      imageSize,
+
+      textPosition,
+      textSize,
+
       productId: selectedProduct?.id || "",
     });
 
@@ -266,16 +360,29 @@ const Customize = () => {
       designId,
       productId: selectedProduct?.id || null,
       productName: selectedProduct?.name || null,
+
       text,
       position,
       side,
+
       tshirtColor: selectedColor,
       size: selectedSize,
+
       textColor,
       fontSize: Number(fontSize),
+
       neck,
+
       imageUrl,
+
+      imagePosition,
+      imageSize,
+
+      textPosition,
+      textSize,
+
       price: finalPrice,
+
       createdAt: serverTimestamp(),
     };
   };
@@ -287,9 +394,15 @@ const Customize = () => {
 
       const designData = await buildDesignData();
 
-      await addDoc(collection(db, "designs"), designData);
+      if (editMode && designDocId) {
+        await updateDoc(doc(db, "designs", designDocId), designData);
 
-      setMessage("✅ Design saved successfully!");
+        setMessage("✅ Design updated successfully!");
+      } else {
+        await addDoc(collection(db, "designs"), designData);
+
+        setMessage("✅ Design saved successfully!");
+      }
     } catch (err) {
       console.log(err);
       setMessage("❌ " + (err.message || "Unable to save design."));
@@ -314,7 +427,7 @@ const Customize = () => {
       const q = query(
         collection(db, "cart"),
         where("uid", "==", uid),
-        where("designId", "==", designData.designId)
+        where("designId", "==", designData.designId),
       );
 
       const snapshot = await getDocs(q);
@@ -393,7 +506,11 @@ const Customize = () => {
 
           {image && (
             <div className="uploaded-thumb-row">
-              <img src={image} alt="Uploaded design" className="uploaded-thumb" />
+              <img
+                src={image}
+                alt="Uploaded design"
+                className="uploaded-thumb"
+              />
               <div className="uploaded-thumb-info">
                 <span>Image added</span>
                 <button className="remove-image-btn" onClick={removeImage}>
@@ -615,23 +732,104 @@ const Customize = () => {
               <div className="stitch"></div>
 
               {image && (
-                <img
-                  src={image}
-                  className={`logo-preview ${position}`}
-                  alt="Logo"
-                />
-              )}
+                <Rnd
+                  size={{
+                    width: imageSize.width,
+                    height: imageSize.height,
+                  }}
+                  position={{
+                    x: imagePosition.x,
+                    y: imagePosition.y,
+                  }}
+                  bounds="parent"
+                  onClick={() => setSelectedElement("image")}
+                  enableResizing={selectedElement === "image"}
+                  disableDragging={selectedElement !== "image"}
+                  onDragStop={(e, d) => {
+                    setImagePosition({
+                      x: d.x,
+                      y: d.y,
+                    });
+                  }}
+                  onResizeStop={(e, direction, ref, delta, position) => {
+                    setImageSize({
+                      width: ref.offsetWidth,
+                      height: ref.offsetHeight,
+                    });
 
-              {text && (
-                <div
-                  className={`text-preview ${position}`}
-                  style={{
-                    color: textColor,
-                    fontSize: `${fontSize}px`,
+                    setImagePosition({
+                      x: position.x,
+                      y: position.y,
+                    });
                   }}
                 >
-                  {text}
-                </div>
+                  <img
+                    src={image}
+                    alt="Logo"
+                    style={{
+                      width: "100%",
+                      height: "100%",
+                      objectFit: "contain",
+                      border:
+                        selectedElement === "image"
+                          ? "2px dashed #2563eb"
+                          : "none",
+                    }}
+                  />
+                </Rnd>
+              )}
+              {text && (
+                <Rnd
+                  size={{
+                    width: textSize.width,
+                    height: textSize.height,
+                  }}
+                  position={{
+                    x: textPosition.x,
+                    y: textPosition.y,
+                  }}
+                  bounds="parent"
+                  onClick={() => setSelectedElement("text")}
+                  enableResizing={selectedElement === "text"}
+                   disableDragging={selectedElement !== "text"}
+                  onDragStop={(e, d) => {
+                    setTextPosition({
+                      x: d.x,
+                      y: d.y,
+                    });
+                  }}
+                  onResizeStop={(e, direction, ref, delta, position) => {
+                    setTextSize({
+                      width: ref.offsetWidth,
+                      height: ref.offsetHeight,
+                    });
+
+                    setTextPosition({
+                      x: position.x,
+                      y: position.y,
+                    });
+                  }}
+                >
+                  <div
+                    style={{
+                      color: textColor,
+                      fontSize: `${fontSize}px`,
+                      fontWeight: "bold",
+                      width: "100%",
+                      height: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      textAlign: "center",
+                      border:
+                        selectedElement === "text"
+                          ? "2px dashed #2563eb"
+                          : "none",
+                    }}
+                  >
+                    {text}
+                  </div>
+                </Rnd>
               )}
             </div>
           </div>

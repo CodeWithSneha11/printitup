@@ -174,6 +174,38 @@
   transform: translateY(-2px);
   box-shadow: 0 12px 24px rgba(79, 70, 229, 0.3);
 }
+.edit-btn {
+  flex: 0 0 100%;
+  margin-top: 10px;
+  padding: 12px;
+  border: 1px solid rgba(184, 121, 31, 0.25);
+  border-radius: 10px;
+  background: linear-gradient(135deg, #fbbf24, #f59e0b);
+  color: #ffffff;
+  font-size: 14.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+  box-shadow: 0 8px 18px rgba(245, 158, 11, 0.25);
+}
+
+.edit-btn:hover {
+  transform: translateY(-2px);
+  filter: brightness(1.05);
+  box-shadow: 0 12px 24px rgba(245, 158, 11, 0.35);
+}
+
+.edit-btn:active {
+  transform: translateY(0);
+}
+
+.edit-btn:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
 
 .delete-btn {
   flex: 0 0 100%;
@@ -336,6 +368,23 @@
     flex: 0 0 100%;
   }
 }
+@media (prefers-reduced-motion: reduce) {
+  .design-card,
+  .cart-btn,
+  .edit-btn,
+  .delete-btn,
+  .confirm-btn,
+  .popup-buttons .cancel-btn {
+    transition: none;
+  }
+
+  .design-card:hover,
+  .cart-btn:hover,
+  .edit-btn:hover,
+  .delete-btn:hover {
+    transform: none;
+  }
+} 
 
 /* ================================
    MOTION PREFERENCES

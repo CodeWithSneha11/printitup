@@ -5,12 +5,13 @@ import {
   doc,
   updateDoc,
   deleteDoc,
+  addDoc,
+  serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
 import "../styles/Orders.css";
 
 const Orders = () => {
-
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -20,189 +21,142 @@ const Orders = () => {
   const [statusFilter, setStatusFilter] = useState("All");
 
   useEffect(() => {
+    const unsubscribe = onSnapshot(collection(db, "orders"), (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
-    const unsubscribe = onSnapshot(
-      collection(db, "orders"),
-      (snapshot) => {
+      data.sort((a, b) => {
+        const first = a.createdAt?.seconds || 0;
+        const second = b.createdAt?.seconds || 0;
 
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+        return second - first;
+      });
 
-        data.sort((a, b) => {
-
-          const first = a.createdAt?.seconds || 0;
-          const second = b.createdAt?.seconds || 0;
-
-          return second - first;
-
-        });
-
-        setOrders(data);
-        setLoading(false);
-
-      }
-    );
+      setOrders(data);
+      setLoading(false);
+    });
 
     return () => unsubscribe();
-
   }, []);
 
-  const updateStatus = async (id, newStatus) => {
-
+  const updateStatus = async (order, newStatus) => {
     try {
+      // Update order status
 
-      await updateDoc(
-        doc(db, "orders", id),
-        {
-          status: newStatus,
-        }
-      );
+      await updateDoc(doc(db, "orders", order.id), {
+        status: newStatus,
+      });
 
+      // Send notification to customer
+
+      if (newStatus === "Processing") {
+        await addDoc(collection(db, "notifications"), {
+          userId: order.uid,
+
+          title: "Order Confirmed",
+
+          message: `Your order #${order.orderId} has been confirmed by PrintItUp.`,
+
+          type: "order",
+
+          read: false,
+
+          createdAt: serverTimestamp(),
+        });
+      }
     } catch (error) {
-
       console.log(error);
 
       alert("Unable to update status.");
-
     }
-
   };
 
   const deleteOrder = async (id) => {
-
     const confirmDelete = window.confirm(
-      "Are you sure you want to delete this order?"
+      "Are you sure you want to delete this order?",
     );
 
     if (!confirmDelete) return;
 
     try {
-
       await deleteDoc(doc(db, "orders", id));
 
       alert("Order deleted successfully.");
-
     } catch (error) {
-
       console.log(error);
 
       alert("Failed to delete order.");
-
     }
-
   };
 
   // Search + Status Filter
   const filteredOrders = orders.filter((order) => {
+    const customerName = order.customer?.name?.toLowerCase() || "";
 
-    const customerName =
-      order.customer?.name?.toLowerCase() || "";
-
-    const customerPhone =
-      order.customer?.phone || "";
+    const customerPhone = order.customer?.phone || "";
 
     const matchesSearch =
       customerName.includes(search.toLowerCase()) ||
       customerPhone.includes(search);
 
     const matchesStatus =
-      statusFilter === "All" ||
-      order.status === statusFilter;
+      statusFilter === "All" || order.status === statusFilter;
 
     return matchesSearch && matchesStatus;
-
   });
 
   if (loading) {
-
     return (
-
-
-        <div className="admin-content">
-
-          <h2>Loading Orders...</h2>
-
-        </div>
-
+      <div className="admin-content">
+        <h2>Loading Orders...</h2>
+      </div>
     );
-
   }
 
   return (
-        <div className="admin-page">
-
+    <div className="admin-page">
       <div className="admin-content">
-
         <div className="orders-page">
-
           <div className="orders-header">
-
             <div>
-
               <h1>Orders</h1>
 
-              <p>
-                Total Orders : {filteredOrders.length}
-              </p>
-
+              <p>Total Orders : {filteredOrders.length}</p>
             </div>
 
             <div className="orders-filters">
-
               <input
                 type="text"
                 placeholder="Search by name or phone..."
                 className="search-input"
                 value={search}
-                onChange={(e) =>
-                  setSearch(e.target.value)
-                }
+                onChange={(e) => setSearch(e.target.value)}
               />
 
               <select
                 className="filter-select"
                 value={statusFilter}
-                onChange={(e) =>
-                  setStatusFilter(e.target.value)
-                }
+                onChange={(e) => setStatusFilter(e.target.value)}
               >
+                <option value="All">All Orders</option>
 
-                <option value="All">
-                  All Orders
-                </option>
+                <option value="Pending">Pending</option>
 
-                <option value="Pending">
-                  Pending
-                </option>
+                <option value="Processing">Processing</option>
 
-                <option value="Processing">
-                  Processing
-                </option>
+                <option value="Shipped">Shipped</option>
 
-                <option value="Shipped">
-                  Shipped
-                </option>
-
-                <option value="Delivered">
-                  Delivered
-                </option>
-
+                <option value="Delivered">Delivered</option>
               </select>
-
             </div>
-
           </div>
 
           <div className="orders-card">
-
             <table className="orders-table">
-
               <thead>
-
                 <tr>
-
                   <th>Customer</th>
 
                   <th>Phone</th>
@@ -212,17 +166,12 @@ const Orders = () => {
                   <th>Status</th>
 
                   <th>Actions</th>
-
                 </tr>
-
               </thead>
 
               <tbody>
-
                 {filteredOrders.length === 0 ? (
-
                   <tr>
-
                     <td
                       colSpan="5"
                       style={{
@@ -230,117 +179,66 @@ const Orders = () => {
                         padding: "30px",
                       }}
                     >
-
                       No Orders Found
-
                     </td>
-
                   </tr>
-
                 ) : (
-
                   filteredOrders.map((order) => (
-
                     <tr key={order.id}>
+                      <td>{order.customer?.name}</td>
+
+                      <td>{order.customer?.phone}</td>
+
+                      <td>₹{order.total}</td>
 
                       <td>
-                        {order.customer?.name}
-                      </td>
-
-                      <td>
-                        {order.customer?.phone}
-                      </td>
-
-                      <td>
-                        ₹{order.total}
-                      </td>
-
-                      <td>
-
                         <select
                           className="status-select"
                           value={order.status}
-                          onChange={(e) =>
-                            updateStatus(
-                              order.id,
-                              e.target.value
-                            )
-                          }
+                          onChange={(e) => updateStatus(order, e.target.value)}
                         >
+                          <option value="Pending">Pending</option>
 
-                          <option value="Pending">
-                            Pending
-                          </option>
+                          <option value="Processing">Processing</option>
 
-                          <option value="Processing">
-                            Processing
-                          </option>
+                          <option value="Shipped">Shipped</option>
 
-                          <option value="Shipped">
-                            Shipped
-                          </option>
-
-                          <option value="Delivered">
-                            Delivered
-                          </option>
-
+                          <option value="Delivered">Delivered</option>
                         </select>
-
                       </td>
 
                       <td>
-
                         <div className="action-buttons">
-
                           <button
                             className="view-btn"
-                            onClick={() =>
-                              setSelectedOrder(order)
-                            }
+                            onClick={() => setSelectedOrder(order)}
                           >
-
                             View
-
                           </button>
 
                           <button
                             className="delete-btn"
-                            onClick={() =>
-                              deleteOrder(order.id)
-                            }
+                            onClick={() => deleteOrder(order.id)}
                           >
-
                             Delete
-
                           </button>
-
                         </div>
-
                       </td>
-
                     </tr>
-
                   ))
-
                 )}
-
               </tbody>
-
             </table>
-                        {selectedOrder && (
-
+            {selectedOrder && (
               <div
                 className="modal-overlay"
                 onClick={() => setSelectedOrder(null)}
               >
-
                 <div
                   className="order-modal"
                   onClick={(e) => e.stopPropagation()}
                 >
-
                   <div className="modal-header">
-
                     <h2>Order Details</h2>
 
                     <button
@@ -349,26 +247,21 @@ const Orders = () => {
                     >
                       ✕
                     </button>
-
                   </div>
 
                   <div className="customer-section">
-
                     <h3>Customer Information</h3>
 
                     <p>
-                      <strong>Name :</strong>{" "}
-                      {selectedOrder.customer?.name}
+                      <strong>Name :</strong> {selectedOrder.customer?.name}
                     </p>
 
                     <p>
-                      <strong>Phone :</strong>{" "}
-                      {selectedOrder.customer?.phone}
+                      <strong>Phone :</strong> {selectedOrder.customer?.phone}
                     </p>
 
                     <p>
-                      <strong>Email :</strong>{" "}
-                      {selectedOrder.customer?.email}
+                      <strong>Email :</strong> {selectedOrder.customer?.email}
                     </p>
 
                     {/*
@@ -404,12 +297,10 @@ const Orders = () => {
                     </p>
 
                     {selectedOrder.deliveryAddress?.landmark && (
-
                       <p>
                         <strong>Landmark :</strong>{" "}
                         {selectedOrder.deliveryAddress.landmark}
                       </p>
-
                     )}
 
                     {/*
@@ -418,56 +309,31 @@ const Orders = () => {
                     */}
 
                     <p>
-                      <strong>Payment :</strong>{" "}
-                      {selectedOrder.payment}
+                      <strong>Payment :</strong> {selectedOrder.payment}
                     </p>
 
                     <p>
-                      <strong>Status :</strong>{" "}
-                      {selectedOrder.status}
+                      <strong>Status :</strong> {selectedOrder.status}
                     </p>
-
                   </div>
 
                   <hr />
 
-                  <h3 className="items-title">
-                    Ordered Products
-                  </h3>
+                  <h3 className="items-title">Ordered Products</h3>
 
                   <div className="items-list">
-
                     {selectedOrder.items?.map((item, index) => (
-
-                      <div
-                        className="item-card"
-                        key={index}
-                      >
-
+                      <div className="item-card" key={index}>
                         <div className="item-image">
-
                           {item.imageUrl ? (
-
-                            <img
-                              src={item.imageUrl}
-                              alt="Design"
-                            />
-
+                            <img src={item.imageUrl} alt="Design" />
                           ) : (
-
-                            <div className="no-image">
-                              No Image
-                            </div>
-
+                            <div className="no-image">No Image</div>
                           )}
-
                         </div>
 
                         <div className="item-details">
-
-                          <h4>
-                            {item.text || "Custom T-Shirt"}
-                          </h4>
+                          <h4>{item.text || "Custom T-Shirt"}</h4>
 
                           <p>
                             <strong>Color:</strong> {item.tshirtColor}
@@ -490,45 +356,26 @@ const Orders = () => {
                           </p>
 
                           <p>
-                            <strong>Quantity:</strong>{" "}
-                            {item.quantity || 1}
+                            <strong>Quantity:</strong> {item.quantity || 1}
                           </p>
-
                         </div>
 
-                        <div className="item-price">
-
-                          ₹{item.price}
-
-                        </div>
-
+                        <div className="item-price">₹{item.price}</div>
                       </div>
-
                     ))}
-
                   </div>
 
                   <div className="modal-total">
-
                     Grand Total : ₹{selectedOrder.total}
-
                   </div>
-
                 </div>
-
               </div>
-
             )}
-                      </div>
-
+          </div>
         </div>
-
       </div>
-
     </div>
-
   );
-
 };
 
 export default Orders;

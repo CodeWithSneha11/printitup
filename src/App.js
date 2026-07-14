@@ -33,6 +33,8 @@ import AdminProfile from "./pages/AdminProfile";
 import ManageAddress from "./pages/ManageAddress";
 import Collections from "./pages/Collections";
 import Analytics from "./pages/Analytics";
+import AdminSettings from "./pages/AdminSettings";
+
 function AppContent() {
   const location = useLocation();
 
@@ -141,6 +143,10 @@ element={<ManageAddress/>}
   <Route path="collections" element={<Collections />} />
   <Route path="users" element={<Users />} />
   <Route path="profile" element={<AdminProfile />} />
+  <Route
+ path="settings"
+ element={<AdminSettings />}
+/>
 </Route>
 
       </Routes>
@@ -151,7 +157,7 @@ element={<ManageAddress/>}
 
 function App() {
   return (
-    <Router basename="/printitup">
+    <Router>
       <AppContent />
     </Router>
   );

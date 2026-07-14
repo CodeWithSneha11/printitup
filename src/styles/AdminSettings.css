@@ -1,0 +1,394 @@
+.admin-settings {
+  padding: 30px;
+  background: #f5f6fa;
+  min-height: 100vh;
+}
+
+
+/* Header */
+
+.settings-header {
+  margin-bottom: 25px;
+}
+
+
+.settings-header h1 {
+  font-size: 32px;
+  color: #191c2c;
+  margin-bottom: 8px;
+}
+
+
+.settings-header p {
+  color: #6b7280;
+  font-size: 15px;
+}
+
+
+
+/* Settings Cards */
+
+.settings-card {
+
+  background: #ffffff;
+
+  padding: 25px;
+
+  border-radius: 16px;
+
+  margin-bottom: 20px;
+
+  box-shadow: 0 5px 20px rgba(0,0,0,0.06);
+
+  border: 1px solid #eeeeee;
+
+}
+
+
+
+
+/* Card Heading */
+
+.card-title {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  margin-bottom: 22px;
+
+}
+
+
+.card-title svg {
+
+  font-size: 22px;
+
+  color: #6c5ce7;
+
+}
+
+
+.card-title h2 {
+
+  margin: 0;
+
+  font-size: 20px;
+
+  color: #191c2c;
+
+}
+
+
+
+
+
+
+/* Form */
+
+.form-grid {
+
+  display: grid;
+
+  grid-template-columns: repeat(2, 1fr);
+
+  gap: 20px;
+
+}
+
+
+
+.form-group {
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 8px;
+
+}
+
+
+
+.form-group label {
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  color: #374151;
+
+}
+
+
+
+.form-group input,
+.form-group select {
+
+
+  width: 100%;
+
+  padding: 12px 14px;
+
+  border-radius: 10px;
+
+  border: 1px solid #dcdfe8;
+
+  background: #ffffff;
+
+  font-size: 15px;
+
+  color: #333;
+
+  transition: .3s;
+
+}
+
+
+
+.form-group input:focus,
+.form-group select:focus {
+
+  outline: none;
+
+  border-color: #6c5ce7;
+
+  box-shadow: 0 0 0 3px rgba(108,92,231,0.12);
+
+}
+
+
+
+
+
+
+/* Toggle Switch */
+
+
+.switch-container {
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 15px;
+
+  margin-bottom: 18px;
+
+  cursor: pointer;
+
+}
+
+
+
+.switch-container input {
+
+  display: none;
+
+}
+
+
+
+.slider {
+
+  width: 48px;
+
+  height: 25px;
+
+  background: #d1d5db;
+
+  border-radius: 30px;
+
+  position: relative;
+
+  transition: .3s;
+
+}
+
+
+
+
+.slider::before {
+
+  content: "";
+
+  width: 19px;
+
+  height: 19px;
+
+  background: white;
+
+  border-radius: 50%;
+
+  position: absolute;
+
+  top: 3px;
+
+  left: 4px;
+
+  transition: .3s;
+
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+
+}
+
+
+
+
+
+.switch-container input:checked + .slider {
+
+  background: #6c5ce7;
+
+}
+
+
+
+.switch-container input:checked + .slider::before {
+
+  transform: translateX(21px);
+
+}
+
+
+
+
+
+.switch-container p {
+
+  margin: 0;
+
+  font-size: 15px;
+
+  color: #374151;
+
+}
+
+
+
+
+
+
+
+/* Save Button */
+
+
+.save-settings {
+
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  gap: 10px;
+
+
+  background: #191c2c;
+
+
+  color: white;
+
+
+  border: none;
+
+
+  padding: 14px 28px;
+
+
+  border-radius: 12px;
+
+
+  font-size: 16px;
+
+
+  font-weight: 600;
+
+
+  cursor: pointer;
+
+
+  transition: .3s;
+
+
+}
+
+
+
+.save-settings:hover {
+
+  background: #6c5ce7;
+
+  transform: translateY(-2px);
+
+}
+
+
+
+
+
+
+/* Responsive */
+
+
+@media(max-width:900px){
+
+
+  .form-grid {
+
+    grid-template-columns: 1fr;
+
+  }
+
+
+}
+
+
+
+
+@media(max-width:600px){
+
+
+  .admin-settings {
+
+    padding: 20px;
+
+  }
+
+
+
+  .settings-header h1 {
+
+    font-size: 26px;
+
+  }
+
+
+
+  .settings-card {
+
+    padding: 20px;
+
+  }
+
+
+
+  .card-title h2 {
+
+    font-size: 18px;
+
+  }
+
+
+
+  .switch-container p {
+
+    font-size: 14px;
+
+  }
+
+
+}
