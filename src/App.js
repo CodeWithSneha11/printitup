@@ -26,15 +26,13 @@ import Users from "./pages/Users";
 
 
 import AdminLayout from "./layouts/AdminLayout";
-import AdminRoute from "./components/AdminRoute";
-import Products from "./pages/Products";
+import AdminRoute from "./components/AdminRoute"; 
 import Footer from "./components/Footer";
 import Profile from "./pages/Profile";
 import AdminProfile from "./pages/AdminProfile";
 import ManageAddress from "./pages/ManageAddress";
 import Collections from "./pages/Collections";
-
-
+import Analytics from "./pages/Analytics";
 function AppContent() {
   const location = useLocation();
 
@@ -129,8 +127,7 @@ element={<ManageAddress/>}
         {/* ==========================
              ADMIN DASHBOARD
         =========================== */}
-
-      <Route
+<Route
   path="/admin-dashboard"
   element={
     <AdminRoute>
@@ -139,15 +136,11 @@ element={<ManageAddress/>}
   }
 >
   <Route index element={<AdminDashboard />} />
+  <Route path="analytics" element={<Analytics />} />
   <Route path="orders" element={<Orders />} />
   <Route path="collections" element={<Collections />} />
   <Route path="users" element={<Users />} />
-  <Route path="products/:collectionId" element={<Products />} />
-
-  <Route
-    path="profile"
-    element={<AdminProfile />}
-  />
+  <Route path="profile" element={<AdminProfile />} />
 </Route>
 
       </Routes>

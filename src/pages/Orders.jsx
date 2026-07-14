@@ -371,29 +371,55 @@ const Orders = () => {
                       {selectedOrder.customer?.email}
                     </p>
 
+                    {/*
+                      Address fields live under `deliveryAddress`
+                      (set in Checkout.jsx as `deliveryAddress: selectedAddress`),
+                      NOT under `customer`. Reading them from `customer`
+                      was the bug causing blank address fields.
+                    */}
+
                     <p>
-                      <strong>Address :</strong>{" "}
-                      {selectedOrder.customer?.address}
+                      <strong>House :</strong>{" "}
+                      {selectedOrder.deliveryAddress?.house}
+                    </p>
+
+                    <p>
+                      <strong>Area :</strong>{" "}
+                      {selectedOrder.deliveryAddress?.area}
                     </p>
 
                     <p>
                       <strong>City :</strong>{" "}
-                      {selectedOrder.customer?.city}
+                      {selectedOrder.deliveryAddress?.city}
                     </p>
 
                     <p>
                       <strong>State :</strong>{" "}
-                      {selectedOrder.customer?.state}
+                      {selectedOrder.deliveryAddress?.state}
                     </p>
 
                     <p>
                       <strong>Pincode :</strong>{" "}
-                      {selectedOrder.customer?.pincode}
+                      {selectedOrder.deliveryAddress?.pincode}
                     </p>
+
+                    {selectedOrder.deliveryAddress?.landmark && (
+
+                      <p>
+                        <strong>Landmark :</strong>{" "}
+                        {selectedOrder.deliveryAddress.landmark}
+                      </p>
+
+                    )}
+
+                    {/*
+                      Payment method is saved as a top-level `payment`
+                      field in Checkout.jsx, not under `customer`.
+                    */}
 
                     <p>
                       <strong>Payment :</strong>{" "}
-                      {selectedOrder.customer?.payment}
+                      {selectedOrder.payment}
                     </p>
 
                     <p>

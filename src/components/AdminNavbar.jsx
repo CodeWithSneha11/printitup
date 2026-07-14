@@ -2,28 +2,78 @@ import React, { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { signOut } from "firebase/auth";
 import {
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  onSnapshot,
+} from "firebase/firestore";
+import {
   FaBell,
   FaSearch,
   FaUserCircle,
   FaCog,
   FaSignOutAlt,
+  FaBars,
+  FaTimes,
 } from "react-icons/fa";
 
-import { auth } from "../firebase";
+import { auth, db } from "../firebase";
 
 import "../styles/AdminNavbar.css";
 
-const AdminNavbar = () => {
+const SEEN_KEY = "adminNotifSeenAt";
+
+// "3m ago" / "2h ago" / "5d ago" style relative time, no extra deps.
+const timeAgo = (seconds) => {
+  if (!seconds) return "";
+
+  const diff = Date.now() / 1000 - seconds;
+
+  if (diff < 60) return "Just now";
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+};
+
+// onToggleSidebar: optional callback so a parent layout can wire up
+// its sidebar collapse/expand from the hamburger button on mobile.
+const AdminNavbar = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
 
   const profileRef = useRef(null);
+  const notifRef = useRef(null);
+  const mobileSearchRef = useRef(null);
+
+  // Timestamp this component mounted. Any pending order that already
+  // existed before this moment is "old" and should never trigger a
+  // notification — only orders that arrive (docChanges type "added")
+  // AFTER this timestamp count as genuinely "new".
+  const mountTimeRef = useRef(Date.now() / 1000);
 
   const [showMenu, setShowMenu] = useState(false);
+  const [showNotif, setShowNotif] = useState(false);
+  const [showMobileSearch, setShowMobileSearch] = useState(false);
+
+  const [search, setSearch] = useState("");
+
+  // Full pending-orders list, still used to populate the dropdown.
+  const [pendingOrders, setPendingOrders] = useState([]);
+
+  // IDs of orders that arrived live (after mount) via a Firestore
+  // "added" change — these are the ones that actually justify a
+  // notification badge, as opposed to orders that were already
+  // sitting in "Pending" status before the admin opened the page.
+  const [newOrderIds, setNewOrderIds] = useState(new Set());
+
+  const [lastSeenAt, setLastSeenAt] = useState(
+    Number(localStorage.getItem(SEEN_KEY)) || 0
+  );
 
   const [adminName] = useState(
     localStorage.getItem("adminName") || "Admin"
   );
-const [search, setSearch] = useState("");
   const [adminEmail] = useState(
     localStorage.getItem("adminEmail") || ""
   );
@@ -35,24 +85,138 @@ const [search, setSearch] = useState("");
     year: "numeric",
   });
 
+  // ==========================
+  // LIVE "NEW ORDER" NOTIFICATIONS
+  // ==========================
+
   useEffect(() => {
-  const handleClickOutside = (event) => {
-    if (
-      profileRef.current &&
-      !profileRef.current.contains(event.target)
-    ) {
-      setShowMenu(false);
-    }
+    const q = query(
+      collection(db, "orders"),
+      where("status", "==", "Pending"),
+      orderBy("createdAt", "desc"),
+      limit(8)
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+
+      setPendingOrders(data);
+
+      // Only "added" changes whose createdAt is after this component
+      // mounted count as a fresh, live-arriving order. This is what
+      // fixes the "notifies about pending orders" issue — the initial
+      // snapshot fires "added" for every existing pending order too,
+      // so without the mount-time check you'd get notified about
+      // orders that have been sitting there for days.
+      snapshot.docChanges().forEach((change) => {
+        if (change.type === "added") {
+          const order = change.doc.data();
+          const createdAt = order.createdAt?.seconds || 0;
+
+          if (createdAt > mountTimeRef.current) {
+            setNewOrderIds((prev) => {
+              const next = new Set(prev);
+              next.add(change.doc.id);
+              return next;
+            });
+          }
+        }
+      });
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Badge count = orders that both (a) arrived live after mount and
+  // (b) haven't been marked seen yet.
+  const unseenCount = pendingOrders.filter(
+    (order) =>
+      newOrderIds.has(order.id) &&
+      (order.createdAt?.seconds || 0) > lastSeenAt
+  ).length;
+
+  const toggleNotifications = () => {
+    setShowMenu(false);
+
+    setShowNotif((prev) => {
+      const next = !prev;
+
+      // Mark everything currently loaded as seen once the panel opens,
+      // so the badge clears but new orders that arrive after this
+      // point will still bump the count back up.
+      if (next) {
+        const now = Date.now() / 1000;
+        localStorage.setItem(SEEN_KEY, now);
+        setLastSeenAt(now);
+      }
+
+      return next;
+    });
   };
 
-  document.addEventListener("mousedown", handleClickOutside);
+  // ==========================
+  // OUTSIDE CLICK / ESCAPE
+  // ==========================
 
-  return () => {
-    document.removeEventListener("mousedown", handleClickOutside);
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (
+        profileRef.current &&
+        !profileRef.current.contains(event.target)
+      ) {
+        setShowMenu(false);
+      }
+
+      if (
+        notifRef.current &&
+        !notifRef.current.contains(event.target)
+      ) {
+        setShowNotif(false);
+      }
+
+      if (
+        mobileSearchRef.current &&
+        !mobileSearchRef.current.contains(event.target)
+      ) {
+        setShowMobileSearch(false);
+      }
+    };
+
+    const handleEscape = (event) => {
+      if (event.key === "Escape") {
+        setShowMenu(false);
+        setShowNotif(false);
+        setShowMobileSearch(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    document.addEventListener("keydown", handleEscape);
+
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("keydown", handleEscape);
+    };
+  }, []);
+
+  // ==========================
+  // SEARCH
+  // ==========================
+
+  const runSearch = () => {
+    if (!search.trim()) return;
+
+    navigate(`/admin-dashboard/search?q=${encodeURIComponent(search)}`);
+    setShowMobileSearch(false);
   };
-}, []);
 
-  // Logout
+  // ==========================
+  // LOGOUT
+  // ==========================
+
   const handleLogout = async () => {
     try {
       await signOut(auth);
@@ -72,104 +236,209 @@ const [search, setSearch] = useState("");
 
   return (
     <div className="admin-navbar">
-
       <div className="navbar-left">
-        <h2>Dashboard</h2>
+        {onToggleSidebar && (
+          <button
+            className="hamburger-btn"
+            aria-label="Toggle menu"
+            onClick={onToggleSidebar}
+          >
+            <FaBars />
+          </button>
+        )}
 
-        <p>{today}</p>
+        <div className="navbar-title">
+          <p>{today}</p>
+        </div>
       </div>
 
       <div className="navbar-center">
-
         <div className="search-box">
           <FaSearch />
-<input
-  type="text"
-  placeholder="Search Products, Orders..."
-  value={search}
-  onChange={(e) => setSearch(e.target.value)}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      navigate(`/admin-dashboard/search?q=${search}`);
-    }
-  }}
-/>
           <input
             type="text"
-            placeholder="Search..."
+            placeholder="Search products, orders..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && runSearch()}
           />
+          {search && (
+            <button
+              className="search-clear"
+              aria-label="Clear search"
+              onClick={() => setSearch("")}
+            >
+              <FaTimes />
+            </button>
+          )}
         </div>
-
       </div>
 
       <div className="navbar-right">
-
-        <button className="notification-btn">
-          <FaBell />
-
-          <span className="notification-dot"></span>
+        {/* Mobile search trigger */}
+        <button
+          className="icon-btn search-toggle-btn"
+          aria-label="Search"
+          onClick={() => setShowMobileSearch(true)}
+        >
+          <FaSearch />
         </button>
 
-        <div
-          className="admin-profile"
-          ref={profileRef}
-        >
+        <div className="admin-notif" ref={notifRef}>
+          <button
+            className="icon-btn notification-btn"
+            aria-label="Notifications"
+            onClick={toggleNotifications}
+          >
+            <FaBell />
+            {unseenCount > 0 && (
+              <span className="notification-dot">
+                {unseenCount > 9 ? "9+" : unseenCount}
+              </span>
+            )}
+          </button>
 
+          {showNotif && (
+            <div className="notif-dropdown">
+              <div className="notif-dropdown-header">
+                <h4>Pending Orders</h4>
+                <span>{pendingOrders.length}</span>
+              </div>
+
+              <div className="notif-list">
+                {pendingOrders.length === 0 ? (
+                  <p className="notif-empty">
+                    You're all caught up — no pending orders.
+                  </p>
+                ) : (
+                  pendingOrders.map((order) => (
+                    <button
+                      key={order.id}
+                      className={`notif-item${
+                        newOrderIds.has(order.id) ? " notif-item-new" : ""
+                      }`}
+                      onClick={() => {
+                        navigate("/admin-dashboard/orders");
+                        setShowNotif(false);
+                      }}
+                    >
+                      <div className="notif-item-avatar">
+                        {(order.customer?.name || "?")
+                          .charAt(0)
+                          .toUpperCase()}
+                      </div>
+
+                      <div className="notif-item-body">
+                        <p>
+                          <strong>
+                            {order.customer?.name || "New order"}
+                          </strong>{" "}
+                          placed an order
+                        </p>
+                        <span>
+                          {timeAgo(order.createdAt?.seconds)} · ₹
+                          {order.total}
+                        </span>
+                      </div>
+                    </button>
+                  ))
+                )}
+              </div>
+
+              <button
+                className="notif-view-all"
+                onClick={() => {
+                  navigate("/admin-dashboard/orders");
+                  setShowNotif(false);
+                }}
+              >
+                View all orders
+              </button>
+            </div>
+          )}
+        </div>
+
+        <div className="admin-profile" ref={profileRef}>
           <div
             className="admin-avatar"
-            onClick={() =>
-              setShowMenu(!showMenu)
-            }
+            role="button"
+            tabIndex={0}
+            aria-haspopup="true"
+            aria-expanded={showMenu}
+            onClick={() => {
+              setShowNotif(false);
+              setShowMenu((prev) => !prev);
+            }}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" || e.key === " ") {
+                setShowNotif(false);
+                setShowMenu((prev) => !prev);
+              }
+            }}
           >
             {adminName.charAt(0).toUpperCase()}
           </div>
 
           {showMenu && (
-
             <div className="admin-dropdown">
-
               <div className="admin-dropdown-header">
-
                 <div className="admin-avatar-large">
                   {adminName.charAt(0).toUpperCase()}
                 </div>
 
                 <h4>{adminName}</h4>
-
                 <p>{adminEmail}</p>
-
               </div>
 
-             <button
-  onClick={() => {
-    navigate("/admin-dashboard/profile");
-    setShowMenu(false);
-  }}
->
-  <FaUserCircle />
-  Profile
-</button>
+              <button
+                onClick={() => {
+                  navigate("/admin-dashboard/profile");
+                  setShowMenu(false);
+                }}
+              >
+                <FaUserCircle />
+                Profile
+              </button>
 
-              <button>
+              <button
+                onClick={() => {
+                  navigate("/admin-dashboard/settings");
+                  setShowMenu(false);
+                }}
+              >
                 <FaCog />
                 Settings
               </button>
 
-              <button
-                onClick={handleLogout}
-              >
+              <button className="logout-btn" onClick={handleLogout}>
                 <FaSignOutAlt />
                 Logout
               </button>
-
             </div>
-
           )}
-
         </div>
-
       </div>
 
+      {/* Mobile search overlay */}
+      {showMobileSearch && (
+        <div className="mobile-search-overlay" ref={mobileSearchRef}>
+          <FaSearch />
+          <input
+            autoFocus
+            type="text"
+            placeholder="Search products, orders..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            onKeyDown={(e) => e.key === "Enter" && runSearch()}
+          />
+          <button
+            aria-label="Close search"
+            onClick={() => setShowMobileSearch(false)}
+          >
+            <FaTimes />
+          </button>
+        </div>
+      )}
     </div>
   );
 };
