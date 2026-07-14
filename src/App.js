@@ -1,5 +1,5 @@
 import {
-  BrowserRouter as Router,
+  HashRouter as Router,
   Routes,
   Route,
   useLocation,
@@ -151,7 +151,7 @@ element={<ManageAddress/>}
 
 function App() {
   return (
-    <Router>
+    <Router basename="/printitup">
       <AppContent />
     </Router>
   );
