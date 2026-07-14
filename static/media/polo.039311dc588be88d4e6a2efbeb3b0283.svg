@@ -1,0 +1,49 @@
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradPolo" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="50%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <radialGradient id="glowPolo" cx="50%" cy="42%" r="55%">
+      <stop offset="0%" stop-color="#ec4899" stop-opacity="0.3"/>
+      <stop offset="100%" stop-color="#ec4899" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="400" height="400" fill="#0b1120"/>
+  <circle cx="200" cy="190" r="175" fill="url(#glowPolo)"/>
+
+  <!-- fitted polo body -->
+  <path d="M165,100
+           L150,120
+           L85,148
+           L70,195
+           L118,215
+           L130,195
+           L130,330
+           Q200,344 270,330
+           L270,195
+           L282,215
+           L330,195
+           L315,148
+           L250,120
+           L235,100
+           Q200,128 165,100 Z"
+        fill="url(#gradPolo)" opacity="0.92"/>
+
+  <!-- collar flaps -->
+  <path d="M165,100 L152,132 L188,148 Z" fill="#0b1120" opacity="0.85"/>
+  <path d="M235,100 L248,132 L212,148 Z" fill="#0b1120" opacity="0.85"/>
+
+  <!-- placket -->
+  <line x1="200" y1="140" x2="200" y2="190" stroke="#0b1120" stroke-width="4" opacity="0.6"/>
+  <circle cx="200" cy="152" r="3.5" fill="#0b1120" opacity="0.7"/>
+  <circle cx="200" cy="168" r="3.5" fill="#0b1120" opacity="0.7"/>
+  <circle cx="200" cy="184" r="3.5" fill="#0b1120" opacity="0.7"/>
+
+  <!-- hem -->
+  <path d="M132,320 Q200,334 268,320" stroke="#0b1120" stroke-width="3" fill="none" opacity="0.35"/>
+
+  <text x="200" y="382" text-anchor="middle" font-family="Poppins, sans-serif" font-size="15" font-weight="600" fill="#94a3b8" letter-spacing="1">CLASSIC POLO</text>
+</svg>

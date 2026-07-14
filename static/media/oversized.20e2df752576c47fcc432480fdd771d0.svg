@@ -1,0 +1,45 @@
+<svg viewBox="0 0 400 400" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="gradOver" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" stop-color="#2563eb"/>
+      <stop offset="50%" stop-color="#7c3aed"/>
+      <stop offset="100%" stop-color="#ec4899"/>
+    </linearGradient>
+    <radialGradient id="glowOver" cx="50%" cy="42%" r="55%">
+      <stop offset="0%" stop-color="#7c3aed" stop-opacity="0.35"/>
+      <stop offset="100%" stop-color="#7c3aed" stop-opacity="0"/>
+    </radialGradient>
+  </defs>
+
+  <rect width="400" height="400" fill="#0b1120"/>
+  <circle cx="200" cy="190" r="175" fill="url(#glowOver)"/>
+
+  <!-- Wide boxy oversized silhouette -->
+  <path d="M155,95
+           L145,118
+           L65,150
+           L48,205
+           L108,228
+           L120,205
+           L120,335
+           Q200,352 280,335
+           L280,205
+           L292,228
+           L352,205
+           L335,150
+           L255,118
+           L245,95
+           Q200,132 155,95 Z"
+        fill="url(#gradOver)" opacity="0.92"/>
+
+  <!-- neckline cutout -->
+  <path d="M158,96 Q200,134 242,96 Q222,80 200,80 Q178,80 158,96 Z" fill="#0b1120"/>
+
+  <!-- sleeve fold lines for detail -->
+  <path d="M120,205 L108,228 M280,205 L292,228" stroke="#0b1120" stroke-width="4" stroke-linecap="round" fill="none" opacity="0.5"/>
+
+  <!-- hem line -->
+  <path d="M122,325 Q200,340 278,325" stroke="#0b1120" stroke-width="3" fill="none" opacity="0.35"/>
+
+  <text x="200" y="382" text-anchor="middle" font-family="Poppins, sans-serif" font-size="15" font-weight="600" fill="#94a3b8" letter-spacing="1">OVERSIZED FIT</text>
+</svg>
