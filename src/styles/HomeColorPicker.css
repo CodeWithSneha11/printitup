@@ -1,0 +1,94 @@
+/* ==========================
+   COLOR PICKER
+========================== */
+
+.color-list {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 18px;
+  margin-top: 25px;
+  flex-wrap: wrap;
+}
+
+.color-circle {
+  width: 48px;
+  height: 48px;
+
+  border-radius: 50%;
+
+  cursor: pointer;
+
+  position: relative;
+
+  border: 3px solid transparent;
+
+  transition:
+    transform 0.3s ease,
+    box-shadow 0.3s ease,
+    border-color 0.3s ease;
+}
+
+/* Hover animation */
+
+.color-circle:hover {
+  transform: translateY(-6px) scale(1.08);
+
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
+}
+
+/* Selected color */
+
+.color-circle.active {
+  border-color: #4f46e5;
+
+  box-shadow:
+    0 0 0 5px rgba(79, 70, 229, 0.18),
+    0 12px 25px rgba(79, 70, 229, 0.25);
+}
+
+/* Check icon */
+
+.color-circle.active::after {
+  content: "✓";
+
+  position: absolute;
+
+  inset: 0;
+
+  display: flex;
+
+  justify-content: center;
+
+  align-items: center;
+
+  color: white;
+
+  font-size: 22px;
+
+  font-weight: 800;
+
+  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
+}
+
+/* White color special handling */
+
+.color-circle[style*="#ffffff"].active::after {
+  color: #111827;
+
+  text-shadow: none;
+}
+
+/* Mobile */
+
+@media (max-width: 768px) {
+  .color-list {
+    gap: 14px;
+  }
+
+  .color-circle {
+    width: 42px;
+
+    height: 42px;
+  }
+}

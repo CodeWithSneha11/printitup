@@ -1,5 +1,6 @@
-import React from "react";
+
 import { Link } from "react-router-dom";
+import React, { useState } from "react";
 import HomeShirt from "./HomeShirt";
 import {
   FaArrowRight,
@@ -11,8 +12,9 @@ import {
 } from "react-icons/fa";
 
 import "../styles/Home.css";
+import "../styles/HomeColorPicker.css";
 
-// Local category images (replaces Unsplash hotlinks)
+// Local category images 
 import oversizedImg from "../assets/images/categories/oversized.svg";
 import poloImg from "../assets/images/categories/polo.svg";
 import roundNeckImg from "../assets/images/categories/round-neck.svg";
@@ -29,7 +31,7 @@ function Home() {
     "#7c3aed",
     "#ec4899",
   ];
-
+const [shirtColor, setShirtColor] = useState("#ffffff");
   const categories = [
     {
       title: "Oversized",
@@ -118,7 +120,7 @@ function Home() {
               NEW
             </div>
 
-          <HomeShirt />
+     <HomeShirt color={shirtColor} />
 
             <div className="floating-mini-card top">
               <FaPalette />
@@ -151,13 +153,16 @@ function Home() {
         <div className="color-list">
 
           {colors.map((color, index) => (
-            <div
-              key={index}
-              className="color-circle"
-              style={{
-                background: color,
-              }}
-            ></div>
+ <div
+  key={index}
+  className={`color-circle ${
+    shirtColor === color ? "active" : ""
+  }`}
+  style={{
+    background: color,
+  }}
+  onClick={() => setShirtColor(color)}
+></div>
           ))}
 
         </div>
