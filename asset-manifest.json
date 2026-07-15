@@ -1,19 +1,19 @@
 {
   "files": {
-    "main.css": "/printitup/static/css/main.e7177081.css",
-    "main.js": "/printitup/static/js/main.137089fa.js",
+    "main.css": "/printitup/static/css/main.a87530b0.css",
+    "main.js": "/printitup/static/js/main.5ce195d6.js",
     "static/js/453.e02e2fc8.chunk.js": "/printitup/static/js/453.e02e2fc8.chunk.js",
     "static/media/tshirt.glb": "/printitup/static/media/tshirt.7a4f8d53404922a133ec.glb",
     "static/media/polo.svg": "/printitup/static/media/polo.039311dc588be88d4e6a2efbeb3b0283.svg",
     "static/media/oversized.svg": "/printitup/static/media/oversized.20e2df752576c47fcc432480fdd771d0.svg",
     "static/media/round-neck.svg": "/printitup/static/media/round-neck.6c1948acdd87735cc02aff7a1acbf89b.svg",
     "index.html": "/printitup/index.html",
-    "main.e7177081.css.map": "/printitup/static/css/main.e7177081.css.map",
-    "main.137089fa.js.map": "/printitup/static/js/main.137089fa.js.map",
+    "main.a87530b0.css.map": "/printitup/static/css/main.a87530b0.css.map",
+    "main.5ce195d6.js.map": "/printitup/static/js/main.5ce195d6.js.map",
     "453.e02e2fc8.chunk.js.map": "/printitup/static/js/453.e02e2fc8.chunk.js.map"
   },
   "entrypoints": [
-    "static/css/main.e7177081.css",
-    "static/js/main.137089fa.js"
+    "static/css/main.a87530b0.css",
+    "static/js/main.5ce195d6.js"
   ]
 }
