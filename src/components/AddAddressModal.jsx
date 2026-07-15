@@ -105,7 +105,7 @@ const AddAddressModal = ({ onClose, onSave, editAddress }) => {
             name="phone"
             value={address.phone}
             onChange={handleChange}
-            placeholder="9876543210"
+            
           />
 
           <label>House / Flat *</label>

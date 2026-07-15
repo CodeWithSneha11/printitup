@@ -25,7 +25,7 @@ import "../styles/AdminNavbar.css";
 
 const SEEN_KEY = "adminNotifSeenAt";
 
-// "3m ago" / "2h ago" / "5d ago" style relative time, no extra deps.
+// "3m ago" / "2h ago" / "5d ago" 
 const timeAgo = (seconds) => {
   if (!seconds) return "";
 
@@ -37,8 +37,7 @@ const timeAgo = (seconds) => {
   return `${Math.floor(diff / 86400)}d ago`;
 };
 
-// onToggleSidebar: optional callback so a parent layout can wire up
-// its sidebar collapse/expand from the hamburger button on mobile.
+
 const AdminNavbar = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
 
@@ -46,10 +45,6 @@ const AdminNavbar = ({ onToggleSidebar }) => {
   const notifRef = useRef(null);
   const mobileSearchRef = useRef(null);
 
-  // Timestamp this component mounted. Any pending order that already
-  // existed before this moment is "old" and should never trigger a
-  // notification — only orders that arrive (docChanges type "added")
-  // AFTER this timestamp count as genuinely "new".
   const mountTimeRef = useRef(Date.now() / 1000);
 
   const [showMenu, setShowMenu] = useState(false);
@@ -58,13 +53,10 @@ const AdminNavbar = ({ onToggleSidebar }) => {
 
   const [search, setSearch] = useState("");
 
-  // Full pending-orders list, still used to populate the dropdown.
+ 
   const [pendingOrders, setPendingOrders] = useState([]);
 
-  // IDs of orders that arrived live (after mount) via a Firestore
-  // "added" change — these are the ones that actually justify a
-  // notification badge, as opposed to orders that were already
-  // sitting in "Pending" status before the admin opened the page.
+
   const [newOrderIds, setNewOrderIds] = useState(new Set());
 
   const [lastSeenAt, setLastSeenAt] = useState(
@@ -105,12 +97,7 @@ const AdminNavbar = ({ onToggleSidebar }) => {
 
       setPendingOrders(data);
 
-      // Only "added" changes whose createdAt is after this component
-      // mounted count as a fresh, live-arriving order. This is what
-      // fixes the "notifies about pending orders" issue — the initial
-      // snapshot fires "added" for every existing pending order too,
-      // so without the mount-time check you'd get notified about
-      // orders that have been sitting there for days.
+     
       snapshot.docChanges().forEach((change) => {
         if (change.type === "added") {
           const order = change.doc.data();
@@ -130,8 +117,6 @@ const AdminNavbar = ({ onToggleSidebar }) => {
     return () => unsubscribe();
   }, []);
 
-  // Badge count = orders that both (a) arrived live after mount and
-  // (b) haven't been marked seen yet.
   const unseenCount = pendingOrders.filter(
     (order) =>
       newOrderIds.has(order.id) &&
@@ -144,9 +129,7 @@ const AdminNavbar = ({ onToggleSidebar }) => {
     setShowNotif((prev) => {
       const next = !prev;
 
-      // Mark everything currently loaded as seen once the panel opens,
-      // so the badge clears but new orders that arrive after this
-      // point will still bump the count back up.
+  
       if (next) {
         const now = Date.now() / 1000;
         localStorage.setItem(SEEN_KEY, now);

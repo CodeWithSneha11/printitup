@@ -11,6 +11,24 @@ import {
 import { db } from "../firebase";
 import "../styles/Orders.css";
 
+// Notification copy for each status. Add/edit statuses here if you
+// introduce new ones (e.g. "Out for Delivery", "Cancelled").
+const STATUS_NOTIFICATIONS = {
+  Confirmed: {
+    title: "Order Confirmed",
+    message: (id) => `Your order #${id} has been confirmed by PrintItUp.`,
+  },
+  Shipped: {
+    title: "Order Shipped",
+    message: (id) =>
+      `Your order #${id} has been shipped and is on its way.`,
+  },
+  Delivered: {
+    title: "Order Delivered",
+    message: (id) => `Your order #${id} has been delivered. Enjoy!`,
+  },
+};
+
 const Orders = () => {
   const [orders, setOrders] = useState([]);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -21,27 +39,38 @@ const Orders = () => {
   const [statusFilter, setStatusFilter] = useState("All");
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "orders"), (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+    const unsubscribe = onSnapshot(
+      collection(db, "orders"),
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
 
-      data.sort((a, b) => {
-        const first = a.createdAt?.seconds || 0;
-        const second = b.createdAt?.seconds || 0;
+        data.sort((a, b) => {
+          const first = a.createdAt?.seconds || 0;
+          const second = b.createdAt?.seconds || 0;
 
-        return second - first;
-      });
+          return second - first;
+        });
 
-      setOrders(data);
-      setLoading(false);
-    });
+        setOrders(data);
+        setLoading(false);
+      },
+      (error) => {
+        console.error("Orders listener error:", error);
+        setLoading(false);
+      },
+    );
 
     return () => unsubscribe();
   }, []);
 
   const updateStatus = async (order, newStatus) => {
+    // No real change (e.g. re-selecting the current status) -> do nothing,
+    // don't write to Firestore, don't notify the customer.
+    if (order.status === newStatus) return;
+
     try {
       // Update order status
 
@@ -49,15 +78,17 @@ const Orders = () => {
         status: newStatus,
       });
 
-      // Send notification to customer
+      // Send notification to customer for any status that has copy defined
 
-      if (newStatus === "Processing") {
+      const config = STATUS_NOTIFICATIONS[newStatus];
+
+      if (config && order.uid) {
         await addDoc(collection(db, "notifications"), {
           userId: order.uid,
 
-          title: "Order Confirmed",
+          title: config.title,
 
-          message: `Your order #${order.orderId} has been confirmed by PrintItUp.`,
+          message: config.message(order.orderId || order.id),
 
           type: "order",
 
@@ -144,7 +175,7 @@ const Orders = () => {
 
                 <option value="Pending">Pending</option>
 
-                <option value="Processing">Processing</option>
+                <option value="Confirmed">Confirmed</option>
 
                 <option value="Shipped">Shipped</option>
 
@@ -187,19 +218,24 @@ const Orders = () => {
                     <tr key={order.id}>
                       <td>{order.customer?.name}</td>
 
-                      <td>{order.customer?.phone}</td>
+                      <td>
+                        <span className="mono">{order.customer?.phone}</span>
+                      </td>
 
-                      <td>₹{order.total}</td>
+                      <td>
+                        <span className="mono">₹{order.total}</span>
+                      </td>
 
                       <td>
                         <select
                           className="status-select"
+                          data-status={order.status}
                           value={order.status}
                           onChange={(e) => updateStatus(order, e.target.value)}
                         >
                           <option value="Pending">Pending</option>
 
-                          <option value="Processing">Processing</option>
+                          <option value="Confirmed">Confirmed</option>
 
                           <option value="Shipped">Shipped</option>
 
@@ -239,7 +275,12 @@ const Orders = () => {
                   onClick={(e) => e.stopPropagation()}
                 >
                   <div className="modal-header">
-                    <h2>Order Details</h2>
+                    <div>
+                      <h2>Order Details</h2>
+                      <p className="modal-order-id mono">
+                        #{selectedOrder.id}
+                      </p>
+                    </div>
 
                     <button
                       className="close-btn"
@@ -360,12 +401,12 @@ const Orders = () => {
                           </p>
                         </div>
 
-                        <div className="item-price">₹{item.price}</div>
+                        <div className="item-price mono">₹{item.price}</div>
                       </div>
                     ))}
                   </div>
 
-                  <div className="modal-total">
+                  <div className="modal-total mono">
                     Grand Total : ₹{selectedOrder.total}
                   </div>
                 </div>

@@ -122,12 +122,19 @@ const Navbar = () => {
 
     const q = query(collection(db, "cart"), where("uid", "==", uid));
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      setCartCount(snapshot.size);
-    });
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        setCartCount(snapshot.size);
+      },
+      (error) => {
+        console.error("Cart listener error:", error);
+      },
+    );
 
     return unsubscribe;
   }, [uid]);
+
   /*
 ===========================
     NOTIFICATIONS
@@ -148,14 +155,26 @@ const Navbar = () => {
       orderBy("createdAt", "desc"),
     );
 
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+    const unsubscribe = onSnapshot(
+      q,
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
 
-      setNotifications(data);
-    });
+        setNotifications(data);
+      },
+      (error) => {
+        // If this fires, open the browser console:
+        // - "failed-precondition" -> Firestore needs a composite index.
+        //   Firebase prints a direct link in the console to auto-create it
+        //   (userId Ascending + createdAt Descending). Click it, wait ~1-2 min.
+        // - "permission-denied" -> update Firestore security rules to allow
+        //   a signed-in user to read notifications where userId == request.auth.uid.
+        console.error("Notifications listener error:", error);
+      },
+    );
 
     return unsubscribe;
   }, [uid]);

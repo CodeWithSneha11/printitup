@@ -595,3 +595,131 @@
   }
 
 }
+/* ---- Mini tracker (order card) ---- */
+.mini-tracker {
+  display: flex;
+  align-items: center;
+  margin: 14px 0;
+}
+
+.mini-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  flex-shrink: 0;
+}
+
+.mini-dot.done {
+  background: #2ecc71;
+}
+
+.mini-dot.current {
+  background: #2ecc71;
+  box-shadow: 0 0 0 3px rgba(46, 204, 113, 0.25);
+}
+
+.mini-line {
+  flex: 1;
+  height: 3px;
+  background: #e0e0e0;
+  margin: 0 4px;
+}
+
+.mini-line.done {
+  background: #2ecc71;
+}
+
+.mini-tracker.cancelled {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #e74c3c;
+  font-size: 13px;
+  font-weight: 500;
+  margin: 14px 0;
+}
+
+/* ---- Full tracker (modal) ---- */
+.order-tracker {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: 10px 0 28px;
+  padding: 20px 10px;
+  background: #fafafa;
+  border-radius: 12px;
+}
+
+.tracker-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  text-align: center;
+}
+
+.tracker-step-top {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.tracker-icon {
+  width: 36px;
+  height: 36px;
+  min-width: 36px;
+  border-radius: 50%;
+  background: #e0e0e0;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  z-index: 2;
+  margin: 0 auto;
+}
+
+.tracker-icon.done {
+  background: #2ecc71;
+}
+
+.tracker-icon.current {
+  background: #2ecc71;
+  box-shadow: 0 0 0 4px rgba(46, 204, 113, 0.25);
+}
+
+.tracker-connector {
+  flex: 1;
+  height: 3px;
+  background: #e0e0e0;
+  margin-top: 18px;
+}
+
+.tracker-connector.done {
+  background: #2ecc71;
+}
+
+.tracker-label {
+  margin-top: 8px;
+  font-size: 12px;
+  color: #999;
+  max-width: 80px;
+}
+
+.tracker-label.active-label {
+  color: #222;
+  font-weight: 600;
+}
+
+.cancelled-tracker {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: #fdecea;
+  color: #e74c3c;
+  padding: 14px 18px;
+  border-radius: 10px;
+  margin-bottom: 24px;
+  font-weight: 500;
+}

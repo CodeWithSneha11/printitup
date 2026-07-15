@@ -73,8 +73,7 @@ const Customize = () => {
   // Store uploaded Cloudinary URL
   const [cloudinaryUrl, setCloudinaryUrl] = useState("");
 
-  // 3D / 2D preview toggle. Defaults to 3D only if the browser actually
-  // supports WebGL — otherwise falls back to the CSS preview automatically.
+  // 3D / 2D preview toggle
   const [use3D, setUse3D] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
   const [imagePosition, setImagePosition] = useState({

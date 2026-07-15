@@ -284,6 +284,21 @@
         transition: none;
     }
 }
+.address-error {
+  background: #fdecea;
+  color: #b91c1c;
+  border: 1px solid #f5c2c7;
+  padding: 12px 16px;
+  border-radius: 8px;
+  margin: 15px 0;
+  font-size: 14px;
+}
+
+.address-actions button:disabled,
+.add-address-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
 
 /* ===========================
    RESPONSIVE

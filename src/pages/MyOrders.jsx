@@ -10,9 +10,96 @@ import {
   FaShoppingBag,
   FaCalendarAlt,
   FaTimes,
+  FaClipboardCheck,
+  FaBoxOpen,
+  FaTruck,
+  FaHome,
+  FaCheck,
+  FaBan,
 } from "react-icons/fa";
 
 import "../styles/MyOrders.css";
+
+// ---- Order tracking config ----
+// Edit these labels/order to match the exact status strings you save in Firestore.
+const STATUS_FLOW = [
+  { key: "Pending", label: "Order Placed", icon: <FaClipboardCheck /> },
+  { key: "Confirmed", label: "Confirmed", icon: <FaCheck /> },
+  { key: "Shipped", label: "Shipped", icon: <FaBoxOpen /> },
+  { key: "Out for Delivery", label: "Out for Delivery", icon: <FaTruck /> },
+  { key: "Delivered", label: "Delivered", icon: <FaHome /> },
+];
+
+// Old orders saved before the "Processing" -> "Confirmed" rename still have
+// status: "Processing" in Firestore. Map that legacy value onto the
+// "Confirmed" step so existing orders keep tracking correctly.
+const LEGACY_STATUS_MAP = {
+  Processing: "Confirmed",
+};
+
+const getStepIndex = (status) => {
+  if (!status) return 0;
+  if (status === "Cancelled") return -1;
+
+  const normalized = LEGACY_STATUS_MAP[status] || status;
+
+  const idx = STATUS_FLOW.findIndex(
+    (s) => s.key.toLowerCase() === normalized.toLowerCase()
+  );
+  return idx === -1 ? 0 : idx;
+};
+
+
+// Full step tracker shown inside the order details modal
+const OrderTracker = ({ status }) => {
+  const currentIndex = getStepIndex(status);
+
+  if (currentIndex === -1) {
+    return (
+      <div className="order-tracker cancelled-tracker">
+        <FaBan size={22} />
+        <p>This order was cancelled.</p>
+      </div>
+    );
+  }
+
+  return (
+    <div className="order-tracker">
+      {STATUS_FLOW.map((step, index) => {
+        const isDone = index < currentIndex;
+        const isCurrent = index === currentIndex;
+
+        return (
+          <div className="tracker-step" key={step.key}>
+            <div className="tracker-step-top">
+              <div
+                className={`tracker-icon ${isDone ? "done" : ""} ${
+                  isCurrent ? "current" : ""
+                }`}
+              >
+                {step.icon}
+              </div>
+
+              {index < STATUS_FLOW.length - 1 && (
+                <div
+                  className={`tracker-connector ${isDone ? "done" : ""}`}
+                />
+              )}
+            </div>
+
+            <span
+              className={`tracker-label ${
+                isDone || isCurrent ? "active-label" : ""
+              }`}
+            >
+              {step.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
+};
 
 const MyOrders = () => {
   const [orders, setOrders] = useState([]);
@@ -152,6 +239,8 @@ const MyOrders = () => {
             </div>
 
             <div className="modal-content">
+              <OrderTracker status={selectedOrder.status} />
+
               <div className="info-grid">
                 <div className="info-card">
                   <p>
@@ -174,39 +263,35 @@ const MyOrders = () => {
                 </div>
 
                 <div className="info-card">
-  <h3>
-    <FaMapMarkerAlt />
-    Delivery Address
-  </h3>
+                  <h3>
+                    <FaMapMarkerAlt />
+                    Delivery Address
+                  </h3>
 
-  <p>
-    <strong>{selectedOrder.deliveryAddress?.fullName}</strong>
-  </p>
+                  <p>
+                    <strong>{selectedOrder.deliveryAddress?.fullName}</strong>
+                  </p>
 
-  <p>{selectedOrder.deliveryAddress?.phone}</p>
+                  <p>{selectedOrder.deliveryAddress?.phone}</p>
 
-  <p>
-    {selectedOrder.deliveryAddress?.house},
-    {" "}
-    {selectedOrder.deliveryAddress?.area}
-  </p>
+                  <p>
+                    {selectedOrder.deliveryAddress?.house},{" "}
+                    {selectedOrder.deliveryAddress?.area}
+                  </p>
 
-  {selectedOrder.deliveryAddress?.landmark && (
-    <p>
-      Landmark :
-      {" "}
-      {selectedOrder.deliveryAddress.landmark}
-    </p>
-  )}
+                  {selectedOrder.deliveryAddress?.landmark && (
+                    <p>
+                      Landmark : {selectedOrder.deliveryAddress.landmark}
+                    </p>
+                  )}
 
-  <p>
-    {selectedOrder.deliveryAddress?.city},
-    {" "}
-    {selectedOrder.deliveryAddress?.state}
-  </p>
+                  <p>
+                    {selectedOrder.deliveryAddress?.city},{" "}
+                    {selectedOrder.deliveryAddress?.state}
+                  </p>
 
-  <p>{selectedOrder.deliveryAddress?.pincode}</p>
-</div>
+                  <p>{selectedOrder.deliveryAddress?.pincode}</p>
+                </div>
 
                 <div className="info-card">
                   <h3>
@@ -214,7 +299,7 @@ const MyOrders = () => {
                     Payment
                   </h3>
 
-               <p>{selectedOrder.payment}</p>
+                  <p>{selectedOrder.payment}</p>
                   <p>
                     {selectedOrder.status === "Delivered"
                       ? "Payment Successful"
