@@ -1,0 +1,121 @@
+.today-summary-section {
+  margin-top: 35px;
+}
+
+.summary-title {
+  font-size: 22px;
+
+  font-weight: 600;
+
+  margin-bottom: 20px;
+
+  color: #222;
+}
+
+.today-grid {
+  display: grid;
+
+  grid-template-columns: repeat(4, 1fr);
+
+  gap: 20px;
+}
+
+.today-card {
+  background: white;
+
+  border-radius: 16px;
+
+  padding: 20px;
+
+  display: flex;
+
+  align-items: center;
+
+  gap: 18px;
+
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+
+  transition: 0.3s ease;
+}
+
+.today-card:hover {
+  transform: translateY(-5px);
+}
+
+.today-icon {
+  width: 55px;
+
+  height: 55px;
+
+  border-radius: 14px;
+
+  display: flex;
+
+  justify-content: center;
+
+  align-items: center;
+
+  font-size: 24px;
+
+  background: #f3f4f6;
+}
+
+.today-info p {
+  margin: 0;
+
+  font-size: 14px;
+
+  color: #777;
+
+  font-weight: 500;
+}
+
+.today-info h2 {
+  margin-top: 8px;
+
+  margin-bottom: 0;
+
+  font-size: 25px;
+
+  font-weight: 700;
+
+  color: #222;
+}
+
+/* Individual Card Styling */
+
+.today-orders .today-icon {
+  color: #2563eb;
+}
+
+.today-revenue .today-icon {
+  color: #16a34a;
+}
+
+.today-average .today-icon {
+  color: #9333ea;
+}
+
+.today-users .today-icon {
+  color: #ea580c;
+}
+
+/* Tablet */
+
+@media (max-width: 1100px) {
+  .today-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 600px) {
+  .today-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .summary-title {
+    font-size: 20px;
+  }
+}

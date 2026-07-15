@@ -1,118 +1,128 @@
-.cards-grid{
-    display:grid;
-    grid-template-columns:repeat(auto-fit,minmax(260px,1fr));
-    gap:25px;
-    width:100%;
+.cards-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 25px;
+  width: 100%;
 }
 
-.dashboard-card{
-    width:100%;
-    min-width:0;
-    background:#fff;
-    border-radius:18px;
-    padding:25px;
-    box-shadow:0 10px 25px rgba(0,0,0,.08);
-    transition:.3s;
-    position:relative;
-    overflow:hidden;
+.dashboard-card {
+  width: 100%;
+  min-width: 0;
+  background: #fff;
+  border-radius: 18px;
+  padding: 25px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+  transition: 0.3s;
+  position: relative;
+  overflow: hidden;
 }
 
-.dashboard-card:hover{
-    transform:translateY(-8px);
-    box-shadow:0 18px 35px rgba(0,0,0,.12);
+.dashboard-card:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 18px 35px rgba(0, 0, 0, 0.12);
 }
 
-.card-top{
-    display:flex;
-    justify-content:flex-end;
-    margin-bottom:20px;
+.card-top {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 20px;
 }
 
-.card-icon{
-    width:60px;
-    height:60px;
-    border-radius:50%;
-    display:flex;
-    justify-content:center;
-    align-items:center;
-    font-size:24px;
-    color:#fff;
+.card-icon {
+  width: 60px;
+  height: 60px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 24px;
+  color: #fff;
 }
 
 /* Card Colors */
 
-.orders-card .card-icon{
-    background:#2563eb;
+.orders-card .card-icon {
+  background: #2563eb;
 }
 
-.revenue-card .card-icon{
-    background:#16a34a;
+.revenue-card .card-icon {
+  background: #16a34a;
 }
 
-.users-card .card-icon{
-    background:#9333ea;
+.users-card .card-icon {
+  background: #9333ea;
 }
 
-.pending-card .card-icon{
-    background:#f59e0b;
+.pending-card .card-icon {
+  background: #f59e0b;
 }
 
-.dashboard-card h3{
-    color:#6b7280;
-    font-size:16px;
-    font-weight:500;
-    margin-bottom:10px;
+.dashboard-card h3 {
+  color: #6b7280;
+  font-size: 16px;
+  font-weight: 500;
+  margin-bottom: 10px;
 }
 
-.dashboard-card h2{
-    color:#111827;
-    font-size:34px;
-    font-weight:700;
+.dashboard-card h2 {
+  color: #111827;
+  font-size: 34px;
+  font-weight: 700;
 }
 
-.dashboard-card::before{
-    content:"";
-    position:absolute;
-    top:0;
-    left:0;
-    width:6px;
-    height:100%;
+.dashboard-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 6px;
+  height: 100%;
 }
 
-.orders-card::before{
-    background:#2563eb;
+.orders-card::before {
+  background: #2563eb;
 }
 
-.revenue-card::before{
-    background:#16a34a;
+.revenue-card::before {
+  background: #16a34a;
 }
 
-.users-card::before{
-    background:#9333ea;
+.users-card::before {
+  background: #9333ea;
 }
 
-.pending-card::before{
-    background:#f59e0b;
+.pending-card::before {
+  background: #f59e0b;
 }
 
-@media (max-width:768px){
+@media (max-width: 768px) {
+  .cards-grid {
+    grid-template-columns: 1fr;
+  }
 
-.cards-grid{
-    grid-template-columns:1fr;
+  .dashboard-card {
+    padding: 20px;
+  }
+
+  .dashboard-card h2 {
+    font-size: 28px;
+  }
+}
+.card-subtitle {
+  margin-top: 8px;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+}
+/* ==========================
+   CANCELLED ORDERS CARD
+========================== */
+
+.cancelled-card {
+  border-top: 4px solid #ef4444;
 }
 
-.dashboard-card{
-    padding:20px;
-}
-
-.dashboard-card h2{
-    font-size:28px;
-}
-
-}
-.card-subtitle{
-    margin-top:8px;
-    color:#6b7280;
-    font-size:14px;
-    font-weight:500;
+.cancelled-card .card-icon {
+  background: #fee2e2;
+  color: #ef4444;
 }

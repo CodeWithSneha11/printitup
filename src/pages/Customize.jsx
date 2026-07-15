@@ -849,7 +849,7 @@ if (selectedElement === "text") {
           </div>
 
           <div className="price-row">
-            <span>Logo Upload</span>
+            <span>Image Upload</span>
             <span>{image ? "₹100" : "₹0"}</span>
           </div>
 

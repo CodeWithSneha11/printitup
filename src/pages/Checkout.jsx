@@ -396,7 +396,7 @@ await setDoc(orderRef, {
             Cash on Delivery
           </option>
 
-          <option>
+          {/* <option>
             UPI
           </option>
 
@@ -406,7 +406,7 @@ await setDoc(orderRef, {
 
           <option>
             Debit Card
-          </option>
+          </option> */}
 
         </select>
 

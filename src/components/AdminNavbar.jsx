@@ -25,7 +25,7 @@ import "../styles/AdminNavbar.css";
 
 const SEEN_KEY = "adminNotifSeenAt";
 
-// "3m ago" / "2h ago" / "5d ago" 
+// "3m ago" / "2h ago" / "5d ago"
 const timeAgo = (seconds) => {
   if (!seconds) return "";
 
@@ -36,7 +36,6 @@ const timeAgo = (seconds) => {
   if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
   return `${Math.floor(diff / 86400)}d ago`;
 };
-
 
 const AdminNavbar = ({ onToggleSidebar }) => {
   const navigate = useNavigate();
@@ -53,22 +52,16 @@ const AdminNavbar = ({ onToggleSidebar }) => {
 
   const [search, setSearch] = useState("");
 
- 
   const [pendingOrders, setPendingOrders] = useState([]);
-
 
   const [newOrderIds, setNewOrderIds] = useState(new Set());
 
   const [lastSeenAt, setLastSeenAt] = useState(
-    Number(localStorage.getItem(SEEN_KEY)) || 0
+    Number(localStorage.getItem(SEEN_KEY)) || 0,
   );
 
-  const [adminName] = useState(
-    localStorage.getItem("adminName") || "Admin"
-  );
-  const [adminEmail] = useState(
-    localStorage.getItem("adminEmail") || ""
-  );
+  const [adminName] = useState(localStorage.getItem("adminName") || "Admin");
+  const [adminEmail] = useState(localStorage.getItem("adminEmail") || "");
 
   const today = new Date().toLocaleDateString("en-IN", {
     weekday: "long",
@@ -86,7 +79,7 @@ const AdminNavbar = ({ onToggleSidebar }) => {
       collection(db, "orders"),
       where("status", "==", "Pending"),
       orderBy("createdAt", "desc"),
-      limit(8)
+      limit(8),
     );
 
     const unsubscribe = onSnapshot(q, (snapshot) => {
@@ -97,7 +90,6 @@ const AdminNavbar = ({ onToggleSidebar }) => {
 
       setPendingOrders(data);
 
-     
       snapshot.docChanges().forEach((change) => {
         if (change.type === "added") {
           const order = change.doc.data();
@@ -119,8 +111,7 @@ const AdminNavbar = ({ onToggleSidebar }) => {
 
   const unseenCount = pendingOrders.filter(
     (order) =>
-      newOrderIds.has(order.id) &&
-      (order.createdAt?.seconds || 0) > lastSeenAt
+      newOrderIds.has(order.id) && (order.createdAt?.seconds || 0) > lastSeenAt,
   ).length;
 
   const toggleNotifications = () => {
@@ -129,7 +120,6 @@ const AdminNavbar = ({ onToggleSidebar }) => {
     setShowNotif((prev) => {
       const next = !prev;
 
-  
       if (next) {
         const now = Date.now() / 1000;
         localStorage.setItem(SEEN_KEY, now);
@@ -146,17 +136,11 @@ const AdminNavbar = ({ onToggleSidebar }) => {
 
   useEffect(() => {
     const handleClickOutside = (event) => {
-      if (
-        profileRef.current &&
-        !profileRef.current.contains(event.target)
-      ) {
+      if (profileRef.current && !profileRef.current.contains(event.target)) {
         setShowMenu(false);
       }
 
-      if (
-        notifRef.current &&
-        !notifRef.current.contains(event.target)
-      ) {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
         setShowNotif(false);
       }
 
@@ -306,21 +290,16 @@ const AdminNavbar = ({ onToggleSidebar }) => {
                       }}
                     >
                       <div className="notif-item-avatar">
-                        {(order.customer?.name || "?")
-                          .charAt(0)
-                          .toUpperCase()}
+                        {(order.customer?.name || "?").charAt(0).toUpperCase()}
                       </div>
 
                       <div className="notif-item-body">
                         <p>
-                          <strong>
-                            {order.customer?.name || "New order"}
-                          </strong>{" "}
+                          <strong>{order.customer?.name || "New order"}</strong>{" "}
                           placed an order
                         </p>
                         <span>
-                          {timeAgo(order.createdAt?.seconds)} · ₹
-                          {order.total}
+                          {timeAgo(order.createdAt?.seconds)} · ₹{order.total}
                         </span>
                       </div>
                     </button>

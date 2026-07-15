@@ -4,6 +4,7 @@ import {
   FaRupeeSign,
   FaUsers,
   FaClock,
+  FaBan,
 } from "react-icons/fa";
 
 import "../styles/DashboardCards.css";
@@ -13,6 +14,7 @@ const DashboardCards = ({
   revenue,
   users,
   pending,
+  cancelled,
 }) => {
 
   const cards = [
@@ -40,6 +42,12 @@ const DashboardCards = ({
       icon: <FaClock />,
       className: "pending-card",
     },
+    {
+  title: "Cancelled Orders",
+  value: cancelled,
+  icon: <FaBan />,
+  className: "cancelled-card",
+},
   ];
 
   return (

@@ -18,14 +18,22 @@ const STATUS_NOTIFICATIONS = {
     title: "Order Confirmed",
     message: (id) => `Your order #${id} has been confirmed by PrintItUp.`,
   },
+
   Shipped: {
     title: "Order Shipped",
     message: (id) =>
       `Your order #${id} has been shipped and is on its way.`,
   },
+
   Delivered: {
     title: "Order Delivered",
     message: (id) => `Your order #${id} has been delivered. Enjoy!`,
+  },
+
+  Cancelled: {
+    title: "Order Cancelled",
+    message: (id) =>
+      `Your order #${id} has been cancelled.`,
   },
 };
 
@@ -74,9 +82,22 @@ const Orders = () => {
     try {
       // Update order status
 
-      await updateDoc(doc(db, "orders", order.id), {
-        status: newStatus,
-      });
+     const updateData = {
+  status: newStatus,
+};
+
+
+if (newStatus === "Cancelled") {
+  updateData.cancelledAt = serverTimestamp();
+  updateData.cancelledBy = "admin";
+  updateData.cancellationReason = "Cancelled by admin";
+}
+
+
+await updateDoc(
+  doc(db, "orders", order.id),
+  updateData
+);
 
       // Send notification to customer for any status that has copy defined
 
@@ -180,6 +201,7 @@ const Orders = () => {
                 <option value="Shipped">Shipped</option>
 
                 <option value="Delivered">Delivered</option>
+                <option value="Cancelled">Cancelled</option>
               </select>
             </div>
           </div>
@@ -231,6 +253,7 @@ const Orders = () => {
                           className="status-select"
                           data-status={order.status}
                           value={order.status}
+                          disabled={order.status === "Cancelled"}
                           onChange={(e) => updateStatus(order, e.target.value)}
                         >
                           <option value="Pending">Pending</option>
@@ -240,6 +263,7 @@ const Orders = () => {
                           <option value="Shipped">Shipped</option>
 
                           <option value="Delivered">Delivered</option>
+                          <option value="Cancelled">Cancelled</option>
                         </select>
                       </td>
 
@@ -277,9 +301,7 @@ const Orders = () => {
                   <div className="modal-header">
                     <div>
                       <h2>Order Details</h2>
-                      <p className="modal-order-id mono">
-                        #{selectedOrder.id}
-                      </p>
+                      <p className="modal-order-id mono">#{selectedOrder.id}</p>
                     </div>
 
                     <button
@@ -356,6 +378,26 @@ const Orders = () => {
                     <p>
                       <strong>Status :</strong> {selectedOrder.status}
                     </p>
+                    {selectedOrder.status === "Cancelled" && (
+                      <div className="cancellation-details">
+                        <h3>Cancellation Details</h3>
+
+                        <p>
+                          <strong>Reason :</strong>{" "}
+                          {selectedOrder.cancellationReason ||
+                            "No reason provided"}
+                        </p>
+
+                        <p>
+                          <strong>Cancelled On :</strong>{" "}
+                          {selectedOrder.cancelledAt?.toDate
+                            ? selectedOrder.cancelledAt
+                                .toDate()
+                                .toLocaleString()
+                            : "-"}
+                        </p>
+                      </div>
+                    )}
                   </div>
 
                   <hr />

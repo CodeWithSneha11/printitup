@@ -123,11 +123,15 @@ function Login() {
         className="auth-card"
         onSubmit={handleLogin}
       >
-        <h2>Welcome Back 👋</h2>
+        <h2>
+    Welcome Back
+</h2>
 
-        <p className="auth-subtitle">
-          Login to continue designing
-        </p>
+<p className="auth-subtitle">
+    Sign in to continue creating amazing custom designs.
+</p>
+
+        
 
         {error && (
           <div className="error-box">

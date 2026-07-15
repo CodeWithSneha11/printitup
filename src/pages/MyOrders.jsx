@@ -1,5 +1,13 @@
 import React, { useEffect, useState } from "react";
-import { collection, query, where, onSnapshot } from "firebase/firestore";
+import {
+  collection,
+  query,
+  where,
+  onSnapshot,
+  doc,
+  updateDoc,
+  serverTimestamp,
+} from "firebase/firestore";
 import { auth, db } from "../firebase";
 import {
   FaUser,
@@ -30,9 +38,6 @@ const STATUS_FLOW = [
   { key: "Delivered", label: "Delivered", icon: <FaHome /> },
 ];
 
-// Old orders saved before the "Processing" -> "Confirmed" rename still have
-// status: "Processing" in Firestore. Map that legacy value onto the
-// "Confirmed" step so existing orders keep tracking correctly.
 const LEGACY_STATUS_MAP = {
   Processing: "Confirmed",
 };
@@ -44,59 +49,114 @@ const getStepIndex = (status) => {
   const normalized = LEGACY_STATUS_MAP[status] || status;
 
   const idx = STATUS_FLOW.findIndex(
-    (s) => s.key.toLowerCase() === normalized.toLowerCase()
+    (s) => s.key.toLowerCase() === normalized.toLowerCase(),
   );
   return idx === -1 ? 0 : idx;
 };
+const canCancelOrder = (status) => {
+  if (!status) return false;
 
+  const normalized = status.toLowerCase();
+
+  return normalized === "pending" || normalized === "confirmed";
+};
 
 // Full step tracker shown inside the order details modal
-const OrderTracker = ({ status }) => {
-  const currentIndex = getStepIndex(status);
+const OrderTracker = ({ order }) => {
+
+  const currentIndex = getStepIndex(order.status);
+
 
   if (currentIndex === -1) {
     return (
       <div className="order-tracker cancelled-tracker">
+
         <FaBan size={22} />
-        <p>This order was cancelled.</p>
+
+        <div className="cancelled-info">
+
+          <h4>Order Cancelled</h4>
+
+          {order.cancellationReason && (
+            <p>
+              Reason: {order.cancellationReason}
+            </p>
+          )}
+          {order.cancelledAt && (
+  <p>
+    Cancelled On:{" "}
+    {order.cancelledAt?.toDate
+      ? order.cancelledAt.toDate().toLocaleString()
+      : "-"}
+  </p>
+)}
+
+        </div>
+
       </div>
     );
   }
 
+
   return (
     <div className="order-tracker">
+
       {STATUS_FLOW.map((step, index) => {
+
         const isDone = index < currentIndex;
+
         const isCurrent = index === currentIndex;
+
 
         return (
           <div className="tracker-step" key={step.key}>
+
             <div className="tracker-step-top">
+
               <div
-                className={`tracker-icon ${isDone ? "done" : ""} ${
+                className={`tracker-icon ${
+                  isDone ? "done" : ""
+                } ${
                   isCurrent ? "current" : ""
                 }`}
               >
+
                 {step.icon}
+
               </div>
 
+
               {index < STATUS_FLOW.length - 1 && (
+
                 <div
-                  className={`tracker-connector ${isDone ? "done" : ""}`}
+                  className={`tracker-connector ${
+                    isDone ? "done" : ""
+                  }`}
                 />
+
               )}
+
             </div>
+
 
             <span
               className={`tracker-label ${
-                isDone || isCurrent ? "active-label" : ""
+                isDone || isCurrent
+                  ? "active-label"
+                  : ""
               }`}
             >
+
               {step.label}
+
             </span>
+
+
           </div>
         );
+
       })}
+
     </div>
   );
 };
@@ -105,6 +165,27 @@ const MyOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState(null);
+  const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+
+  //cancel order
+      const handleCancelOrder = async () => {
+      try {
+        const orderRef = doc(db, "orders", selectedOrder.id);
+await updateDoc(orderRef, {
+  status: "Cancelled",
+  cancelledAt: serverTimestamp(),
+  cancelledBy: "user",
+  cancellationReason: cancelReason || "No reason provided",
+});
+
+        setShowCancelConfirm(false);
+        setSelectedOrder(null);
+      } catch (error) {
+        console.error("Error cancelling order:", error);
+        alert("Unable to cancel order. Please try again.");
+      }
+    };
 
   useEffect(() => {
     const user = auth.currentUser;
@@ -239,7 +320,7 @@ const MyOrders = () => {
             </div>
 
             <div className="modal-content">
-              <OrderTracker status={selectedOrder.status} />
+             <OrderTracker order={selectedOrder} />
 
               <div className="info-grid">
                 <div className="info-card">
@@ -280,9 +361,7 @@ const MyOrders = () => {
                   </p>
 
                   {selectedOrder.deliveryAddress?.landmark && (
-                    <p>
-                      Landmark : {selectedOrder.deliveryAddress.landmark}
-                    </p>
+                    <p>Landmark : {selectedOrder.deliveryAddress.landmark}</p>
                   )}
 
                   <p>
@@ -392,11 +471,96 @@ const MyOrders = () => {
             </div>
 
             <div className="modal-footer">
+              {canCancelOrder(selectedOrder.status) && (
+                <button
+                  className="cancel-order-btn"
+                  onClick={() => setShowCancelConfirm(true)}
+                >
+                  <FaBan />
+                  Cancel Order
+                </button>
+              )}
+
               <button
                 className="close-modal-btn"
                 onClick={() => setSelectedOrder(null)}
               >
                 Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+      {showCancelConfirm && (
+        <div className="modal-overlay">
+          <div className="cancel-confirm-modal">
+            <FaBan size={35} />
+
+            <h2>Cancel Order?</h2>
+
+            <p>
+              Are you sure you want to cancel this order? This action cannot be
+              undone.
+            </p>
+<div className="cancel-reasons">
+
+  <label>
+    <input
+      type="radio"
+      name="reason"
+      value="Changed my mind"
+      onChange={(e) => setCancelReason(e.target.value)}
+    />
+    Changed my mind
+  </label>
+
+
+  <label>
+    <input
+      type="radio"
+      name="reason"
+      value="Wrong size selected"
+      onChange={(e) => setCancelReason(e.target.value)}
+    />
+    Wrong size selected
+  </label>
+
+
+  <label>
+    <input
+      type="radio"
+      name="reason"
+      value="Wrong design"
+      onChange={(e) => setCancelReason(e.target.value)}
+    />
+    Wrong design
+  </label>
+
+
+  <label>
+    <input
+      type="radio"
+      name="reason"
+      value="Ordered by mistake"
+      onChange={(e) => setCancelReason(e.target.value)}
+    />
+    Ordered by mistake
+  </label>
+
+</div>
+            <div className="cancel-actions">
+              <button
+                className="keep-order-btn"
+                onClick={() => setShowCancelConfirm(false)}
+              >
+                Keep Order
+              </button>
+
+              <button
+                className="confirm-cancel-btn"
+                onClick={handleCancelOrder}
+              >
+                Yes, Cancel
               </button>
             </div>
           </div>

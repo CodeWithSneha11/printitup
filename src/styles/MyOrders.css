@@ -13,7 +13,7 @@
   padding: 40px 8%;
   min-height: 100vh;
   background: #f6f8fc;
-  font-family: 'Inter', sans-serif;
+  font-family: "Inter", sans-serif;
 }
 
 .myorders-header {
@@ -26,7 +26,7 @@
 }
 
 .myorders-header h1 {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   font-size: 36px;
   color: #111827;
   margin-bottom: 6px;
@@ -43,11 +43,11 @@
   color: #fff;
   padding: 11px 22px;
   border-radius: 40px;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.03em;
-  box-shadow: 0 8px 20px rgba(79, 70, 229, .25);
+  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.25);
 }
 
 /* ==========================
@@ -62,7 +62,7 @@
   justify-content: center;
   align-items: center;
   color: #6b7280;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 14px;
   letter-spacing: 0.03em;
 }
@@ -74,11 +74,13 @@
   border-radius: 50%;
   border: 3px solid var(--ink-soft);
   border-top-color: var(--ink);
-  animation: spin .8s linear infinite;
+  animation: spin 0.8s linear infinite;
 }
 
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* ==========================
@@ -91,7 +93,7 @@
   border: 1px solid #eef0f4;
   border-radius: 20px;
   padding: 70px 30px;
-  box-shadow: 0 15px 35px rgba(17,24,39,.05);
+  box-shadow: 0 15px 35px rgba(17, 24, 39, 0.05);
 }
 
 .empty-orders svg {
@@ -100,7 +102,7 @@
 }
 
 .empty-orders h2 {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   margin-bottom: 8px;
   color: #111827;
 }
@@ -115,7 +117,7 @@
 
 .orders-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(360px,1fr));
+  grid-template-columns: repeat(auto-fit, minmax(360px, 1fr));
   gap: 24px;
 }
 
@@ -128,14 +130,17 @@
   border: 1px solid #eef0f4;
   border-radius: 20px;
   padding: 24px;
-  box-shadow: 0 8px 20px rgba(17,24,39,.04);
-  transition: transform .25s ease, box-shadow .25s ease, border-color .25s ease;
+  box-shadow: 0 8px 20px rgba(17, 24, 39, 0.04);
+  transition:
+    transform 0.25s ease,
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
 }
 
 .order-card:hover {
   transform: translateY(-4px);
   border-color: #e0e3ff;
-  box-shadow: 0 16px 36px rgba(79,70,229,.12);
+  box-shadow: 0 16px 36px rgba(79, 70, 229, 0.12);
 }
 
 .order-top {
@@ -148,7 +153,7 @@
 }
 
 .order-top h3 {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   margin-bottom: 6px;
   color: #111827;
   font-size: 18px;
@@ -159,7 +164,7 @@
   align-items: center;
   gap: 7px;
   color: #6b7280;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 12px;
 }
 
@@ -176,7 +181,7 @@
 .order-info span {
   display: block;
   color: #9ca3af;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -201,18 +206,28 @@
   padding: 7px 16px;
   border-radius: 30px;
   color: #fff;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 11px;
   font-weight: 600;
   letter-spacing: 0.05em;
   text-transform: uppercase;
 }
 
-.status.pending    { background: #f59e0b; }
-.status.processing { background: #3b82f6; }
-.status.shipped    { background: #7c3aed; }
-.status.delivered  { background: #16a34a; }
-.status.cancelled  { background: #ef4444; }
+.status.pending {
+  background: #f59e0b;
+}
+.status.processing {
+  background: #3b82f6;
+}
+.status.shipped {
+  background: #7c3aed;
+}
+.status.delivered {
+  background: #16a34a;
+}
+.status.cancelled {
+  background: #ef4444;
+}
 
 /* ==========================
    BUTTON
@@ -228,7 +243,9 @@
   font-size: 14px;
   font-weight: 600;
   cursor: pointer;
-  transition: background .25s ease, transform .25s ease;
+  transition:
+    background 0.25s ease,
+    transform 0.25s ease;
 }
 
 .details-btn:hover {
@@ -248,19 +265,23 @@
 .modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(17,17,25,.6);
+  background: rgba(17, 17, 25, 0.6);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 9999;
   backdrop-filter: blur(6px);
-  animation: fade .2s ease;
+  animation: fade 0.2s ease;
   padding: 20px;
 }
 
 @keyframes fade {
-  from { opacity: 0; }
-  to { opacity: 1; }
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .order-modal {
@@ -270,13 +291,19 @@
   overflow-y: auto;
   background: #fff;
   border-radius: 22px;
-  animation: popup .25s ease;
-  font-family: 'Inter', sans-serif;
+  animation: popup 0.25s ease;
+  font-family: "Inter", sans-serif;
 }
 
 @keyframes popup {
-  from { transform: scale(.95); opacity: 0; }
-  to { transform: scale(1); opacity: 1; }
+  from {
+    transform: scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: scale(1);
+    opacity: 1;
+  }
 }
 
 /* ==========================
@@ -296,14 +323,14 @@
 }
 
 .modal-header h2 {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   margin-bottom: 6px;
   color: #111827;
 }
 
 .modal-header p {
   color: #6b7280;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 12px;
 }
 
@@ -321,7 +348,9 @@
   cursor: pointer;
   background: #f3f4f6;
   color: #6b7280;
-  transition: background .2s ease, color .2s ease;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
 }
 
 .close-btn:hover {
@@ -344,7 +373,7 @@
 
 .info-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit,minmax(260px,1fr));
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
   gap: 20px;
   margin-bottom: 32px;
 }
@@ -361,7 +390,7 @@
   align-items: center;
   gap: 9px;
   color: var(--ink);
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   font-size: 15px;
   margin-bottom: 16px;
 }
@@ -380,7 +409,7 @@
 }
 
 .items-title {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   font-size: 22px;
   color: #111827;
   margin-bottom: 22px;
@@ -403,12 +432,14 @@
   border: 1px solid #eef0f4;
   border-radius: 16px;
   padding: 18px;
-  transition: box-shadow .25s ease, border-color .25s ease;
+  transition:
+    box-shadow 0.25s ease,
+    border-color 0.25s ease;
 }
 
 .product-card:hover {
   border-color: #e0e3ff;
-  box-shadow: 0 10px 24px rgba(79,70,229,.08);
+  box-shadow: 0 10px 24px rgba(79, 70, 229, 0.08);
 }
 
 .product-image img {
@@ -435,7 +466,7 @@
 }
 
 .product-info h4 {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   margin-bottom: 16px;
   color: #111827;
   font-size: 16px;
@@ -443,14 +474,14 @@
 
 .product-specs {
   display: grid;
-  grid-template-columns: repeat(2,1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 12px;
 }
 
 .product-specs span {
   display: block;
   color: #9ca3af;
-  font-family: 'JetBrains Mono', monospace;
+  font-family: "JetBrains Mono", monospace;
   font-size: 11px;
   text-transform: uppercase;
   letter-spacing: 0.05em;
@@ -464,7 +495,7 @@
 }
 
 .product-price {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   font-size: 24px;
   font-weight: 700;
   color: #16a34a;
@@ -500,7 +531,7 @@
 }
 
 .grand-total {
-  font-family: 'Space Grotesk', sans-serif;
+  font-family: "Space Grotesk", sans-serif;
   font-size: 22px;
   font-weight: 700;
   color: #111827;
@@ -526,7 +557,9 @@
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: background .2s ease, transform .2s ease;
+  transition:
+    background 0.2s ease,
+    transform 0.2s ease;
 }
 
 .close-modal-btn:hover {
@@ -544,8 +577,13 @@
 ========================== */
 
 @media (prefers-reduced-motion: reduce) {
-  .order-card, .details-btn, .close-btn,
-  .close-modal-btn, .product-card, .modal-overlay, .order-modal {
+  .order-card,
+  .details-btn,
+  .close-btn,
+  .close-modal-btn,
+  .product-card,
+  .modal-overlay,
+  .order-modal {
     transition: none;
     animation: none;
   }
@@ -555,8 +593,7 @@
    RESPONSIVE
 ========================== */
 
-@media (max-width:768px) {
-
+@media (max-width: 768px) {
   .myorders-page {
     padding: 24px 5%;
   }
@@ -593,7 +630,6 @@
   .header-right {
     gap: 10px;
   }
-
 }
 /* ---- Mini tracker (order card) ---- */
 .mini-tracker {
@@ -722,4 +758,256 @@
   border-radius: 10px;
   margin-bottom: 24px;
   font-weight: 500;
+}
+/* ==========================
+   CANCEL ORDER BUTTON
+========================== */
+
+.cancel-order-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+
+  border: none;
+  background: #ef4444;
+  color: #fff;
+
+  padding: 13px 26px;
+  border-radius: 12px;
+
+  font-size: 15px;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    background 0.25s ease,
+    transform 0.25s ease;
+}
+
+.cancel-order-btn:hover {
+  background: #dc2626;
+  transform: translateY(-1px);
+}
+
+.cancel-order-btn svg {
+  font-size: 16px;
+}
+
+/* ==========================
+   CANCEL CONFIRM MODAL
+========================== */
+
+.cancel-confirm-modal {
+  width: 95%;
+  max-width: 430px;
+
+  background: #fff;
+
+  border-radius: 22px;
+
+  padding: 32px;
+
+  text-align: center;
+
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
+
+  animation: popup 0.25s ease;
+}
+
+.cancel-confirm-modal > svg {
+  color: #ef4444;
+  background: #fee2e2;
+
+  padding: 12px;
+
+  width: 60px;
+  height: 60px;
+
+  border-radius: 50%;
+
+  margin-bottom: 18px;
+}
+
+.cancel-confirm-modal h2 {
+  font-family: "Space Grotesk", sans-serif;
+
+  font-size: 26px;
+
+  color: #111827;
+
+  margin-bottom: 12px;
+}
+
+.cancel-confirm-modal p {
+  color: #6b7280;
+
+  font-size: 14px;
+
+  line-height: 1.6;
+
+  margin-bottom: 22px;
+}
+
+/* ==========================
+   CANCEL REASONS
+========================== */
+
+.cancel-reasons {
+  background: #f8fafc;
+
+  border: 1px solid #eef0f4;
+
+  border-radius: 14px;
+
+  padding: 18px;
+
+  text-align: left;
+
+  margin-bottom: 25px;
+}
+
+.cancel-reasons label {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 10px 0;
+
+  color: #374151;
+
+  font-size: 14px;
+
+  cursor: pointer;
+}
+
+.cancel-reasons input {
+  width: 16px;
+
+  height: 16px;
+
+  accent-color: #ef4444;
+}
+
+/* ==========================
+   CANCEL ACTION BUTTONS
+========================== */
+
+.cancel-actions {
+  display: flex;
+
+  justify-content: center;
+
+  gap: 14px;
+}
+
+.keep-order-btn,
+.confirm-cancel-btn {
+  flex: 1;
+
+  padding: 13px;
+
+  border-radius: 12px;
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+/* Keep order */
+
+.keep-order-btn {
+  border: 1px solid #e5e7eb;
+
+  background: #fff;
+
+  color: #374151;
+}
+
+.keep-order-btn:hover {
+  background: #f3f4f6;
+
+  transform: translateY(-1px);
+}
+
+/* Confirm cancellation */
+
+.confirm-cancel-btn {
+  border: none;
+
+  background: #ef4444;
+
+  color: white;
+}
+
+.confirm-cancel-btn:hover {
+  background: #dc2626;
+
+  transform: translateY(-1px);
+}
+
+/* ==========================
+   MOBILE CANCEL POPUP
+========================== */
+
+@media (max-width: 480px) {
+  .cancel-confirm-modal {
+    padding: 24px;
+  }
+
+  .cancel-actions {
+    flex-direction: column;
+  }
+
+  .keep-order-btn,
+  .confirm-cancel-btn {
+    width: 100%;
+  }
+}
+.cancelled-tracker {
+  display: flex;
+  align-items: flex-start;
+  gap: 15px;
+
+  background: #fdecec;
+
+  color: #dc2626;
+
+  padding: 18px 20px;
+
+  border-radius: 14px;
+
+  margin-bottom: 25px;
+}
+
+.cancelled-info h4 {
+  margin: 0 0 8px;
+
+  font-family: "Space Grotesk", sans-serif;
+
+  font-size: 18px;
+}
+
+.cancelled-info p {
+  margin: 0;
+
+  color: #7f1d1d;
+
+  font-size: 14px;
+}
+.cancelled-info p {
+  margin-bottom: 6px;
+}
+
+.cancelled-info p:last-child {
+  margin-bottom: 0;
 }

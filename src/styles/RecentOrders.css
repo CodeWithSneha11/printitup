@@ -1,0 +1,190 @@
+.recent-orders-container {
+  margin-top: 35px;
+
+  background: white;
+
+  padding: 25px;
+
+  border-radius: 16px;
+
+  box-shadow: 0 5px 20px rgba(0, 0, 0, 0.08);
+}
+
+.recent-orders-header {
+  display: flex;
+
+  justify-content: space-between;
+
+  align-items: center;
+
+  margin-bottom: 20px;
+}
+
+.recent-orders-header h2 {
+  margin: 0;
+
+  font-size: 22px;
+
+  font-weight: 600;
+
+  color: #222;
+}
+
+.view-orders-btn {
+  border: none;
+
+  background: #111827;
+
+  color: white;
+
+  padding: 10px 18px;
+
+  border-radius: 10px;
+
+  cursor: pointer;
+
+  font-size: 14px;
+
+  transition: 0.3s ease;
+}
+
+.view-orders-btn:hover {
+  opacity: 0.85;
+}
+
+.table-wrapper {
+  width: 100%;
+
+  overflow-x: auto;
+}
+
+.recent-orders-table {
+  width: 100%;
+
+  border-collapse: collapse;
+}
+
+.recent-orders-table th {
+  text-align: left;
+
+  padding: 14px;
+
+  font-size: 14px;
+
+  color: #666;
+
+  border-bottom: 1px solid #eee;
+}
+
+.recent-orders-table td {
+  padding: 15px 14px;
+
+  font-size: 14px;
+
+  color: #333;
+
+  border-bottom: 1px solid #f1f1f1;
+}
+
+.recent-orders-table tbody tr {
+  transition: 0.2s ease;
+}
+
+.recent-orders-table tbody tr:hover {
+  background: #fafafa;
+}
+
+/* Status Badge */
+
+.order-status {
+  display: inline-block;
+
+  padding: 6px 12px;
+
+  border-radius: 20px;
+
+  font-size: 12px;
+
+  font-weight: 600;
+}
+
+.status-pending {
+  background: #fff7ed;
+
+  color: #ea580c;
+}
+
+.status-processing {
+  background: #eff6ff;
+
+  color: #2563eb;
+}
+
+.status-shipped {
+  background: #f5f3ff;
+
+  color: #7c3aed;
+}
+
+.status-delivered {
+  background: #f0fdf4;
+
+  color: #16a34a;
+}
+
+.status-cancelled {
+  background: #fef2f2;
+
+  color: #dc2626;
+}
+
+.status-default {
+  background: #f3f4f6;
+
+  color: #555;
+}
+
+.no-orders {
+  text-align: center;
+
+  padding: 40px;
+
+  color: #777;
+
+  font-size: 15px;
+}
+
+/* Tablet */
+
+@media (max-width: 900px) {
+  .recent-orders-container {
+    padding: 20px;
+  }
+
+  .recent-orders-header h2 {
+    font-size: 20px;
+  }
+}
+
+/* Mobile */
+
+@media (max-width: 600px) {
+  .recent-orders-header {
+    flex-direction: column;
+
+    align-items: flex-start;
+
+    gap: 15px;
+  }
+
+  .view-orders-btn {
+    width: 100%;
+  }
+
+  .recent-orders-table th,
+  .recent-orders-table td {
+    padding: 12px 10px;
+
+    white-space: nowrap;
+  }
+}
