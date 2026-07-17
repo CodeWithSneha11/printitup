@@ -510,7 +510,7 @@ canvas {
 ================================================== */
 
 .colors-section {
-   padding: 35px 8% 90px;
+  padding: 35px 8% 90px;
   text-align: center;
   position: relative;
   z-index: 2;
@@ -806,6 +806,8 @@ button,
    RESPONSIVE
 ========================================== */
 
+/* ---------------- Desktop ---------------- */
+
 @media (max-width: 1200px) {
   .hero-section {
     gap: 40px;
@@ -816,20 +818,19 @@ button,
   }
 
   .shirt-card {
-    width: 450px;
-    height: 450px;
-  }
-
-  .shirt-card img {
-    width: 300px;
+    width: 470px;
+    height: 470px;
   }
 }
+
+/* ---------------- Tablet ---------------- */
 
 @media (max-width: 992px) {
   .hero-section {
     flex-direction: column;
     text-align: center;
-    padding: 70px 6%;
+    padding: 70px 6% 40px;
+    min-height: auto;
   }
 
   .hero-left {
@@ -838,37 +839,53 @@ button,
     align-items: center;
   }
 
+  .hero-left h1 {
+    font-size: 52px;
+  }
+
   .hero-left p {
-    max-width: 700px;
+    max-width: 650px;
   }
 
   .hero-buttons {
     justify-content: center;
-    flex-wrap: wrap;
+  }
+
+  .hero-right {
+    width: 100%;
+    margin-top: 20px;
+  }
+
+  .shirt-card {
+    width: 420px;
+    height: 420px;
   }
 
   .hero-stats {
     justify-content: center;
-    flex-wrap: wrap;
     gap: 35px;
-  }
-
-  .hero-right {
-    margin-top: 40px;
-  }
-
-  .process-grid {
-    grid-template-columns: 1fr;
   }
 
   .category-grid {
     grid-template-columns: repeat(2, 1fr);
   }
+
+  .process-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
+/* ---------------- Mobile ---------------- */
+
 @media (max-width: 768px) {
+  .hero-section {
+    padding: 45px 20px 20px;
+    gap: 25px;
+  }
+
   .hero-left h1 {
-    font-size: 46px;
+    font-size: 40px;
+    line-height: 1.2;
   }
 
   .hero-left p {
@@ -876,42 +893,62 @@ button,
   }
 
   .hero-buttons {
-    flex-direction: column;
     width: 100%;
   }
 
-  .primary-btn,
-  .secondary-btn {
+  .hero-buttons a {
+    width: 100%;
+  }
+
+  .primary-btn {
     width: 100%;
     justify-content: center;
   }
 
-  .hero-stats {
-    flex-direction: column;
-    gap: 20px;
+  .hero-right {
+    width: 100%;
   }
 
   .shirt-card {
-    width: 350px;
-    height: 350px;
+    width: 100%;
+    max-width: 340px;
+    aspect-ratio: 1;
+    height: auto;
   }
 
-  .shirt-card img {
-    width: 240px;
+  .discount-badge {
+    top: 15px;
+    left: 15px;
   }
 
   .floating-mini-card {
     display: none;
   }
 
-  .discount-badge {
-    font-size: 12px;
-    padding: 8px 14px;
+  /* Color Picker */
+
+  .colors-section {
+    padding: 50px 20px;
   }
 
-  .colors-section h2,
-  .section-title h2 {
-    font-size: 34px;
+  .colors-section h2 {
+    font-size: 32px;
+  }
+
+  .color-list {
+    gap: 12px;
+    justify-content: center;
+  }
+
+  .color-circle {
+    width: 42px;
+    height: 42px;
+  }
+
+  /* Categories */
+
+  .category-section {
+    padding: 60px 20px;
   }
 
   .category-grid {
@@ -919,64 +956,65 @@ button,
   }
 
   .category-card {
-    height: 320px;
+    height: 300px;
   }
 
-  .process-card {
-    padding: 35px 25px;
-  }
-}
+  /* Process */
 
-@media (max-width: 480px) {
-  .hero-section {
+  .design-process {
     padding: 60px 20px;
   }
 
-  .hero-left h1 {
-    font-size: 36px;
+  .process-card {
+    padding: 30px 20px;
   }
 
-  .hero-tag {
-    font-size: 12px;
-    padding: 8px 15px;
+  .hero-stats {
+    flex-direction: column;
+    gap: 20px;
+  }
+}
+
+/* ---------------- Small Phones ---------------- */
+
+@media (max-width: 480px) {
+  .hero-left h1 {
+    font-size: 32px;
   }
 
   .hero-left p {
     font-size: 15px;
   }
 
-  .hero-stats h2 {
-    font-size: 32px;
-  }
-
-  .hero-stats p {
-    font-size: 14px;
+  .hero-tag {
+    font-size: 12px;
+    padding: 8px 14px;
   }
 
   .shirt-card {
-    width: 280px;
-    height: 280px;
-  }
-
-  .shirt-card img {
-    width: 180px;
+    max-width: 280px;
   }
 
   .color-circle {
-    width: 50px;
-    height: 50px;
+    width: 38px;
+    height: 38px;
+  }
+
+  .color-circle.active::after {
+    font-size: 18px;
+  }
+
+  .section-title h2,
+  .colors-section h2 {
+    font-size: 28px;
   }
 
   .category-overlay h3 {
-    font-size: 24px;
-  }
-
-  .category-overlay button {
-    width: 100%;
+    font-size: 22px;
   }
 
   .process-icon {
-    font-size: 45px;
+    font-size: 40px;
   }
 
   .process-card h3 {
@@ -984,124 +1022,6 @@ button,
   }
 
   .process-card p {
-    font-size: 15px;
-  }
-}
-
-/* ==========================================
-   FADE-IN ANIMATION
-========================================== */
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(40px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-.hero-left,
-.hero-right,
-.colors-section,
-.category-section,
-.design-process {
-  animation: fadeInUp 0.9s ease;
-}
-/* ==========================
-   COLOR PICKER
-========================== */
-
-.color-list {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 18px;
-  margin-top: 25px;
-  flex-wrap: wrap;
-}
-
-.color-circle {
-  width: 48px;
-  height: 48px;
-
-  border-radius: 50%;
-
-  cursor: pointer;
-
-  position: relative;
-
-  border: 3px solid transparent;
-
-  transition:
-    transform 0.3s ease,
-    box-shadow 0.3s ease,
-    border-color 0.3s ease;
-}
-
-/* Hover animation */
-
-.color-circle:hover {
-  transform: translateY(-6px) scale(1.08);
-
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.18);
-}
-
-/* Selected color */
-
-.color-circle.active {
-  border-color: #4f46e5;
-
-  box-shadow:
-    0 0 0 5px rgba(79, 70, 229, 0.18),
-    0 12px 25px rgba(79, 70, 229, 0.25);
-}
-
-/* Check icon */
-
-.color-circle.active::after {
-  content: "✓";
-
-  position: absolute;
-
-  inset: 0;
-
-  display: flex;
-
-  justify-content: center;
-
-  align-items: center;
-
-  color: white;
-
-  font-size: 22px;
-
-  font-weight: 800;
-
-  text-shadow: 0 2px 5px rgba(0, 0, 0, 0.5);
-}
-
-/* White color special handling */
-
-.color-circle[style*="#ffffff"].active::after {
-  color: #111827;
-
-  text-shadow: none;
-}
-
-/* Mobile */
-
-@media (max-width: 768px) {
-  .color-list {
-    gap: 14px;
-  }
-
-  .color-circle {
-    width: 42px;
-
-    height: 42px;
+    font-size: 14px;
   }
 }

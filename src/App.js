@@ -4,7 +4,7 @@ import {
   Route,
   useLocation,
 } from "react-router-dom";
-
+import { useEffect } from "react"; 
 import Navbar from "./components/Navbar";
 
 import Home from "./pages/Home";
@@ -16,6 +16,7 @@ import Cart from "./pages/cart";
 import Checkout from "./pages/Checkout";
 import MyOrders from "./pages/MyOrders";
 import CustomerCollections from "./pages/CustomerCollections";
+import CustomerCollectionProducts from "./pages/CustomerCollectionProducts";
 
 import ProtectedRoute from "./components/ProtectedRoute";
 
@@ -29,7 +30,6 @@ import AdminLayout from "./layouts/AdminLayout";
 import AdminRoute from "./components/AdminRoute"; 
 import Footer from "./components/Footer";
 import Profile from "./pages/Profile";
-import AdminProfile from "./pages/AdminProfile";
 import ManageAddress from "./pages/ManageAddress";
 import Collections from "./pages/Collections";
 import Analytics from "./pages/Analytics";
@@ -38,6 +38,24 @@ import AdminSearch from "./pages/AdminSearch";
 
 function AppContent() {
   const location = useLocation();
+  useEffect(() => {
+  try {
+    const saved = JSON.parse(
+      localStorage.getItem("adminAppearance") ||
+      '{"theme":"dark"}'
+    );
+
+    document.documentElement.setAttribute(
+      "data-admin-theme",
+      saved.theme || "dark"
+    );
+  } catch {
+    document.documentElement.setAttribute(
+      "data-admin-theme",
+      "dark"
+    );
+  }
+}, []);
 
   const isAdminPage =
   location.pathname.startsWith("/admin");
@@ -100,6 +118,10 @@ function AppContent() {
  element={<CustomerCollections/>}
 />
 <Route
+  path="/collection/:id"
+  element={<CustomerCollectionProducts />}
+/>
+<Route
   path="/my-orders"
   element={
     <ProtectedRoute>
@@ -143,7 +165,6 @@ element={<ManageAddress/>}
   <Route path="orders" element={<Orders />} />
   <Route path="collections" element={<Collections />} />
   <Route path="users" element={<Users />} />
-  <Route path="profile" element={<AdminProfile />} />
   <Route path="settings"element={<AdminSettings />}/>
 <Route path="search" element={<AdminSearch />} />
 </Route>

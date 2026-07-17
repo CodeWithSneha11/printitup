@@ -6,9 +6,10 @@ import { db } from "../firebase";
 
 import DashboardCards from "../components/DashboardCards";
 import TodaysSummary from "../components/TodaysSummary";
+import RecentOrders from "../components/RecentOrders";
 
 import "../styles/AdminDashboard.css";
-import RecentOrders from "../components/RecentOrders";
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
 
@@ -16,11 +17,8 @@ const AdminDashboard = () => {
   const [users, setUsers] = useState([]);
 
   // Today's Summary States
-
   const [todayOrders, setTodayOrders] = useState(0);
-
   const [todayRevenue, setTodayRevenue] = useState(0);
-
   const [newUsersToday, setNewUsersToday] = useState(0);
 
   const [loading, setLoading] = useState(true);
@@ -31,7 +29,6 @@ const AdminDashboard = () => {
 
     if (!adminUid) {
       navigate("/admin-login");
-
       return;
     }
 
@@ -50,13 +47,14 @@ const AdminDashboard = () => {
 
       const orderList = orderSnapshot.docs.map((doc) => ({
         id: doc.id,
-
         ...doc.data(),
       }));
 
       setOrders(orderList);
 
+      // --------------------
       // Latest 5 Orders
+      // --------------------
 
       const latestOrders = [...orderList]
         .sort((a, b) => {
@@ -82,51 +80,52 @@ const AdminDashboard = () => {
 
       const userList = userSnapshot.docs.map((doc) => ({
         id: doc.id,
-
         ...doc.data(),
       }));
 
       setUsers(userList);
 
-      // -------------------------
-      // Today's Calculations
-      // -------------------------
-
-      const today = new Date();
-
+          const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      // Today's Orders
+      // -------------------------
+      // Today's NON-CANCELLED Orders
+      // -------------------------
 
       const todaysOrders = orderList.filter((order) => {
         if (!order.createdAt) return false;
 
         const orderDate = order.createdAt.toDate();
-
         orderDate.setHours(0, 0, 0, 0);
 
-        return orderDate.getTime() === today.getTime();
+        return (
+          orderDate.getTime() === today.getTime() &&
+          order.status !== "Cancelled"
+        );
       });
 
       setTodayOrders(todaysOrders.length);
 
+      // -------------------------
       // Today's Revenue
+      // (excluding cancelled orders)
+      // -------------------------
 
       const revenue = todaysOrders.reduce(
         (sum, order) => sum + Number(order.total || 0),
-
-        0,
+        0
       );
 
       setTodayRevenue(revenue);
 
+      // -------------------------
       // New Users Today
+      // -------------------------
 
       const todaysUsers = userList.filter((user) => {
         if (!user.createdAt) return false;
 
         const userDate = user.createdAt.toDate();
-
         userDate.setHours(0, 0, 0, 0);
 
         return userDate.getTime() === today.getTime();
@@ -141,33 +140,39 @@ const AdminDashboard = () => {
   };
 
   // -----------------------
-  // Existing Dashboard Data
+  // Dashboard Statistics
   // -----------------------
 
-  const totalRevenue = orders.reduce(
-    (sum, order) => sum + Number(order.total || 0),
-
-    0,
+  // Active Orders (excluding cancelled)
+  const activeOrders = orders.filter(
+    (order) => order.status !== "Cancelled"
   );
 
+  // Total Revenue (excluding cancelled)
+  const totalRevenue = activeOrders.reduce(
+    (sum, order) => sum + Number(order.total || 0),
+    0
+  );
+
+  // Pending Orders
   const pendingOrders = orders.filter(
-    (order) => order.status === "Pending",
+    (order) => order.status === "Pending"
   ).length;
+
+  // Cancelled Orders
   const cancelledOrders = orders.filter(
-    (order) => order.status === "Cancelled",
+    (order) => order.status === "Cancelled"
   ).length;
 
-  const averageOrderValue =
-    orders.length > 0 ? Math.round(totalRevenue / orders.length) : 0;
 
-  return (
+        return (
     <div className="admin-content">
       {loading ? (
         <h2>Loading Dashboard...</h2>
       ) : (
         <>
           <DashboardCards
-            orders={orders.length}
+            orders={activeOrders.length}
             revenue={totalRevenue}
             users={users.length}
             pending={pendingOrders}
@@ -177,9 +182,10 @@ const AdminDashboard = () => {
           <TodaysSummary
             todayOrders={todayOrders}
             todayRevenue={todayRevenue}
-            averageOrder={averageOrderValue}
+            
             newUsers={newUsersToday}
           />
+
           <RecentOrders orders={recentOrders} />
         </>
       )}

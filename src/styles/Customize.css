@@ -116,6 +116,13 @@ body {
   color: #1e293b;
 }
 
+.section-hint {
+  margin: -4px 0 4px;
+  color: #94a3b8;
+  font-size: 12.5px;
+  line-height: 1.5;
+}
+
 .options label {
   display: block;
   margin-top: 16px;
@@ -638,6 +645,20 @@ body {
   border-radius: 0 35px 40px 0;
 }
 
+/* Soft directional lighting so the garment reads as fabric rather
+   than a flat color swatch — sits above the color, below everything
+   else, and is automatically clipped to the neck cutout below. */
+.fabric-shade {
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 30% 15%, rgba(255, 255, 255, .5) 0%, rgba(255, 255, 255, 0) 40%),
+    linear-gradient(160deg, rgba(255, 255, 255, .28) 0%, rgba(255, 255, 255, 0) 35%, rgba(0, 0, 0, 0) 60%, rgba(0, 0, 0, .16) 100%);
+  mix-blend-mode: multiply;
+  pointer-events: none;
+  z-index: 1;
+}
+
 /* Neck */
 
 .neck {
@@ -649,6 +670,7 @@ body {
   top: -2px;
   transform: translateX(-50%);
   border-radius: 0 0 60px 60px;
+  box-shadow: inset 0 -6px 10px rgba(0, 0, 0, .08);
   z-index: 10;
 }
 
@@ -658,6 +680,7 @@ body {
   border: 2px dashed rgba(0, 0, 0, .08);
   border-radius: 18px;
   pointer-events: none;
+  z-index: 2;
 }
 
 /* Neck style shapes */
@@ -674,63 +697,151 @@ body {
   clip-path: polygon(0 18%, 15% 0, 85% 0, 100% 18%, 100% 100%, 0 100%);
 }
 
-/* Logo */
+/* ===================================================
+   ALIGNMENT GUIDES (shown while an element is selected)
+=================================================== */
 
-.logo-preview {
+.center-guide-v,
+.center-guide-h {
   position: absolute;
-  width: 120px;
-  height: 120px;
-  object-fit: contain;
+  background: repeating-linear-gradient(
+    to bottom,
+    rgba(37, 99, 235, .55) 0 6px,
+    transparent 6px 12px
+  );
   pointer-events: none;
-  z-index: 20;
+  z-index: 15;
 }
 
-.logo-preview.center {
-  top: 35%;
+.center-guide-v {
   left: 50%;
-  transform: translate(-50%, -50%);
+  top: 0;
+  bottom: 0;
+  width: 1px;
+  transform: translateX(-50%);
 }
 
-.logo-preview.left {
-  top: 28%;
-  left: 35%;
-  transform: translate(-50%, -50%);
+.center-guide-h {
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  transform: translateY(-50%);
+  background: repeating-linear-gradient(
+    to right,
+    rgba(37, 99, 235, .55) 0 6px,
+    transparent 6px 12px
+  );
 }
 
-.logo-preview.right {
-  top: 28%;
-  left: 65%;
-  transform: translate(-50%, -50%);
+/* ===================================================
+   DRAGGABLE DESIGN ELEMENTS
+=================================================== */
+
+.design-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: box-shadow .15s;
 }
 
-/* Text */
-
-.text-preview {
-  position: absolute;
-  max-width: 180px;
+.design-text {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
   text-align: center;
   font-weight: 700;
   word-break: break-word;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: box-shadow .15s;
+}
+
+.design-selected {
+  cursor: grab;
+  box-shadow:
+    0 0 0 2px #2563eb,
+    0 0 0 6px rgba(37, 99, 235, .15);
+}
+
+.design-selected:active {
+  cursor: grabbing;
+}
+
+/* Empty-canvas hint */
+
+.preview-empty-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: rgba(0, 0, 0, .28);
+  text-align: center;
+  padding: 0 30px;
+  z-index: 3;
   pointer-events: none;
-  z-index: 30;
 }
 
-.text-preview.center {
-  top: 65%;
-  left: 50%;
-  transform: translate(-50%, -50%);
+.preview-empty-hint svg {
+  font-size: 26px;
 }
 
-.text-preview.left {
-  top: 48%;
-  left: 35%;
-  transform: translate(-50%, -50%);
+.preview-empty-hint p {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.5;
 }
 
-.text-preview.right {
-  top: 48%;
-  left: 65%;
-  transform: translate(-50%, -50%);
+/* Floating toolbar for the currently selected element */
+
+.element-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  padding: 8px 10px 8px 16px;
+  background: white;
+  border-radius: 50px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, .1);
+  font-size: 13px;
+  font-weight: 600;
+  color: #475569;
+}
+
+.element-toolbar button {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: none;
+  border-radius: 40px;
+  padding: 8px 14px;
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  background: #eff6ff;
+  color: #2563eb;
+  transition: .2s;
+}
+
+.element-toolbar button:hover {
+  background: #dbeafe;
+}
+
+.element-toolbar-remove {
+  background: #fee2e2 !important;
+  color: #dc2626 !important;
+}
+
+.element-toolbar-remove:hover {
+  background: #dc2626 !important;
+  color: white !important;
 }
 
 @keyframes float {
@@ -775,16 +886,6 @@ body {
     height: 300px;
   }
 
-  .logo-preview {
-    width: 90px;
-    height: 90px;
-  }
-
-  .text-preview {
-    max-width: 130px;
-    font-size: 14px;
-  }
-
   .button-group {
     flex-direction: column;
   }
@@ -802,5 +903,11 @@ body {
   .view-toggle {
     width: 100%;
     justify-content: center;
+  }
+
+  .element-toolbar {
+    width: 100%;
+    justify-content: center;
+    flex-wrap: wrap;
   }
 }

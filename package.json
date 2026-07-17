@@ -13,6 +13,7 @@
     "axios": "^1.13.2",
     "fabric": "^7.4.0",
     "firebase": "^12.15.0",
+    "framer-motion": "^12.42.2",
     "konva": "^10.3.0",
     "razorpay": "^2.9.6",
     "react": "^19.2.0",

@@ -1,5 +1,4 @@
 import React from "react";
-
 import {
   FaShoppingBag,
   FaRupeeSign,
@@ -12,7 +11,7 @@ import "../styles/TodaysSummary.css";
 const TodaysSummary = ({
   todayOrders,
   todayRevenue,
-  averageOrder,
+ 
   newUsers,
 }) => {
   const cards = [
@@ -22,21 +21,12 @@ const TodaysSummary = ({
       icon: <FaShoppingBag />,
       className: "today-orders",
     },
-
     {
       title: "Today's Revenue",
-      value: `₹${todayRevenue}`,
+      value: `₹${Number(todayRevenue).toLocaleString("en-IN")}`,
       icon: <FaRupeeSign />,
       className: "today-revenue",
     },
-
-    {
-      title: "Average Order Value",
-      value: `₹${averageOrder}`,
-      icon: <FaChartLine />,
-      className: "today-average",
-    },
-
     {
       title: "New Users Today",
       value: newUsers,
@@ -56,7 +46,6 @@ const TodaysSummary = ({
 
             <div className="today-info">
               <p>{card.title}</p>
-
               <h2>{card.value}</h2>
             </div>
           </div>

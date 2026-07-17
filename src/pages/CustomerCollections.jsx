@@ -3,10 +3,7 @@ import { useNavigate } from "react-router-dom";
 
 import { db, auth } from "../firebase";
 
-import {
-  collection,
-  onSnapshot,
-} from "firebase/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 
 import "../styles/CustomerCollections.css";
 
@@ -32,7 +29,7 @@ const CustomerCollections = () => {
         }));
 
         setCollections(data);
-      }
+      },
     );
 
     return () => unsubscribe();
@@ -45,17 +42,14 @@ const CustomerCollections = () => {
   */
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, "products"),
-      (snapshot) => {
-        const data = snapshot.docs.map((doc) => ({
-          id: doc.id,
-          ...doc.data(),
-        }));
+    const unsubscribe = onSnapshot(collection(db, "products"), (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
 
-        setProducts(data);
-      }
-    );
+      setProducts(data);
+    });
 
     return () => unsubscribe();
   }, []);
@@ -65,23 +59,23 @@ const CustomerCollections = () => {
       ADD PRODUCT TO CART
   ==========================
   */
-const customizeProduct = (product) => {
-  navigate("/customize", {
-    state: {
-      product,
-      fromCollection: true,
-    },
-  });
-};
+  const customizeProduct = (product) => {
+    navigate("/customize", {
+      state: {
+        product,
+        fromCollection: true,
+      },
+    });
+  };
 
-
+  const viewCollectionProducts = (collectionItem) => {
+    navigate(`/collection/${collectionItem.id}`);
+  };
   return (
     <div className="customer-page">
       <h1>Explore Our Collections</h1>
 
-      <p className="subtitle">
-        Discover beautiful products curated for you
-      </p>
+      <p className="subtitle">Discover beautiful products curated for you</p>
 
       <div className="customer-collection-grid">
         {collections.map((collectionItem) => (
@@ -90,6 +84,7 @@ const customizeProduct = (product) => {
               src={collectionItem.image}
               alt={collectionItem.name}
               className="collection-image"
+              loading="lazy"
             />
 
             <div className="customer-content">
@@ -102,17 +97,25 @@ const customizeProduct = (product) => {
               <div className="customer-products">
                 {products
                   .filter(
-                    (product) =>
-                      product.collectionId === collectionItem.id
+                    (product) => product.collectionId === collectionItem.id,
                   )
+                  .slice(0, 3)
                   .map((product) => (
                     <div
-                      className="customer-product"
+                      className={`customer-product ${
+                        product.stock === 0 ? "out-of-stock" : ""
+                      }`}
                       key={product.id}
+                      onClick={() => {
+                        if (product.stock > 0) {
+                          customizeProduct(product);
+                        }
+                      }}
                     >
                       <img
                         src={product.image}
                         alt={product.name}
+                        loading="lazy"
                       />
 
                       <div>
@@ -120,21 +123,28 @@ const customizeProduct = (product) => {
 
                         <p>₹{product.price}</p>
 
-                        <p className="desc">
-                          {product.description}
-                        </p>
-<button
-  onClick={() => customizeProduct(product)}
-  disabled={product.stock === 0}
->
-  {product.stock === 0
-    ? "Out of Stock"
-    : "Customize & Add to Cart"}
-</button>
+                        <p className="desc">{product.description}</p>
                       </div>
                     </div>
                   ))}
               </div>
+
+              {products.filter(
+                (product) => product.collectionId === collectionItem.id,
+              ).length > 3 && (
+                <button
+                  className="view-products-btn"
+                  onClick={() => viewCollectionProducts(collectionItem)}
+                >
+                  View All Products (
+                  {
+                    products.filter(
+                      (product) => product.collectionId === collectionItem.id,
+                    ).length
+                  }
+                  )
+                </button>
+              )}
             </div>
           </div>
         ))}

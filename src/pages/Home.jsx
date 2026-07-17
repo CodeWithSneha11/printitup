@@ -2,6 +2,7 @@
 import { Link } from "react-router-dom";
 import React, { useState } from "react";
 import HomeShirt from "./HomeShirt";
+
 import {
   FaArrowRight,
 
@@ -121,6 +122,7 @@ const [shirtColor, setShirtColor] = useState("#ffffff");
             </div>
 
      <HomeShirt color={shirtColor} />
+     
 
             <div className="floating-mini-card top">
               <FaPalette />

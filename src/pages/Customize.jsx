@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
 import { db } from "../firebase";
 import "../styles/Customize.css";
@@ -24,6 +24,7 @@ import {
   FaCube,
   FaSquare,
   FaTimes,
+  FaCrosshairs,
 } from "react-icons/fa";
 import { Rnd } from "react-rnd";
 
@@ -52,7 +53,6 @@ const Customize = () => {
   const designDocId = incomingDesign?.id || null;
 
   const [text, setText] = useState("");
-  const [position, setPosition] = useState("center");
   const [side, setSide] = useState("front");
   const [selectedColor, setSelectedColor] = useState("#ffffff");
   const [selectedSize, setSelectedSize] = useState("M");
@@ -96,6 +96,9 @@ const Customize = () => {
     height: 50,
   });
 
+  // Ref to the actual rendered shirt canvas so "Center" can measure
+  const canvasRef = useRef(null);
+
   useEffect(() => {
     if (!isWebGLAvailable()) {
       setUse3D(false);
@@ -127,8 +130,6 @@ const Customize = () => {
     setText(incomingDesign.text || "");
 
     setSide(incomingDesign.side || "front");
-
-    setPosition(incomingDesign.position || "center");
 
     setSelectedColor(incomingDesign.tshirtColor || "#ffffff");
 
@@ -224,6 +225,7 @@ if (selectedElement === "text") {
     setMessage("");
     setImageFile(file);
     setImage(URL.createObjectURL(file));
+    setSelectedElement("image");
 
     // Upload immediately in background
     try {
@@ -249,7 +251,6 @@ if (selectedElement === "text") {
     }
 
     setText("");
-    setPosition("center");
     setSide("front");
     setSelectedColor("#ffffff");
     setSelectedSize("M");
@@ -261,6 +262,7 @@ if (selectedElement === "text") {
     setImageFile(null);
     setCloudinaryUrl("");
     setMessage("");
+    setSelectedElement(null);
 
     // Reset also clears the product association, since the design
     // no longer reflects the product that was passed in
@@ -330,7 +332,6 @@ if (selectedElement === "text") {
     }
     const designId = await generateDesignId({
       text,
-      position,
       side,
 
       tshirtColor: selectedColor,
@@ -361,7 +362,6 @@ if (selectedElement === "text") {
       productName: selectedProduct?.name || null,
 
       text,
-      position,
       side,
 
       tshirtColor: selectedColor,
@@ -460,6 +460,32 @@ if (selectedElement === "text") {
     }
   };
 
+  // ==========================
+  // DRAG-CANVAS HELPERS
+  // ==========================
+
+  // Clicking empty shirt space deselects whatever's selected.
+  const handleCanvasBackgroundClick = () => setSelectedElement(null);
+
+  // Quick "snap to horizontal center" — the practical replacement for
+  // the old center/left/right preset now that placement is freeform.
+  const centerElement = (type) => {
+    if (!canvasRef.current) return;
+    const { width } = canvasRef.current.getBoundingClientRect();
+
+    if (type === "image") {
+      setImagePosition((prev) => ({
+        ...prev,
+        x: Math.max(0, (width - imageSize.width) / 2),
+      }));
+    } else {
+      setTextPosition((prev) => ({
+        ...prev,
+        x: Math.max(0, (width - textSize.width) / 2),
+      }));
+    }
+  };
+
   const isError = message.startsWith("❌");
 
   return (
@@ -490,6 +516,7 @@ if (selectedElement === "text") {
             maxLength={30}
             value={text}
             onChange={(e) => setText(e.target.value)}
+            onFocus={() => text && setSelectedElement("text")}
           />
           <small className="character-count">{text.length}/30 characters</small>
 
@@ -530,18 +557,6 @@ if (selectedElement === "text") {
             <FaRulerCombined className="section-icon" />
             <h3>Placement</h3>
           </div>
-
-          <label htmlFor="print-position">Print Position</label>
-          <select
-            id="print-position"
-            value={position}
-            onChange={(e) => setPosition(e.target.value)}
-          >
-            <option value="center">Center</option>
-            <option value="left">Left Chest</option>
-            <option value="right">Right Chest</option>
-          </select>
-
           <label htmlFor="print-side">Print Side</label>
           <select
             id="print-side"
@@ -722,116 +737,157 @@ if (selectedElement === "text") {
             side={side}
           />
         ) : (
-          <div className={`preview-card ${rotate ? "rotate" : ""}`}>
-            <div
-              className={`tshirt-preview ${neck}`}
-              style={{ background: selectedColor }}
-            >
-              <div className="neck"></div>
-              <div className="stitch"></div>
+          <>
+            <div className={`preview-card ${rotate ? "rotate" : ""}`}>
+              <div
+                className={`tshirt-preview ${neck}`}
+                style={{ background: selectedColor }}
+                ref={canvasRef}
+                onClick={handleCanvasBackgroundClick}
+              >
+                <div className="fabric-shade"></div>
+                <div className="neck"></div>
+                <div className="stitch"></div>
 
-              {image && (
-                <Rnd
-                  size={{
-                    width: imageSize.width,
-                    height: imageSize.height,
-                  }}
-                  position={{
-                    x: imagePosition.x,
-                    y: imagePosition.y,
-                  }}
-                  bounds="parent"
-                  onClick={() => setSelectedElement("image")}
-                  enableResizing={selectedElement === "image"}
-                  disableDragging={selectedElement !== "image"}
-                  onDragStop={(e, d) => {
-                    setImagePosition({
-                      x: d.x,
-                      y: d.y,
-                    });
-                  }}
-                  onResizeStop={(e, direction, ref, delta, position) => {
-                    setImageSize({
-                      width: ref.offsetWidth,
-                      height: ref.offsetHeight,
-                    });
+                {selectedElement && (
+                  <>
+                    <div className="center-guide-v"></div>
+                    <div className="center-guide-h"></div>
+                  </>
+                )}
 
-                    setImagePosition({
-                      x: position.x,
-                      y: position.y,
-                    });
-                  }}
-                >
-                  <img
-                    src={image}
-                    alt="Logo"
-                    style={{
-                      width: "100%",
-                      height: "100%",
-                      objectFit: "contain",
-                      border:
-                        selectedElement === "image"
-                          ? "2px dashed #2563eb"
-                          : "none",
+                {image && (
+                  <Rnd
+                    size={{
+                      width: imageSize.width,
+                      height: imageSize.height,
                     }}
-                  />
-                </Rnd>
-              )}
-              {text && (
-                <Rnd
-                  size={{
-                    width: textSize.width,
-                    height: textSize.height,
-                  }}
-                  position={{
-                    x: textPosition.x,
-                    y: textPosition.y,
-                  }}
-                  bounds="parent"
-                  onClick={() => setSelectedElement("text")}
-                  enableResizing={selectedElement === "text"}
-                   disableDragging={selectedElement !== "text"}
-                  onDragStop={(e, d) => {
-                    setTextPosition({
-                      x: d.x,
-                      y: d.y,
-                    });
-                  }}
-                  onResizeStop={(e, direction, ref, delta, position) => {
-                    setTextSize({
-                      width: ref.offsetWidth,
-                      height: ref.offsetHeight,
-                    });
+                    position={{
+                      x: imagePosition.x,
+                      y: imagePosition.y,
+                    }}
+                    bounds="parent"
+                    style={{ zIndex: selectedElement === "image" ? 25 : 20 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedElement("image");
+                    }}
+                    enableResizing={selectedElement === "image"}
+                    disableDragging={selectedElement !== "image"}
+                    onDragStop={(e, d) => {
+                      setImagePosition({
+                        x: d.x,
+                        y: d.y,
+                      });
+                    }}
+                    onResizeStop={(e, direction, ref, delta, position) => {
+                      setImageSize({
+                        width: ref.offsetWidth,
+                        height: ref.offsetHeight,
+                      });
 
-                    setTextPosition({
-                      x: position.x,
-                      y: position.y,
-                    });
-                  }}
-                >
-                  <div
-                    style={{
-                      color: textColor,
-                      fontSize: `${fontSize}px`,
-                      fontWeight: "bold",
-                      width: "100%",
-                      height: "100%",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      textAlign: "center",
-                      border:
-                        selectedElement === "text"
-                          ? "2px dashed #2563eb"
-                          : "none",
+                      setImagePosition({
+                        x: position.x,
+                        y: position.y,
+                      });
                     }}
                   >
-                    {text}
+                    <img
+                      src={image}
+                      alt="Logo"
+                      className={`design-image${
+                        selectedElement === "image" ? " design-selected" : ""
+                      }`}
+                    />
+                  </Rnd>
+                )}
+                {text && (
+                  <Rnd
+                    size={{
+                      width: textSize.width,
+                      height: textSize.height,
+                    }}
+                    position={{
+                      x: textPosition.x,
+                      y: textPosition.y,
+                    }}
+                    bounds="parent"
+                    style={{ zIndex: selectedElement === "text" ? 25 : 20 }}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setSelectedElement("text");
+                    }}
+                    enableResizing={selectedElement === "text"}
+                     disableDragging={selectedElement !== "text"}
+                    onDragStop={(e, d) => {
+                      setTextPosition({
+                        x: d.x,
+                        y: d.y,
+                      });
+                    }}
+                    onResizeStop={(e, direction, ref, delta, position) => {
+                      setTextSize({
+                        width: ref.offsetWidth,
+                        height: ref.offsetHeight,
+                      });
+
+                      setTextPosition({
+                        x: position.x,
+                        y: position.y,
+                      });
+                    }}
+                  >
+                    <div
+                      className={`design-text${
+                        selectedElement === "text" ? " design-selected" : ""
+                      }`}
+                      style={{
+                        color: textColor,
+                        fontSize: `${fontSize}px`,
+                      }}
+                    >
+                      {text}
+                    </div>
+                  </Rnd>
+                )}
+
+                {!image && !text && (
+                  <div className="preview-empty-hint">
+                    <FaImage />
+                    <p>Add text or an image to start designing</p>
                   </div>
-                </Rnd>
-              )}
+                )}
+              </div>
             </div>
-          </div>
+
+            {selectedElement && (
+              <div className="element-toolbar">
+                <span>
+                  {selectedElement === "image" ? "Image selected" : "Text selected"}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => centerElement(selectedElement)}
+                >
+                  <FaCrosshairs /> Center
+                </button>
+                <button
+                  type="button"
+                  className="element-toolbar-remove"
+                  onClick={() => {
+                    if (selectedElement === "image") {
+                      removeImage();
+                    } else {
+                      setText("");
+                    }
+                    setSelectedElement(null);
+                  }}
+                >
+                  <FaTimes /> Remove
+                </button>
+              </div>
+            )}
+          </>
         )}
 
         {/* PRICE DETAILS BELOW PREVIEW */}

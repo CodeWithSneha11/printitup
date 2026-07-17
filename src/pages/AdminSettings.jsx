@@ -1,193 +1,223 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
-  FaStore,
-  FaBell,
+  FaUserCircle,
+  FaEnvelope,
+  FaUserShield,
+  FaArrowLeft,
+  FaPalette,
+  FaCheckCircle,
+  FaExclamationCircle,
   FaSave,
-  FaShoppingCart,
-  FaGlobe,
-  FaCog,
 } from "react-icons/fa";
 
 import "../styles/AdminSettings.css";
 
+/* ---------- localStorage helpers ---------- */
+
+const readJSON = (key, fallback) => {
+  try {
+    const raw = localStorage.getItem(key);
+    return raw ? JSON.parse(raw) : fallback;
+  } catch {
+    return fallback;
+  }
+};
+
+const DEFAULT_APPEARANCE = {
+  theme: "dark", // "dark" | "light"
+  compactMode: false,
+};
+
+/* ---------- component ---------- */
+
+const TABS = [
+  { id: "profile", label: "Profile", icon: <FaUserCircle /> },
+  { id: "appearance", label: "Appearance", icon: <FaPalette /> },
+];
+
 const AdminSettings = () => {
-  const [settings, setSettings] = useState({
-    storeName: "PrintItUp",
+  const navigate = useNavigate();
 
-    currency: "INR",
+  const [activeTab, setActiveTab] = useState("profile");
+  const [banner, setBanner] = useState(null); // { type: "success" | "error", text }
 
-    orderNotifications: true,
+  /* profile state — email is read-only and cannot be changed */
+  const [name, setName] = useState(localStorage.getItem("adminName") || "Admin");
+  const email = localStorage.getItem("adminEmail") || "";
+  const [profileErrors, setProfileErrors] = useState({});
 
-    newOrderAlert: true,
+  /* appearance state */
+  const [appearance, setAppearance] = useState(
+    readJSON("adminAppearance", DEFAULT_APPEARANCE)
+  );
 
-    autoAcceptOrders: false,
+  /* apply theme to root on load + whenever it changes */
+  useEffect(() => {
+    document.documentElement.setAttribute(
+      "data-admin-theme",
+      appearance.theme
+    );
+  }, [appearance.theme]);
 
-    websiteStatus: "Active",
-
-    maintenanceMode: false,
-  });
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-
-    setSettings({
-      ...settings,
-
-      [name]: type === "checkbox" ? checked : value,
-    });
+  const showBanner = (type, text) => {
+    setBanner({ type, text });
+    window.clearTimeout(showBanner._t);
+    showBanner._t = window.setTimeout(() => setBanner(null), 3000);
   };
 
-  const handleSave = () => {
-    console.log("Saved Settings:", settings);
+  /* ---------- Profile handlers ---------- */
 
-    alert("Settings saved successfully!");
+  const validateProfile = () => {
+    const errors = {};
+    if (!name.trim()) errors.name = "Name is required.";
+    setProfileErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+
+  const handleSaveProfile = (e) => {
+    e.preventDefault();
+    if (!validateProfile()) {
+      showBanner("error", "Please fix the highlighted fields.");
+      return;
+    }
+    localStorage.setItem("adminName", name.trim());
+    showBanner("success", "Profile updated successfully.");
+  };
+
+  /* ---------- Appearance handlers ---------- */
+
+ const handleThemeChange = (theme) => {
+  const next = {
+    ...appearance,
+    theme,
+  };
+
+  setAppearance(next);
+
+  localStorage.setItem(
+    "adminAppearance",
+    JSON.stringify(next)
+  );
+
+  // Apply immediately
+  document.documentElement.setAttribute(
+    "data-admin-theme",
+    theme
+  );
+
+  showBanner("success", `Switched to ${theme} theme.`);
+};
+
+  const handleToggleCompact = () => {
+    const next = { ...appearance, compactMode: !appearance.compactMode };
+    setAppearance(next);
+    localStorage.setItem("adminAppearance", JSON.stringify(next));
+    showBanner("success", "Layout preference saved.");
   };
 
   return (
-    <div className="admin-settings">
-      <div className="settings-header">
+    <div className="admin-content">
+      <div className="admin-profile-header">
+        <button className="back-btn" onClick={() => navigate(-1)}>
+          <FaArrowLeft />
+          Back
+        </button>
         <h1>Admin Settings</h1>
-
-        <p>Manage general settings for your PrintItUp store</p>
       </div>
 
-      {/* Store Configuration */}
-
-      <div className="settings-card">
-        <div className="card-title">
-          <FaStore />
-
-          <h2>Store Configuration</h2>
+      {banner && (
+        <div className={`admin-banner admin-banner-${banner.type}`}>
+          {banner.type === "success" ? <FaCheckCircle /> : <FaExclamationCircle />}
+          <span>{banner.text}</span>
         </div>
+      )}
 
-        <div className="form-grid">
-          <div className="form-group">
-            <label>Store Name</label>
-
-            <input
-              type="text"
-              name="storeName"
-              value={settings.storeName}
-              onChange={handleChange}
-            />
-          </div>
-
-          <div className="form-group">
-            <label>Currency</label>
-
-            <select
-              name="currency"
-              value={settings.currency}
-              onChange={handleChange}
+      <div className="admin-settings-layout">
+        {/* Tabs */}
+        <nav className="admin-settings-tabs">
+          {TABS.map((tab) => (
+            <button
+              key={tab.id}
+              className={`settings-tab-btn ${activeTab === tab.id ? "active" : ""}`}
+              onClick={() => setActiveTab(tab.id)}
+              type="button"
             >
-              <option value="INR">Indian Rupee (₹)</option>
-            </select>
-          </div>
+              {tab.icon}
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+
+        {/* Panels */}
+        <div className="admin-settings-panel">
+          {activeTab === "profile" && (
+            <form className="settings-form" onSubmit={handleSaveProfile} noValidate>
+              <div className="admin-profile-top">
+                <div className="profile-circle">{name.charAt(0).toUpperCase() || "A"}</div>
+                <h2>{name || "Admin"}</h2>
+                <p>Administrator</p>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="admin-name">
+                  <FaUserCircle /> Full name
+                </label>
+                <input
+                  id="admin-name"
+                  type="text"
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                  placeholder="Enter your name"
+                />
+                {profileErrors.name && <span className="field-error">{profileErrors.name}</span>}
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="admin-email">
+                  <FaEnvelope /> Email address
+                </label>
+                <input id="admin-email" type="email" value={email} disabled />
+              </div>
+
+              <div className="form-group">
+                <label>
+                  <FaUserShield /> Role
+                </label>
+                <input type="text" value="Administrator" disabled />
+              </div>
+
+              <button type="submit" className="save-btn">
+                <FaSave /> Save changes
+              </button>
+            </form>
+          )}
+
+          {activeTab === "appearance" && (
+            <div className="settings-form">
+              <h3 className="settings-section-title">Theme</h3>
+              <div className="theme-options">
+                <button
+                  type="button"
+                  className={`theme-card ${appearance.theme === "dark" ? "active" : ""}`}
+                  onClick={() => handleThemeChange("dark")}
+                >
+                  <span className="theme-swatch theme-swatch-dark" />
+                  Dark
+                </button>
+                <button
+                  type="button"
+                  className={`theme-card ${appearance.theme === "light" ? "active" : ""}`}
+                  onClick={() => handleThemeChange("light")}
+                >
+                  <span className="theme-swatch theme-swatch-light" />
+                  Light
+                </button>
+              </div>
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Order Settings */}
-
-      <div className="settings-card">
-        <div className="card-title">
-          <FaShoppingCart />
-
-          <h2>Order Settings</h2>
-        </div>
-
-        <label className="switch-container">
-          <input
-            type="checkbox"
-            name="autoAcceptOrders"
-            checked={settings.autoAcceptOrders}
-            onChange={handleChange}
-          />
-
-          <span className="slider"></span>
-
-          <p>Automatically accept new orders</p>
-        </label>
-      </div>
-
-      {/* Notification Settings */}
-
-      <div className="settings-card">
-        <div className="card-title">
-          <FaBell />
-
-          <h2>Notifications</h2>
-        </div>
-
-        <label className="switch-container">
-          <input
-            type="checkbox"
-            name="orderNotifications"
-            checked={settings.orderNotifications}
-            onChange={handleChange}
-          />
-
-          <span className="slider"></span>
-
-          <p>Enable order notifications</p>
-        </label>
-
-        <label className="switch-container">
-          <input
-            type="checkbox"
-            name="newOrderAlert"
-            checked={settings.newOrderAlert}
-            onChange={handleChange}
-          />
-
-          <span className="slider"></span>
-
-          <p>Show new order alerts</p>
-        </label>
-      </div>
-
-      {/* Website Settings */}
-
-      <div className="settings-card">
-        <div className="card-title">
-          <FaGlobe />
-
-          <h2>Website Settings</h2>
-        </div>
-
-        <div className="form-group">
-          <label>Website Status</label>
-
-          <select
-            name="websiteStatus"
-            value={settings.websiteStatus}
-            onChange={handleChange}
-          >
-            <option>Active</option>
-
-            <option>Offline</option>
-          </select>
-        </div>
-
-        <label className="switch-container">
-          <input
-            type="checkbox"
-            name="maintenanceMode"
-            checked={settings.maintenanceMode}
-            onChange={handleChange}
-          />
-
-          <span className="slider"></span>
-
-          <p>Enable maintenance mode</p>
-        </label>
-      </div>
-
-      {/* Save */}
-
-      <button className="save-settings" onClick={handleSave}>
-        <FaSave />
-        Save Settings
-      </button>
     </div>
   );
 };

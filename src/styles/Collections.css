@@ -1,20 +1,42 @@
-/* ================================
-   MAIN PAGE
-================================ */
+/* ==========================================
+   GOOGLE FONT
+========================================== */
 
-.collections-page {
-  padding: 35px;
+@import url("https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap");
 
-  min-height: 100vh;
+/* ==========================================
+   RESET
+========================================== */
 
-  background: linear-gradient(135deg, #f8fafc, #eef2ff);
-
-  font-family: "Inter", "Segoe UI", sans-serif;
+*,
+*::before,
+*::after {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 
-/* ================================
+body {
+  font-family: "Inter", sans-serif;
+  background: #f8fafc;
+  color: #1f2937;
+}
+
+/* ==========================================
+   MAIN PAGE
+========================================== */
+
+.collections-page {
+  min-height: 100vh;
+
+  padding: 32px;
+
+  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+}
+
+/* ==========================================
    HEADER
-================================ */
+========================================== */
 
 .collections-header {
   display: flex;
@@ -23,41 +45,55 @@
 
   align-items: center;
 
-  margin-bottom: 35px;
+  gap: 20px;
 
-  background: white;
+  background: #ffffff;
 
-  padding: 25px 30px;
+  padding: 26px 30px;
 
   border-radius: 18px;
 
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+  border: 1px solid #e5e7eb;
+
+  margin-bottom: 32px;
+
+  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.05);
 }
 
 .collections-header h2 {
-  margin: 0;
-
-  font-size: 32px;
+  font-size: 30px;
 
   font-weight: 700;
 
   color: #111827;
+
+  letter-spacing: -0.5px;
 }
 
 .collections-header p {
-  margin-top: 8px;
+  margin-top: 7px;
 
   color: #64748b;
 
-  font-size: 15px;
+  font-size: 14px;
 }
 
-/* ================================
+/* ==========================================
    BUTTONS
-================================ */
+========================================== */
+
+button {
+  font-family: inherit;
+}
 
 .primary-btn {
-  background: linear-gradient(135deg, #4f46e5, #6366f1);
+  display: inline-flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  background: #2563eb;
 
   color: white;
 
@@ -65,189 +101,243 @@
 
   padding: 12px 22px;
 
-  border-radius: 12px;
+  border-radius: 10px;
 
-  cursor: pointer;
-
-  font-size: 15px;
+  font-size: 14px;
 
   font-weight: 600;
 
-  transition: 0.3s;
+  cursor: pointer;
 
-  box-shadow: 0 8px 15px rgba(79, 70, 229, 0.25);
+  transition:
+    background 0.25s ease,
+    transform 0.25s ease,
+    box-shadow 0.25s ease;
 }
 
 .primary-btn:hover {
-  transform: translateY(-3px);
+  background: #1d4ed8;
 
-  box-shadow: 0 12px 25px rgba(79, 70, 229, 0.35);
+  transform: translateY(-2px);
+
+  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
 }
 
-.delete-btn {
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+.primary-btn:disabled {
+  opacity: 0.6;
 
-  color: white;
-
-  border: none;
-
-  padding: 12px 22px;
-
-  border-radius: 12px;
-
-  cursor: pointer;
-
-  font-weight: 600;
-
-  transition: 0.3s;
+  cursor: not-allowed;
 }
 
-.delete-btn:hover {
-  transform: translateY(-3px);
-}
+/* EDIT BUTTON */
 
 .edit-btn {
-  background: linear-gradient(135deg, #0284c7, #0ea5e9);
+  background: #f8fafc;
 
-  color: white;
+  color: #334155;
 
-  border: none;
+  border: 1px solid #cbd5e1;
 
-  padding: 8px 15px;
+  padding: 8px 14px;
 
   border-radius: 8px;
 
-  cursor: pointer;
-
   font-size: 13px;
 
-  transition: 0.3s;
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.25s;
 }
 
 .edit-btn:hover {
-  transform: scale(1.05);
+  background: #e2e8f0;
 }
 
-.cancel-btn {
-  margin-top: 15px;
+/* DELETE BUTTON */
 
-  width: 100%;
+.delete-btn,
+.product-delete-btn {
+  background: #dc2626;
 
-  padding: 12px;
+  color: white;
 
   border: none;
 
+  padding: 11px 20px;
+
   border-radius: 10px;
+
+  font-size: 14px;
+
+  font-weight: 600;
+
+  cursor: pointer;
+
+  transition: 0.25s;
+}
+
+.delete-btn:hover,
+.product-delete-btn:hover {
+  background: #b91c1c;
+
+  transform: translateY(-2px);
+}
+
+/* CANCEL */
+
+.cancel-btn {
+  width: 100%;
+
+  margin-top: 14px;
+
+  padding: 12px;
+
+  border-radius: 10px;
+
+  border: none;
 
   background: #e5e7eb;
 
   color: #374151;
 
-  cursor: pointer;
-
   font-weight: 600;
+
+  cursor: pointer;
 }
 
 .cancel-btn:hover {
   background: #d1d5db;
 }
 
-/* ================================
+/* ==========================================
    COLLECTION GRID
-================================ */
+========================================== */
 
 .collection-grid {
   display: grid;
 
-  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
 
-  gap: 30px;
+  gap: 26px;
 }
 
-/* ================================
+/* ==========================================
    COLLECTION CARD
-================================ */
+========================================== */
 
 .collection-card {
   background: white;
 
-  border-radius: 20px;
+  border-radius: 18px;
 
   overflow: hidden;
 
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+  border: 1px solid #e5e7eb;
 
-  transition: 0.35s;
+  box-shadow: 0 5px 18px rgba(15, 23, 42, 0.06);
+
+  transition: 0.3s ease;
 }
 
 .collection-card:hover {
-  transform: translateY(-8px);
+  transform: translateY(-5px);
 
-  box-shadow: 0 18px 40px rgba(0, 0, 0, 0.15);
+  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
 }
+
+/* ==========================================
+   COLLECTION IMAGE
+========================================== */
+
 .collection-image {
+  width: 100%;
 
-    width:100%;
+  height: 240px;
 
-    height:260px;
+  object-fit: cover;
 
-    object-fit:contain;
+  display: block;
 
-    background:#f1f5f9;
+  background: #f1f5f9;
 
-    display:block;
-
+  transition: 0.35s ease;
 }
-
 
 .collection-card:hover .collection-image {
-  transform: scale(1.05);
+  transform: scale(1.04);
 }
 
+/* ==========================================
+   COLLECTION CONTENT
+========================================== */
+
 .collection-content {
-  padding: 25px;
+  padding: 24px;
 }
 
 .collection-content h3 {
-  font-size: 22px;
+  font-size: 21px;
 
-  margin-bottom: 10px;
+  font-weight: 700;
 
   color: #111827;
+
+  margin-bottom: 10px;
 }
 
 .collection-content p {
+  font-size: 14px;
+
   color: #64748b;
 
-  line-height: 1.5;
+  line-height: 1.7;
 }
+
+/* ==========================================
+   PRODUCT COUNT
+========================================== */
 
 .product-count {
-  background: #eef2ff;
+  display: inline-flex;
 
-  color: #4338ca;
+  align-items: center;
 
-  padding: 10px 15px;
+  margin-top: 18px;
 
-  border-radius: 10px;
+  padding: 7px 14px;
+
+  border-radius: 999px;
+
+  background: #f1f5f9;
+
+  color: #334155;
+
+  border: 1px solid #e2e8f0;
+
+  font-size: 13px;
 
   font-weight: 600;
-
-  display: inline-block;
-
-  margin: 15px 0;
 }
-
-/* ================================
+/* ==========================================
    PRODUCT LIST
-================================ */
+========================================== */
 
 .products-list {
-  max-height: 270px;
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 14px;
+
+  max-height: 320px;
 
   overflow-y: auto;
 
-  padding-right: 5px;
+  padding-right: 6px;
+
+  margin-top: 15px;
 }
 
 /* scrollbar */
@@ -257,87 +347,197 @@
 }
 
 .products-list::-webkit-scrollbar-thumb {
-  background: #c7d2fe;
+  background: #cbd5e1;
 
-  border-radius: 10px;
+  border-radius: 20px;
 }
+
+/* ==========================================
+   PRODUCT ITEM CARD
+========================================== */
 
 .product-item {
   display: flex;
 
   align-items: center;
 
-  gap: 12px;
+  gap: 15px;
 
-  padding: 12px;
+  padding: 14px;
 
-  margin-bottom: 12px;
-
-  background: #f8fafc;
-
-  border-radius: 14px;
+  background: #ffffff;
 
   border: 1px solid #e5e7eb;
 
-  transition: 0.3s;
+  border-radius: 14px;
+
+  transition: 0.25s ease;
 }
 
 .product-item:hover {
-  background: #eef2ff;
+  border-color: #cbd5e1;
 
-  transform: translateX(5px);
+  background: #f8fafc;
+
+  transform: translateX(4px);
 }
 
-.product-item img {
-  width: 60px;
+/* ==========================================
+   PRODUCT IMAGE
+========================================== */
 
-  height: 60px;
+.product-item img {
+  width: 70px;
+
+  height: 70px;
 
   object-fit: cover;
 
   border-radius: 12px;
+
+  background: #f1f5f9;
+
+  flex-shrink: 0;
 }
+
+/* ==========================================
+   PRODUCT INFO
+========================================== */
 
 .product-info {
   flex: 1;
+
+  min-width: 0;
 }
 
 .product-info h4 {
-  margin: 0;
-
   font-size: 15px;
 
+  font-weight: 600;
+
   color: #111827;
+
+  margin-bottom: 6px;
+
+  white-space: nowrap;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
 }
 
 .product-info p {
-  margin-top: 5px;
+  font-size: 15px;
 
-  color: #4f46e5;
+  font-weight: 700;
 
-  font-weight: 600;
+  color: #2563eb;
 }
+
+/* ==========================================
+   PRODUCT BUTTONS
+========================================== */
+
+.product-buttons {
+  display: flex;
+
+  gap: 8px;
+
+  flex-direction: column;
+}
+
+.product-buttons button {
+  min-width: 80px;
+}
+
+/* ==========================================
+   CARD ACTIONS
+========================================== */
 
 .card-actions {
   display: flex;
 
   gap: 12px;
 
-  margin-top: 25px;
+  margin-top: 22px;
 }
 
-/* ================================
-   MODAL
-================================ */
+.card-actions button {
+  flex: 1;
+}
+
+/* ==========================================
+   EMPTY STATE
+========================================== */
+
+.products-list:empty::before {
+  content: "No products available";
+
+  display: block;
+
+  text-align: center;
+
+  padding: 25px;
+
+  color: #94a3b8;
+
+  border: 1px dashed #cbd5e1;
+
+  border-radius: 12px;
+
+  font-size: 14px;
+}
+
+/* ==========================================
+   HOVER MICRO EFFECTS
+========================================== */
+
+.primary-btn:active,
+.edit-btn:active,
+.delete-btn:active,
+.product-delete-btn:active,
+.cancel-btn:active {
+  transform: scale(0.97);
+}
+
+/* ==========================================
+   IMAGE LOADING BACKGROUND
+========================================== */
+
+.collection-image,
+.product-item img,
+.preview-image {
+  background: #f1f5f9;
+}
+
+/* ==========================================
+   FOCUS ACCESSIBILITY
+========================================== */
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible {
+  outline: 3px solid rgba(37, 99, 235, 0.2);
+
+  outline-offset: 2px;
+}
+
+/* ==========================================
+   TEXT SELECTION
+========================================== */
+
+::selection {
+  background: rgba(37, 99, 235, 0.15);
+
+  color: #111827;
+} /* ==========================================
+   MODAL OVERLAY
+========================================== */
 
 .modal-overlay {
   position: fixed;
 
   inset: 0;
-
-  background: rgba(15, 23, 42, 0.65);
-
-  backdrop-filter: blur(5px);
 
   display: flex;
 
@@ -345,44 +545,94 @@
 
   align-items: center;
 
+  padding: 20px;
+
+  background: rgba(15, 23, 42, 0.45);
+
+  backdrop-filter: blur(6px);
+
   z-index: 999;
+
+  animation: fadeIn 0.25s ease;
 }
+
+/* ==========================================
+   MODAL BOX
+========================================== */
 
 .modal-box {
-  width: 450px;
+  width: 100%;
 
-  max-width: 90%;
+  max-width: 480px;
 
-  background: white;
+  max-height: 90vh;
 
-  padding: 35px;
+  overflow-y: auto;
 
-  border-radius: 22px;
+  padding: 30px;
+
+  background: #ffffff;
+
+  border-radius: 18px;
+
+  border: 1px solid #e5e7eb;
+
+  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.18);
 
   animation: popup 0.3s ease;
-
-  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.25);
 }
 
-@keyframes popup {
-  from {
-    opacity: 0;
+/* modal scrollbar */
 
-    transform: scale(0.85);
-  }
-
-  to {
-    opacity: 1;
-
-    transform: scale(1);
-  }
+.modal-box::-webkit-scrollbar {
+  width: 6px;
 }
+
+.modal-box::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+
+  border-radius: 20px;
+}
+
+/* ==========================================
+   MODAL TITLE
+========================================== */
 
 .modal-box h2 {
-  margin-bottom: 25px;
+  font-size: 24px;
+
+  font-weight: 700;
 
   color: #111827;
+
+  margin-bottom: 22px;
 }
+
+.modal-box p {
+  color: #64748b;
+
+  font-size: 14px;
+
+  margin-bottom: 16px;
+}
+
+.modal-box p b {
+  color: #111827;
+}
+
+/* ==========================================
+   FORM
+========================================== */
+
+.modal-box form {
+  display: flex;
+
+  flex-direction: column;
+}
+
+/* ==========================================
+   INPUTS
+========================================== */
 
 .modal-box input,
 .modal-box textarea {
@@ -392,51 +642,130 @@
 
   margin-bottom: 15px;
 
+  border-radius: 10px;
+
   border: 1px solid #d1d5db;
 
-  border-radius: 12px;
+  background: #ffffff;
 
-  outline: none;
+  color: #111827;
 
   font-size: 14px;
 
-  transition: 0.3s;
+  outline: none;
+
+  transition: 0.25s;
+}
+
+.modal-box input::placeholder,
+.modal-box textarea::placeholder {
+  color: #9ca3af;
 }
 
 .modal-box input:focus,
 .modal-box textarea:focus {
-  border-color: #4f46e5;
+  border-color: #2563eb;
 
-  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
 }
 
 .modal-box textarea {
-  min-height: 110px;
+  min-height: 120px;
 
-  resize: none;
+  resize: vertical;
 }
 
-.preview-image {
-  width: 160px;
+/* ==========================================
+   FILE INPUT
+========================================== */
 
-  height: 160px;
+.modal-box input[type="file"] {
+  background: #f8fafc;
+
+  cursor: pointer;
+
+  padding: 10px;
+}
+
+.modal-box input[type="file"]::-webkit-file-upload-button {
+  background: #2563eb;
+
+  color: white;
+
+  border: none;
+
+  padding: 8px 14px;
+
+  border-radius: 8px;
+
+  cursor: pointer;
+}
+
+/* ==========================================
+   IMAGE PREVIEW
+========================================== */
+
+.preview-image {
+  width: 170px;
+
+  height: 170px;
 
   object-fit: cover;
 
-  border-radius: 15px;
+  display: block;
 
-  margin-bottom: 15px;
+  margin: 10px auto 20px;
 
-  border: 3px solid #e0e7ff;
+  border-radius: 14px;
+
+  border: 1px solid #e5e7eb;
 }
 
-/* ================================
-   RESPONSIVE
-================================ */
+/* ==========================================
+   ANIMATION
+========================================== */
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes popup {
+  from {
+    opacity: 0;
+
+    transform: translateY(20px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+
+    transform: translateY(0) scale(1);
+  }
+}
+
+/* ==========================================
+   RESPONSIVE DESIGN
+========================================== */
+
+@media (max-width: 992px) {
+  .collections-page {
+    padding: 24px;
+  }
+
+  .collection-grid {
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  }
+}
 
 @media (max-width: 768px) {
   .collections-page {
-    padding: 20px;
+    padding: 18px;
   }
 
   .collections-header {
@@ -444,71 +773,213 @@
 
     align-items: flex-start;
 
-    gap: 20px;
+    padding: 22px;
   }
 
   .collections-header h2 {
-    font-size: 26px;
+    font-size: 24px;
   }
 
-  .card-actions {
-    flex-direction: column;
-  }
-
-  .primary-btn,
-  .delete-btn {
+  .primary-btn {
     width: 100%;
   }
 
   .collection-grid {
     grid-template-columns: 1fr;
   }
-}
-.product-buttons{
 
-    display:flex;
+  .collection-image {
+    height: 210px;
+  }
 
-    gap:8px;
+  .card-actions {
+    flex-direction: column;
+  }
 
-}
+  .card-actions button {
+    width: 100%;
+  }
 
+  .product-item {
+    flex-wrap: wrap;
+  }
 
+  .product-buttons {
+    width: 100%;
 
-.product-delete-btn{
+    flex-direction: row;
+  }
 
+  .product-buttons button {
+    flex: 1;
+  }
 
-    background:
-    linear-gradient(
-        135deg,
-        #ef4444,
-        #dc2626
-    );
+  .modal-box {
+    padding: 22px;
 
-
-    color:white;
-
-    border:none;
-
-    padding:8px 14px;
-
-    border-radius:8px;
-
-    cursor:pointer;
-
-    font-size:13px;
-
-    transition:.3s;
-
+    border-radius: 16px;
+  }
 }
 
+@media (max-width: 480px) {
+  .collections-page {
+    padding: 14px;
+  }
+
+  .collections-header {
+    padding: 18px;
+  }
+
+  .collections-header h2 {
+    font-size: 22px;
+  }
+
+  .collection-card {
+    border-radius: 14px;
+  }
+
+  .collection-image {
+    height: 180px;
+  }
+
+  .collection-content {
+    padding: 18px;
+  }
+
+  .collection-content h3 {
+    font-size: 18px;
+  }
+
+  .product-item {
+    padding: 12px;
+  }
+
+  .product-item img {
+    width: 60px;
+
+    height: 60px;
+  }
+
+  .modal-box {
+    padding: 18px;
+  }
+
+  .modal-box h2 {
+    font-size: 21px;
+  }
+
+  .preview-image {
+    width: 130px;
+
+    height: 130px;
+  }
+}
+
+/* ==========================================
+   GLOBAL SMOOTH TRANSITIONS
+========================================== */
+
+button,
+input,
+textarea,
+.collection-card,
+.product-item,
+.collection-image {
+  transition: all 0.25s ease;
+}
+
+/* ==========================================
+   SCROLLBAR
+========================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+
+::-webkit-scrollbar-thumb {
+  background: #cbd5e1;
+
+  border-radius: 20px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #94a3b8;
+}
+/* ==========================================
+   VIEW ALL PRODUCTS BUTTON
+========================================== */
+
+.view-products-btn {
+
+  width:100%;
+
+  margin-top:18px;
+
+  padding:12px 18px;
+
+  background:#ffffff;
+
+  color:#2563eb;
+
+  border:1px solid #2563eb;
+
+  border-radius:10px;
+
+  font-size:14px;
+
+  font-weight:600;
+
+  cursor:pointer;
+
+  display:flex;
+
+  align-items:center;
+
+  justify-content:center;
+
+  gap:8px;
+
+  transition:.25s ease;
+
+}
 
 
-.product-delete-btn:hover{
+.view-products-btn:hover {
+
+  background:#2563eb;
+
+  color:#ffffff;
+
+  transform:translateY(-2px);
+
+  box-shadow:
+
+  0 8px 18px rgba(37,99,235,.18);
+
+}
 
 
-    transform:scale(1.05);
+.view-products-btn:active {
 
-    box-shadow:
-    0 5px 15px rgba(239,68,68,.3);
+  transform:scale(.97);
+
+}
+
+
+/* Mobile */
+
+@media(max-width:768px){
+
+  .view-products-btn {
+
+    width:100%;
+
+  }
 
 }

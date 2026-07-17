@@ -265,15 +265,41 @@
     gap:12px;
     padding:12px 16px;
     border:none;
+    border-left:3px solid transparent;
     border-bottom:1px solid var(--line);
     background:var(--surface);
     cursor:pointer;
     text-align:left;
-    transition:background .15s;
+    transition:background .15s, border-color .15s;
 }
 
 .notif-item:hover{
     background:var(--canvas);
+}
+
+/* Unread "new order" — teal accent */
+.notif-item-new{
+    background:#f2fbfa;
+    border-left-color:var(--teal);
+}
+
+.notif-item-new:hover{
+    background:var(--teal-soft);
+}
+
+/* Cancelled order — crimson accent, whether read or unread */
+.notif-item-cancelled .notif-item-avatar{
+    background:var(--crimson-soft);
+    color:var(--crimson-text);
+}
+
+.notif-item-cancelled.notif-item-new{
+    background:#fdf3ee;
+    border-left-color:var(--crimson);
+}
+
+.notif-item-cancelled.notif-item-new:hover{
+    background:var(--crimson-soft);
 }
 
 .notif-item-avatar{
