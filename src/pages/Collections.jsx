@@ -35,12 +35,22 @@ const Collections = () => {
 
   const [uploading, setUploading] = useState(false);
 
+  // Edit Collection
+
+  const [showEditCollectionModal, setShowEditCollectionModal] = useState(false);
+  const [editingCollection, setEditingCollection] = useState(null);
+
+  const [editCollectionName, setEditCollectionName] = useState("");
+  const [editCollectionImageFile, setEditCollectionImageFile] = useState(null);
+  const [editCollectionPreview, setEditCollectionPreview] = useState("");
+
+  const [updatingCollection, setUpdatingCollection] = useState(false);
+
   // Product Form
 
   const [productName, setProductName] = useState("");
   const [productPrice, setProductPrice] = useState("");
   const [productDescription, setProductDescription] = useState("");
-  const [productStock, setProductStock] = useState("");
 
   const [productImageFile, setProductImageFile] = useState(null);
   const [productPreview, setProductPreview] = useState("");
@@ -56,7 +66,6 @@ const Collections = () => {
   const [editProductName, setEditProductName] = useState("");
   const [editProductPrice, setEditProductPrice] = useState("");
   const [editProductDescription, setEditProductDescription] = useState("");
-  const [editProductStock, setEditProductStock] = useState("");
 
   const [editProductImageFile, setEditProductImageFile] = useState(null);
 
@@ -123,10 +132,10 @@ const Collections = () => {
 
   // Upload Collection Image
 
-  const uploadImage = async () => {
+  const uploadImage = async (file) => {
     const formData = new FormData();
 
-    formData.append("file", imageFile);
+    formData.append("file", file);
 
     formData.append("upload_preset", UPLOAD_PRESET);
 
@@ -181,7 +190,7 @@ const Collections = () => {
     try {
       setUploading(true);
 
-      const imageUrl = await uploadImage();
+      const imageUrl = await uploadImage(imageFile);
 
       await addDoc(collection(db, "collections"), {
         name,
@@ -218,6 +227,70 @@ const Collections = () => {
     if (!confirmDelete) return;
 
     await deleteDoc(doc(db, "collections", id));
+  };
+
+  // Open Edit Collection Modal
+
+  const handleEditCollection = (item) => {
+    setEditingCollection(item);
+
+    setEditCollectionName(item.name);
+    setEditCollectionImageFile(null);
+    setEditCollectionPreview(item.image);
+
+    setShowEditCollectionModal(true);
+  };
+
+  // Edit Collection Image Select
+
+  const handleEditCollectionImage = (e) => {
+    const file = e.target.files[0];
+
+    if (!file) return;
+
+    setEditCollectionImageFile(file);
+
+    setEditCollectionPreview(URL.createObjectURL(file));
+  };
+
+  // Update Collection
+
+  const updateCollection = async (e) => {
+    e.preventDefault();
+
+    if (!editCollectionName) {
+      alert("Please fill required fields");
+
+      return;
+    }
+
+    try {
+      setUpdatingCollection(true);
+
+      let imageUrl = editingCollection.image;
+
+      if (editCollectionImageFile) {
+        imageUrl = await uploadImage(editCollectionImageFile);
+      }
+
+      await updateDoc(doc(db, "collections", editingCollection.id), {
+        name: editCollectionName,
+        image: imageUrl,
+      });
+
+      alert("Collection updated successfully");
+
+      setShowEditCollectionModal(false);
+      setEditingCollection(null);
+      setEditCollectionImageFile(null);
+      setEditCollectionPreview("");
+    } catch (error) {
+      console.log(error);
+
+      alert("Failed to update collection");
+    } finally {
+      setUpdatingCollection(false);
+    }
   };
 
   // Delete Product
@@ -259,8 +332,6 @@ const Collections = () => {
 
         description: productDescription,
 
-        stock: Number(productStock),
-
         image: imageUrl,
 
         collectionId: selectedCollection.id,
@@ -275,7 +346,6 @@ const Collections = () => {
       setProductName("");
       setProductPrice("");
       setProductDescription("");
-      setProductStock("");
 
       setProductImageFile(null);
       setProductPreview("");
@@ -299,7 +369,6 @@ const Collections = () => {
     setEditProductName(product.name);
     setEditProductPrice(product.price);
     setEditProductDescription(product.description);
-    setEditProductStock(product.stock);
 
     setEditProductPreview(product.image);
 
@@ -356,8 +425,6 @@ const Collections = () => {
           price: Number(editProductPrice),
 
           description: editProductDescription,
-
-          stock: Number(editProductStock),
 
           image: imageUrl,
         },
@@ -467,6 +534,13 @@ const Collections = () => {
                 </button>
 
                 <button
+                  className="edit-btn"
+                  onClick={() => handleEditCollection(item)}
+                >
+                  Edit
+                </button>
+
+                <button
                   className="delete-btn"
                   onClick={() => handleDelete(item.id)}
                 >
@@ -523,6 +597,51 @@ const Collections = () => {
           </div>
         </div>
       )}
+
+      {/* Edit Collection Modal */}
+
+      {showEditCollectionModal && (
+        <div className="modal-overlay">
+          <div className="modal-box">
+            <h2>Edit Collection</h2>
+
+            <form onSubmit={updateCollection}>
+              <input
+                placeholder="Collection Name"
+                value={editCollectionName}
+                onChange={(e) => setEditCollectionName(e.target.value)}
+              />
+
+              <input
+                type="file"
+                accept="image/*"
+                onChange={handleEditCollectionImage}
+              />
+
+              {editCollectionPreview && (
+                <img
+                  src={editCollectionPreview}
+                  className="preview-image"
+                  alt="preview"
+                />
+              )}
+
+              <button className="primary-btn" disabled={updatingCollection}>
+                {updatingCollection ? "Updating..." : "Update Collection"}
+              </button>
+
+              <button
+                type="button"
+                className="cancel-btn"
+                onClick={() => setShowEditCollectionModal(false)}
+              >
+                Cancel
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
       {/* Add Product Modal */}
 
       {showProductModal && (
@@ -551,13 +670,6 @@ const Collections = () => {
               placeholder="Product Description"
               value={productDescription}
               onChange={(e) => setProductDescription(e.target.value)}
-            />
-
-            <input
-              type="number"
-              placeholder="Stock Quantity"
-              value={productStock}
-              onChange={(e) => setProductStock(e.target.value)}
             />
 
             <input
@@ -617,12 +729,6 @@ const Collections = () => {
             <textarea
               value={editProductDescription}
               onChange={(e) => setEditProductDescription(e.target.value)}
-            />
-
-            <input
-              type="number"
-              value={editProductStock}
-              onChange={(e) => setEditProductStock(e.target.value)}
             />
 
             <input

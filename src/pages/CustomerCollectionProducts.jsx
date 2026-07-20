@@ -205,10 +205,6 @@ const CustomerCollectionProducts = () => {
                   {product.stock === 0 && (
                     <span className="stock-label">Out of Stock</span>
                   )}
-
-                  {product.stock !== 0 && (
-                    <span className="customize-hint">Click to customize →</span>
-                  )}
                 </div>
               </div>
             ))}

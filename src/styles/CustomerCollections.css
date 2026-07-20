@@ -130,12 +130,18 @@
   --swatch: var(--sky);
 }
 
+/* Collection image — switched from `cover` to `contain` so the whole
+   image is visible instead of being cropped to fill the fixed 250px
+   height. The surrounding tint + padding keeps it looking intentional
+   rather than like empty space. */
 .customer-card > img {
   width: 100%;
   height: 250px;
-  object-fit: cover;
+  object-fit: contain;
+  object-position: center;
   display: block;
   background: var(--canvas-alt);
+  padding: 14px;
 }
 
 .customer-content {

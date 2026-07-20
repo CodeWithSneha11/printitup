@@ -12,7 +12,7 @@ import Customize from "./pages/Customize";
 import Login from "./pages/Login";
 import Signup from "./pages/Signup";
 import MyDesigns from "./pages/MyDesigns";
-import Cart from "./pages/cart";
+import Cart from "./pages/Cart";
 import Checkout from "./pages/Checkout";
 import MyOrders from "./pages/MyOrders";
 import CustomerCollections from "./pages/CustomerCollections";

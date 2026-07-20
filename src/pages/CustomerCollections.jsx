@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 
-import { db, auth } from "../firebase";
+import { db } from "../firebase";
 
 import { collection, onSnapshot } from "firebase/firestore";
 
@@ -102,15 +102,9 @@ const CustomerCollections = () => {
                   .slice(0, 3)
                   .map((product) => (
                     <div
-                      className={`customer-product ${
-                        product.stock === 0 ? "out-of-stock" : ""
-                      }`}
+                      className="customer-product"
                       key={product.id}
-                      onClick={() => {
-                        if (product.stock > 0) {
-                          customizeProduct(product);
-                        }
-                      }}
+                      onClick={() => customizeProduct(product)}
                     >
                       <img
                         src={product.image}

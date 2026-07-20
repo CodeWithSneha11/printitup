@@ -1011,3 +1011,270 @@
 .cancelled-info p:last-child {
   margin-bottom: 0;
 }
+
+/* ---- Star rating (shared by display + input) ---- */
+
+.star-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  color: #f59e0b;
+}
+
+.star-rating .star {
+  display: flex;
+  cursor: pointer;
+  transition: transform 0.15s ease;
+}
+
+.star-rating .star:hover {
+  transform: scale(1.12);
+}
+
+.star-rating-readonly .star {
+  cursor: default;
+}
+
+.star-rating-readonly .star:hover {
+  transform: none;
+}
+
+.star-rating .star:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+
+/* ---- Review trigger row inside an ordered product card ---- */
+
+.product-review {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px dashed #eef0f4;
+}
+
+.write-review-btn,
+.edit-review-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border: 1px solid var(--ink);
+  background: #fff;
+  color: var(--ink);
+  padding: 8px 15px;
+  border-radius: 999px;
+  font-family: "Inter", sans-serif;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease,
+    transform 0.2s ease;
+}
+
+.write-review-btn:hover {
+  background: var(--ink);
+  color: #fff;
+  transform: translateY(-1px);
+}
+
+.edit-review-btn {
+  border-color: #d1d5db;
+  color: #374151;
+}
+
+.edit-review-btn:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+  color: #111827;
+  transform: translateY(-1px);
+}
+
+.write-review-btn:focus-visible,
+.edit-review-btn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ---- Review modal ---- */
+
+.review-modal {
+  position: relative;
+  width: 95%;
+  max-width: 480px;
+  background: #fff;
+  border-radius: 22px;
+  padding: 32px;
+  box-shadow: 0 25px 60px rgba(0, 0, 0, 0.15);
+  animation: popup 0.25s ease;
+  font-family: "Inter", sans-serif;
+}
+
+.review-modal-close {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  width: 38px;
+  height: 38px;
+  border: none;
+  border-radius: 50%;
+  background: #f3f4f6;
+  color: #6b7280;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition:
+    background 0.2s ease,
+    color 0.2s ease;
+}
+
+.review-modal-close:hover {
+  background: var(--coral);
+  color: #fff;
+}
+
+.review-modal-close:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.review-modal-product {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 20px;
+  padding-bottom: 20px;
+  padding-right: 30px;
+  border-bottom: 1px dashed #eef0f4;
+}
+
+.review-modal-product img,
+.review-modal-product .no-image {
+  width: 68px;
+  height: 68px;
+  object-fit: contain;
+  border-radius: 12px;
+  background: #f8fafc;
+  flex-shrink: 0;
+}
+
+.review-modal-product .no-image {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #9ca3af;
+  font-size: 11px;
+  text-align: center;
+}
+
+.review-modal-product h3 {
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 18px;
+  color: #111827;
+  margin-bottom: 4px;
+}
+
+.review-modal-product p {
+  color: #6b7280;
+  font-size: 13px;
+}
+
+.review-label {
+  display: block;
+  font-family: "JetBrains Mono", monospace;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: #9ca3af;
+  margin: 18px 0 10px;
+}
+
+.review-modal textarea {
+  width: 100%;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 14px;
+  font-family: "Inter", sans-serif;
+  font-size: 14px;
+  color: #111827;
+  resize: vertical;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.review-modal textarea::placeholder {
+  color: #9ca3af;
+}
+
+.review-modal textarea:focus {
+  outline: none;
+  border-color: var(--ink);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.12);
+}
+
+.review-error {
+  color: #dc2626;
+  font-size: 13px;
+  margin-top: 10px;
+}
+
+.review-modal-actions {
+  display: flex;
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.review-modal-actions button {
+  flex: 1;
+  padding: 13px;
+  border-radius: 12px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease;
+}
+
+.confirm-review-btn {
+  border: none;
+  background: var(--ink);
+  color: #fff;
+}
+
+.confirm-review-btn:hover:not(:disabled) {
+  background: #4338ca;
+  transform: translateY(-1px);
+}
+
+.confirm-review-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.confirm-review-btn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+/* ---- Responsive ---- */
+
+@media (max-width: 480px) {
+  .review-modal {
+    padding: 22px;
+  }
+
+  .review-modal-product {
+    padding-right: 20px;
+  }
+
+  .review-modal-actions {
+    flex-direction: column;
+  }
+}

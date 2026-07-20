@@ -23,15 +23,45 @@ body {
 }
 
 /* ==========================================
+   TOKENS — muted, neutral-first palette
+========================================== */
+
+:root {
+  --color-bg: #f8fafc;
+  --color-surface: #ffffff;
+  --color-text: #1f2937;
+  --color-text-strong: #111827;
+  --color-text-muted: #64748b;
+  --color-border: #e5e7eb;
+  --color-border-strong: #cbd5e1;
+
+  --color-primary: #2563eb;
+  --color-primary-dark: #1d4ed8;
+  --color-primary-tint: #eff6ff;
+
+  --color-danger: #b91c1c;
+  --color-danger-dark: #991b1b;
+  --color-danger-tint: #fef2f2;
+
+  --radius-lg: 18px;
+  --radius-md: 14px;
+  --radius-sm: 10px;
+
+  --shadow-card: 0 2px 10px rgba(15, 23, 42, 0.05);
+  --shadow-card-hover: 0 10px 24px rgba(15, 23, 42, 0.08);
+  --shadow-modal: 0 20px 45px rgba(15, 23, 42, 0.14);
+
+  --transition-base: 0.2s ease;
+}
+
+/* ==========================================
    MAIN PAGE
 ========================================== */
 
 .collections-page {
   min-height: 100vh;
-
   padding: 32px;
-
-  background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+  background: var(--color-bg);
 }
 
 /* ==========================================
@@ -40,41 +70,27 @@ body {
 
 .collections-header {
   display: flex;
-
   justify-content: space-between;
-
   align-items: center;
-
   gap: 20px;
-
-  background: #ffffff;
-
+  background: var(--color-surface);
   padding: 26px 30px;
-
-  border-radius: 18px;
-
-  border: 1px solid #e5e7eb;
-
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
   margin-bottom: 32px;
-
-  box-shadow: 0 4px 15px rgba(15, 23, 42, 0.05);
+  box-shadow: var(--shadow-card);
 }
 
 .collections-header h2 {
-  font-size: 30px;
-
+  font-size: 28px;
   font-weight: 700;
-
-  color: #111827;
-
-  letter-spacing: -0.5px;
+  color: var(--color-text-strong);
+  letter-spacing: -0.4px;
 }
 
 .collections-header p {
-  margin-top: 7px;
-
-  color: #64748b;
-
+  margin-top: 6px;
+  color: var(--color-text-muted);
   font-size: 14px;
 }
 
@@ -88,127 +104,98 @@ button {
 
 .primary-btn {
   display: inline-flex;
-
   align-items: center;
-
   justify-content: center;
-
-  background: #2563eb;
-
+  background: var(--color-primary);
   color: white;
-
   border: none;
-
   padding: 12px 22px;
-
-  border-radius: 10px;
-
+  border-radius: var(--radius-sm);
   font-size: 14px;
-
   font-weight: 600;
-
   cursor: pointer;
-
   transition:
-    background 0.25s ease,
-    transform 0.25s ease,
-    box-shadow 0.25s ease;
+    background var(--transition-base),
+    transform var(--transition-base),
+    box-shadow var(--transition-base);
 }
 
 .primary-btn:hover {
-  background: #1d4ed8;
-
-  transform: translateY(-2px);
-
-  box-shadow: 0 8px 18px rgba(37, 99, 235, 0.25);
+  background: var(--color-primary-dark);
+  transform: translateY(-1px);
+  box-shadow: 0 6px 14px rgba(37, 99, 235, 0.18);
 }
 
 .primary-btn:disabled {
-  opacity: 0.6;
-
+  opacity: 0.55;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 /* EDIT BUTTON */
 
 .edit-btn {
-  background: #f8fafc;
-
+  background: var(--color-surface);
   color: #334155;
-
-  border: 1px solid #cbd5e1;
-
+  border: 1px solid var(--color-border-strong);
   padding: 8px 14px;
-
   border-radius: 8px;
-
   font-size: 13px;
-
   font-weight: 600;
-
   cursor: pointer;
-
-  transition: 0.25s;
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base);
 }
 
 .edit-btn:hover {
-  background: #e2e8f0;
+  background: #f1f5f9;
+  border-color: #94a3b8;
 }
 
-/* DELETE BUTTON */
+/* DELETE BUTTON — muted rather than alarm-red */
 
 .delete-btn,
 .product-delete-btn {
-  background: #dc2626;
-
-  color: white;
-
-  border: none;
-
-  padding: 11px 20px;
-
-  border-radius: 10px;
-
+  background: var(--color-surface);
+  color: var(--color-danger);
+  border: 1px solid #fecaca;
+  padding: 10px 20px;
+  border-radius: var(--radius-sm);
   font-size: 14px;
-
   font-weight: 600;
-
   cursor: pointer;
-
-  transition: 0.25s;
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base),
+    transform var(--transition-base);
 }
 
 .delete-btn:hover,
 .product-delete-btn:hover {
-  background: #b91c1c;
-
-  transform: translateY(-2px);
+  background: var(--color-danger-tint);
+  border-color: var(--color-danger);
+  transform: translateY(-1px);
 }
 
 /* CANCEL */
 
 .cancel-btn {
   width: 100%;
-
   margin-top: 14px;
-
   padding: 12px;
-
-  border-radius: 10px;
-
-  border: none;
-
-  background: #e5e7eb;
-
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface);
   color: #374151;
-
   font-weight: 600;
-
   cursor: pointer;
+  transition: background var(--transition-base);
 }
 
 .cancel-btn:hover {
-  background: #d1d5db;
+  background: #f1f5f9;
 }
 
 /* ==========================================
@@ -217,10 +204,8 @@ button {
 
 .collection-grid {
   display: grid;
-
-  grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
-
-  gap: 26px;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  gap: 24px;
 }
 
 /* ==========================================
@@ -228,45 +213,42 @@ button {
 ========================================== */
 
 .collection-card {
-  background: white;
-
-  border-radius: 18px;
-
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
   overflow: hidden;
-
-  border: 1px solid #e5e7eb;
-
-  box-shadow: 0 5px 18px rgba(15, 23, 42, 0.06);
-
-  transition: 0.3s ease;
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-card);
+  transition:
+    transform var(--transition-base),
+    box-shadow var(--transition-base);
 }
 
 .collection-card:hover {
-  transform: translateY(-5px);
-
-  box-shadow: 0 14px 30px rgba(15, 23, 42, 0.12);
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-card-hover);
 }
 
 /* ==========================================
    COLLECTION IMAGE
+   Fixed cropping: `object-fit: cover` inside a fixed-height box was
+   slicing off the top/bottom of images whose aspect ratio didn't
+   match. Switched to `contain` so the full image is always visible;
+   the img's own background fills the letterboxed space.
 ========================================== */
 
 .collection-image {
   width: 100%;
-
-  height: 240px;
-
-  object-fit: cover;
-
+  height: 220px;
+  object-fit: contain;
+  object-position: center;
   display: block;
-
   background: #f1f5f9;
-
-  transition: 0.35s ease;
+  padding: 12px;
+  transition: transform 0.3s ease;
 }
 
 .collection-card:hover .collection-image {
-  transform: scale(1.04);
+  transform: scale(1.02);
 }
 
 /* ==========================================
@@ -274,25 +256,20 @@ button {
 ========================================== */
 
 .collection-content {
-  padding: 24px;
+  padding: 22px;
 }
 
 .collection-content h3 {
-  font-size: 21px;
-
+  font-size: 19px;
   font-weight: 700;
-
-  color: #111827;
-
-  margin-bottom: 10px;
+  color: var(--color-text-strong);
+  margin-bottom: 8px;
 }
 
 .collection-content p {
   font-size: 14px;
-
-  color: #64748b;
-
-  line-height: 1.7;
+  color: var(--color-text-muted);
+  line-height: 1.65;
 }
 
 /* ==========================================
@@ -301,54 +278,37 @@ button {
 
 .product-count {
   display: inline-flex;
-
   align-items: center;
-
-  margin-top: 18px;
-
-  padding: 7px 14px;
-
+  margin-top: 16px;
+  padding: 6px 13px;
   border-radius: 999px;
-
   background: #f1f5f9;
-
   color: #334155;
-
-  border: 1px solid #e2e8f0;
-
+  border: 1px solid var(--color-border);
   font-size: 13px;
-
   font-weight: 600;
 }
+
 /* ==========================================
    PRODUCT LIST
 ========================================== */
 
 .products-list {
   display: flex;
-
   flex-direction: column;
-
-  gap: 14px;
-
+  gap: 12px;
   max-height: 320px;
-
   overflow-y: auto;
-
   padding-right: 6px;
-
-  margin-top: 15px;
+  margin-top: 14px;
 }
-
-/* scrollbar */
 
 .products-list::-webkit-scrollbar {
   width: 6px;
 }
 
 .products-list::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-
+  background: var(--color-border-strong);
   border-radius: 20px;
 }
 
@@ -358,45 +318,37 @@ button {
 
 .product-item {
   display: flex;
-
   align-items: center;
-
-  gap: 15px;
-
-  padding: 14px;
-
-  background: #ffffff;
-
-  border: 1px solid #e5e7eb;
-
-  border-radius: 14px;
-
-  transition: 0.25s ease;
+  gap: 14px;
+  padding: 12px;
+  background: var(--color-surface);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base);
 }
 
 .product-item:hover {
-  border-color: #cbd5e1;
-
+  border-color: var(--color-border-strong);
   background: #f8fafc;
-
-  transform: translateX(4px);
 }
 
 /* ==========================================
    PRODUCT IMAGE
+   Same fix as the collection image: `contain` on a padded, tinted
+   background keeps small thumbnails from having their subject
+   cropped off.
 ========================================== */
 
 .product-item img {
-  width: 70px;
-
-  height: 70px;
-
-  object-fit: cover;
-
-  border-radius: 12px;
-
+  width: 64px;
+  height: 64px;
+  object-fit: contain;
+  object-position: center;
+  border-radius: 10px;
   background: #f1f5f9;
-
+  padding: 4px;
   flex-shrink: 0;
 }
 
@@ -406,32 +358,23 @@ button {
 
 .product-info {
   flex: 1;
-
   min-width: 0;
 }
 
 .product-info h4 {
   font-size: 15px;
-
   font-weight: 600;
-
-  color: #111827;
-
-  margin-bottom: 6px;
-
+  color: var(--color-text-strong);
+  margin-bottom: 4px;
   white-space: nowrap;
-
   overflow: hidden;
-
   text-overflow: ellipsis;
 }
 
 .product-info p {
-  font-size: 15px;
-
+  font-size: 14px;
   font-weight: 700;
-
-  color: #2563eb;
+  color: var(--color-primary);
 }
 
 /* ==========================================
@@ -440,14 +383,12 @@ button {
 
 .product-buttons {
   display: flex;
-
   gap: 8px;
-
   flex-direction: column;
 }
 
 .product-buttons button {
-  min-width: 80px;
+  min-width: 76px;
 }
 
 /* ==========================================
@@ -456,10 +397,8 @@ button {
 
 .card-actions {
   display: flex;
-
-  gap: 12px;
-
-  margin-top: 22px;
+  gap: 10px;
+  margin-top: 20px;
 }
 
 .card-actions button {
@@ -472,19 +411,12 @@ button {
 
 .products-list:empty::before {
   content: "No products available";
-
   display: block;
-
   text-align: center;
-
-  padding: 25px;
-
+  padding: 22px;
   color: #94a3b8;
-
-  border: 1px dashed #cbd5e1;
-
-  border-radius: 12px;
-
+  border: 1px dashed var(--color-border-strong);
+  border-radius: var(--radius-sm);
   font-size: 14px;
 }
 
@@ -496,18 +428,9 @@ button {
 .edit-btn:active,
 .delete-btn:active,
 .product-delete-btn:active,
-.cancel-btn:active {
+.cancel-btn:active,
+.view-products-btn:active {
   transform: scale(0.97);
-}
-
-/* ==========================================
-   IMAGE LOADING BACKGROUND
-========================================== */
-
-.collection-image,
-.product-item img,
-.preview-image {
-  background: #f1f5f9;
 }
 
 /* ==========================================
@@ -517,8 +440,7 @@ button {
 button:focus-visible,
 input:focus-visible,
 textarea:focus-visible {
-  outline: 3px solid rgba(37, 99, 235, 0.2);
-
+  outline: 2px solid rgba(37, 99, 235, 0.4);
   outline-offset: 2px;
 }
 
@@ -528,32 +450,24 @@ textarea:focus-visible {
 
 ::selection {
   background: rgba(37, 99, 235, 0.15);
+  color: var(--color-text-strong);
+}
 
-  color: #111827;
-} /* ==========================================
+/* ==========================================
    MODAL OVERLAY
 ========================================== */
 
 .modal-overlay {
   position: fixed;
-
   inset: 0;
-
   display: flex;
-
   justify-content: center;
-
   align-items: center;
-
   padding: 20px;
-
   background: rgba(15, 23, 42, 0.45);
-
-  backdrop-filter: blur(6px);
-
+  backdrop-filter: blur(4px);
   z-index: 999;
-
-  animation: fadeIn 0.25s ease;
+  animation: fadeIn 0.2s ease;
 }
 
 /* ==========================================
@@ -562,35 +476,23 @@ textarea:focus-visible {
 
 .modal-box {
   width: 100%;
-
-  max-width: 480px;
-
+  max-width: 460px;
   max-height: 90vh;
-
   overflow-y: auto;
-
-  padding: 30px;
-
-  background: #ffffff;
-
-  border-radius: 18px;
-
-  border: 1px solid #e5e7eb;
-
-  box-shadow: 0 25px 60px rgba(15, 23, 42, 0.18);
-
-  animation: popup 0.3s ease;
+  padding: 28px;
+  background: var(--color-surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--color-border);
+  box-shadow: var(--shadow-modal);
+  animation: popup 0.25s ease;
 }
-
-/* modal scrollbar */
 
 .modal-box::-webkit-scrollbar {
   width: 6px;
 }
 
 .modal-box::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-
+  background: var(--color-border-strong);
   border-radius: 20px;
 }
 
@@ -599,25 +501,20 @@ textarea:focus-visible {
 ========================================== */
 
 .modal-box h2 {
-  font-size: 24px;
-
+  font-size: 22px;
   font-weight: 700;
-
-  color: #111827;
-
-  margin-bottom: 22px;
+  color: var(--color-text-strong);
+  margin-bottom: 20px;
 }
 
 .modal-box p {
-  color: #64748b;
-
+  color: var(--color-text-muted);
   font-size: 14px;
-
   margin-bottom: 16px;
 }
 
 .modal-box p b {
-  color: #111827;
+  color: var(--color-text-strong);
 }
 
 /* ==========================================
@@ -626,7 +523,6 @@ textarea:focus-visible {
 
 .modal-box form {
   display: flex;
-
   flex-direction: column;
 }
 
@@ -637,24 +533,17 @@ textarea:focus-visible {
 .modal-box input,
 .modal-box textarea {
   width: 100%;
-
-  padding: 13px 15px;
-
-  margin-bottom: 15px;
-
-  border-radius: 10px;
-
-  border: 1px solid #d1d5db;
-
-  background: #ffffff;
-
-  color: #111827;
-
+  padding: 12px 14px;
+  margin-bottom: 14px;
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--color-border-strong);
+  background: var(--color-surface);
+  color: var(--color-text-strong);
   font-size: 14px;
-
   outline: none;
-
-  transition: 0.25s;
+  transition:
+    border-color var(--transition-base),
+    box-shadow var(--transition-base);
 }
 
 .modal-box input::placeholder,
@@ -664,14 +553,12 @@ textarea:focus-visible {
 
 .modal-box input:focus,
 .modal-box textarea:focus {
-  border-color: #2563eb;
-
-  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+  border-color: var(--color-primary);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
 }
 
 .modal-box textarea {
-  min-height: 120px;
-
+  min-height: 110px;
   resize: vertical;
 }
 
@@ -681,44 +568,36 @@ textarea:focus-visible {
 
 .modal-box input[type="file"] {
   background: #f8fafc;
-
   cursor: pointer;
-
-  padding: 10px;
+  padding: 9px;
 }
 
 .modal-box input[type="file"]::-webkit-file-upload-button {
-  background: #2563eb;
-
+  background: var(--color-primary);
   color: white;
-
   border: none;
-
   padding: 8px 14px;
-
   border-radius: 8px;
-
   cursor: pointer;
 }
 
 /* ==========================================
    IMAGE PREVIEW
+   Same crop fix — the uploaded preview should show the whole
+   image, not a cropped square.
 ========================================== */
 
 .preview-image {
-  width: 170px;
-
-  height: 170px;
-
-  object-fit: cover;
-
+  width: 150px;
+  height: 150px;
+  object-fit: contain;
+  object-position: center;
   display: block;
-
-  margin: 10px auto 20px;
-
-  border-radius: 14px;
-
-  border: 1px solid #e5e7eb;
+  margin: 8px auto 18px;
+  border-radius: var(--radius-md);
+  border: 1px solid var(--color-border);
+  background: #f1f5f9;
+  padding: 8px;
 }
 
 /* ==========================================
@@ -729,7 +608,6 @@ textarea:focus-visible {
   from {
     opacity: 0;
   }
-
   to {
     opacity: 1;
   }
@@ -738,15 +616,40 @@ textarea:focus-visible {
 @keyframes popup {
   from {
     opacity: 0;
-
-    transform: translateY(20px) scale(0.96);
+    transform: translateY(14px) scale(0.97);
   }
-
   to {
     opacity: 1;
-
     transform: translateY(0) scale(1);
   }
+}
+
+/* ==========================================
+   VIEW ALL PRODUCTS BUTTON
+========================================== */
+
+.view-products-btn {
+  width: 100%;
+  margin-top: 16px;
+  padding: 11px 18px;
+  background: var(--color-surface);
+  color: var(--color-primary);
+  border: 1px solid var(--color-primary);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  transition:
+    background var(--transition-base),
+    color var(--transition-base);
+}
+
+.view-products-btn:hover {
+  background: var(--color-primary-tint);
 }
 
 /* ==========================================
@@ -759,7 +662,7 @@ textarea:focus-visible {
   }
 
   .collection-grid {
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
   }
 }
 
@@ -770,17 +673,16 @@ textarea:focus-visible {
 
   .collections-header {
     flex-direction: column;
-
     align-items: flex-start;
-
     padding: 22px;
   }
 
   .collections-header h2 {
-    font-size: 24px;
+    font-size: 23px;
   }
 
-  .primary-btn {
+  .primary-btn,
+  .view-products-btn {
     width: 100%;
   }
 
@@ -789,7 +691,7 @@ textarea:focus-visible {
   }
 
   .collection-image {
-    height: 210px;
+    height: 200px;
   }
 
   .card-actions {
@@ -806,7 +708,6 @@ textarea:focus-visible {
 
   .product-buttons {
     width: 100%;
-
     flex-direction: row;
   }
 
@@ -815,9 +716,8 @@ textarea:focus-visible {
   }
 
   .modal-box {
-    padding: 22px;
-
-    border-radius: 16px;
+    padding: 20px;
+    border-radius: var(--radius-md);
   }
 }
 
@@ -827,51 +727,72 @@ textarea:focus-visible {
   }
 
   .collections-header {
-    padding: 18px;
+    padding: 16px;
   }
 
   .collections-header h2 {
-    font-size: 22px;
+    font-size: 20px;
+  }
+
+  .collections-header p {
+    font-size: 13px;
   }
 
   .collection-card {
-    border-radius: 14px;
+    border-radius: var(--radius-md);
   }
 
   .collection-image {
-    height: 180px;
+    height: 170px;
+    padding: 8px;
   }
 
   .collection-content {
-    padding: 18px;
+    padding: 16px;
   }
 
   .collection-content h3 {
-    font-size: 18px;
+    font-size: 17px;
   }
 
   .product-item {
-    padding: 12px;
+    padding: 10px;
   }
 
   .product-item img {
-    width: 60px;
-
-    height: 60px;
+    width: 52px;
+    height: 52px;
   }
 
   .modal-box {
-    padding: 18px;
+    padding: 16px;
   }
 
   .modal-box h2 {
-    font-size: 21px;
+    font-size: 19px;
   }
 
   .preview-image {
-    width: 130px;
+    width: 120px;
+    height: 120px;
+  }
+}
 
-    height: 130px;
+@media (max-width: 360px) {
+  .collection-grid {
+    gap: 16px;
+  }
+
+  .collection-image {
+    height: 150px;
+  }
+
+  .product-buttons {
+    flex-direction: column;
+  }
+
+  .product-buttons button {
+    width: 100%;
   }
 }
 
@@ -885,7 +806,11 @@ textarea,
 .collection-card,
 .product-item,
 .collection-image {
-  transition: all 0.25s ease;
+  transition:
+    background var(--transition-base),
+    border-color var(--transition-base),
+    box-shadow var(--transition-base),
+    transform var(--transition-base);
 }
 
 /* ==========================================
@@ -894,7 +819,6 @@ textarea,
 
 ::-webkit-scrollbar {
   width: 8px;
-
   height: 8px;
 }
 
@@ -903,83 +827,18 @@ textarea,
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-
+  background: var(--color-border-strong);
   border-radius: 20px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
   background: #94a3b8;
 }
-/* ==========================================
-   VIEW ALL PRODUCTS BUTTON
-========================================== */
 
-.view-products-btn {
-
-  width:100%;
-
-  margin-top:18px;
-
-  padding:12px 18px;
-
-  background:#ffffff;
-
-  color:#2563eb;
-
-  border:1px solid #2563eb;
-
-  border-radius:10px;
-
-  font-size:14px;
-
-  font-weight:600;
-
-  cursor:pointer;
-
-  display:flex;
-
-  align-items:center;
-
-  justify-content:center;
-
-  gap:8px;
-
-  transition:.25s ease;
-
-}
-
-
-.view-products-btn:hover {
-
-  background:#2563eb;
-
-  color:#ffffff;
-
-  transform:translateY(-2px);
-
-  box-shadow:
-
-  0 8px 18px rgba(37,99,235,.18);
-
-}
-
-
-.view-products-btn:active {
-
-  transform:scale(.97);
-
-}
-
-
-/* Mobile */
-
-@media(max-width:768px){
-
-  .view-products-btn {
-
-    width:100%;
-
-  }
-
+button,
+button:focus,
+button:focus-visible,
+button:active {
+  outline: none !important;
+  box-shadow: none !important;
 }
