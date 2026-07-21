@@ -32,6 +32,7 @@ const Navbar = () => {
   const location = useLocation();
 
   const profileRef = useRef(null);
+  const notificationRef = useRef(null);
 
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -73,6 +74,7 @@ const Navbar = () => {
 
   useEffect(() => {
     setShowProfileMenu(false);
+    setShowNotifications(false);
 
     setMenuOpen(false);
   }, [location]);
@@ -181,7 +183,7 @@ const Navbar = () => {
 
   /*
   ===========================
-      CLOSE PROFILE OUTSIDE CLICK
+      CLOSE PROFILE / NOTIFICATIONS ON OUTSIDE CLICK
   ===========================
   */
 
@@ -189,6 +191,13 @@ const Navbar = () => {
     const handleClickOutside = (e) => {
       if (profileRef.current && !profileRef.current.contains(e.target)) {
         setShowProfileMenu(false);
+      }
+
+      if (
+        notificationRef.current &&
+        !notificationRef.current.contains(e.target)
+      ) {
+        setShowNotifications(false);
       }
     };
 
@@ -278,7 +287,7 @@ const Navbar = () => {
             <li>
               <Link to="/my-designs">My Designs</Link>
             </li>
-            <li className="notification-wrapper">
+            <li className="notification-wrapper" ref={notificationRef}>
               <div
                 className="notification-icon"
                 onClick={() => {

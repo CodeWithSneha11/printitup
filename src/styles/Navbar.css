@@ -347,58 +347,6 @@
   color: #be123c;
 }
 
-/* ===========================
-   MOBILE
-=========================== */
-
-@media (max-width: 768px) {
-  .hamburger {
-    display: block;
-  }
-
-  .nav-links {
-    position: absolute;
-
-    top: 66px;
-    right: 0;
-
-    width: 220px;
-
-    background: var(--navy-soft);
-    border: 1px solid var(--line);
-    border-radius: 0 0 0 16px;
-
-    flex-direction: column;
-    align-items: flex-start;
-
-    padding: 22px;
-
-    gap: 20px;
-
-    display: none;
-
-    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
-  }
-
-  .nav-links.active {
-    display: flex;
-  }
-
-  .nav-links a::after {
-    display: none;
-  }
-
-  .profile-menu {
-    width: 100%;
-  }
-
-  .profile-dropdown {
-    position: static;
-    width: 100%;
-    margin-top: 12px;
-    box-shadow: none;
-  }
-}
 /* =========================
    NOTIFICATION BELL
 ========================= */
@@ -518,6 +466,120 @@
 
   padding: 15px;
 }
+
+/* ===========================
+   MOBILE
+=========================== */
+
+@media (max-width: 768px) {
+  .hamburger {
+    display: block;
+  }
+
+  .nav-links {
+    position: absolute;
+
+    top: 66px;
+    right: 0;
+
+    width: 220px;
+
+    background: var(--navy-soft);
+    border: 1px solid var(--line);
+    border-radius: 0 0 0 16px;
+
+    flex-direction: column;
+    align-items: flex-start;
+
+    padding: 22px;
+
+    gap: 20px;
+
+    display: none;
+
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.4);
+  }
+
+  .nav-links.active {
+    display: flex;
+  }
+
+  .nav-links a::after {
+    display: none;
+  }
+
+  .profile-menu {
+    width: 100%;
+  }
+
+  .profile-dropdown {
+    position: static;
+    width: 100%;
+    margin-top: 12px;
+    box-shadow: none;
+  }
+
+  /* -- notification bell: shrink target + badge slightly,
+        and stop the dropdown pinning to the far right edge
+        of the viewport where it can overflow -- */
+  .notification-icon {
+    font-size: 18px;
+    padding: 6px;
+  }
+
+  .notification-badge {
+    top: -2px;
+    right: -3px;
+    width: 16px;
+    height: 16px;
+    font-size: 10px;
+  }
+
+  .notification-dropdown {
+    position: fixed;
+    top: 66px;
+    right: 12px;
+    left: 12px;
+
+    width: auto;
+    max-width: none;
+
+    max-height: 70vh;
+  }
+}
+
+/* ===========================
+   SMALL MOBILE
+=========================== */
+
+@media (max-width: 480px) {
+  .notification-dropdown {
+    top: 60px;
+    right: 8px;
+    left: 8px;
+    padding: 8px;
+    border-radius: 10px;
+    max-height: 65vh;
+  }
+
+  .notification-item {
+    padding: 10px 6px;
+  }
+
+  .notification-item h4 {
+    font-size: 14px;
+  }
+
+  .notification-item p {
+    font-size: 12.5px;
+  }
+
+  .notification-dropdown > p {
+    padding: 12px;
+    font-size: 13px;
+  }
+}
+
 /* ===========================
    MOTION PREFERENCES
 =========================== */

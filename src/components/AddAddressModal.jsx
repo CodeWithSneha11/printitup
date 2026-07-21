@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from "react";
 
 import "../styles/AddAddressModal.css";
-import { FaPlus } from "react-icons/fa";
 const emptyAddress = {
   label: "Home",
 

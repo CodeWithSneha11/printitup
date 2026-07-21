@@ -30,26 +30,102 @@ function useDebouncedValue(value, delayMs) {
 }
 
 /* ------------------------------------------------------------------ */
-function createDesignTexture({ text, textColor, fontSize, imageEl }) {
+function createDesignTexture({
+  text,
+  textColor,
+  fontSize,
+  imageEl,
+  imagePosition,
+  imageSize,
+  textPosition,
+  textSize,
+}) {
   const canvas = document.createElement("canvas");
   canvas.width = 1024;
   canvas.height = 1024;
   const ctx = canvas.getContext("2d");
   ctx.clearRect(0, 0, 1024, 1024);
+  // Canvas represents the printable area
+const DESIGN_WIDTH = 300;
+const DESIGN_HEIGHT = 400;
 
-  if (imageEl) {
-    const size = 500;
-    const y = text ? 180 : 512 - size / 2;
-    ctx.drawImage(imageEl, 512 - size / 2, y, size, size);
-  }
+const scaleX = 1024 / DESIGN_WIDTH;
+const scaleY = 1024 / DESIGN_HEIGHT;
+// Printable area (approximately 70% of shirt width)
+const PRINT_WIDTH = DESIGN_WIDTH * 0.7;
+//const PRINT_HEIGHT = DESIGN_HEIGHT * 0.7;
 
-  if (text) {
-    ctx.fillStyle = textColor || "#000000";
-    ctx.font = `bold ${fontSize * 5}px Arial`;
-    ctx.textAlign = "center";
-    ctx.textBaseline = "middle";
-    ctx.fillText(text, 512, imageEl ? 780 : 512);
+const PRINT_X = (DESIGN_WIDTH - PRINT_WIDTH) / 2;
+//const PRINT_Y = (DESIGN_HEIGHT - PRINT_HEIGHT) / 2;
+  if (imageEl && imagePosition && imageSize) {
+  ctx.drawImage(
+    imageEl,
+    imagePosition.x * scaleX,
+    imagePosition.y * scaleY,
+    imageSize.width * scaleX,
+    imageSize.height * scaleY
+  );
+}
+
+ if (text && textPosition && textSize) {
+  ctx.fillStyle = textColor || "#000000";
+let drawFontSize = fontSize * 5;
+
+if (textSize) {
+  const maxWidth = textSize.width * scaleX * 0.9;
+
+  while (drawFontSize > 10) {
+    ctx.font = `bold ${drawFontSize}px Arial`;
+
+    if (ctx.measureText(text).width <= maxWidth) {
+      break;
+    }
+
+    drawFontSize--;
   }
+}
+
+ctx.font = `bold ${drawFontSize}px Arial`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+
+ const maxWidth = PRINT_WIDTH * scaleX;
+
+const words = text.split(" ");
+const lines = [];
+let currentLine = "";
+
+for (const word of words) {
+  const testLine = currentLine
+    ? `${currentLine} ${word}`
+    : word;
+
+  if (ctx.measureText(testLine).width > maxWidth && currentLine) {
+    lines.push(currentLine);
+    currentLine = word;
+  } else {
+    currentLine = testLine;
+  }
+}
+
+if (currentLine) {
+  lines.push(currentLine);
+}
+
+const lineHeight = drawFontSize * 1.2;
+
+const startY =
+  (textPosition.y + textSize.height / 2) * scaleY -
+  ((lines.length - 1) * lineHeight) / 2;
+
+lines.forEach((line, index) => {
+  ctx.fillText(
+    line,
+  (PRINT_X + PRINT_WIDTH / 2) * scaleX,
+    startY + index * lineHeight
+  );
+});
+}
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -81,7 +157,8 @@ function DesignDecal({ meshes, box, side, texture }) {
 
     // Aim at roughly chest height: a bit above vertical center, since the
     // lower half of the bounding box includes the hem/waist area.
-    const targetY = box.min.y + size.y * 0.62;
+   // Place decal slightly below the neckline (upper chest)
+const targetY = box.max.y - size.y * 0.32;
     const targetX = center.x;
 
     // Start the ray well outside the model on the correct side, pointing
@@ -123,11 +200,16 @@ function DesignDecal({ meshes, box, side, texture }) {
 
     // Decal footprint scales with the model's own size instead of a fixed
     // guess, so it stays proportional regardless of model scale.
-    const decalSize = new THREE.Vector3(
-      size.x * 0.35,
-      size.x * 0.35,
-      Math.max(size.x, size.y, size.z) * 0.5
-    );
+ // More realistic printable area
+const decalWidth = size.x * 0.42;
+const decalHeight = size.y * 0.32;
+const decalDepth = 0.25;
+
+const decalSize = new THREE.Vector3(
+  decalWidth,
+  decalHeight,
+  decalDepth
+);
 
     const geo = new DecalGeometry(hit.object, position, orientation, decalSize);
     setDecalGeo(geo);
@@ -194,6 +276,12 @@ function TShirt3DPreview({
   fontSize = 18,
   imageUrl = "",
   side = "front",
+
+  imagePosition,
+  imageSize,
+
+  textPosition,
+  textSize,
 }) {
   const [meshes, setMeshes] = useState([]);
   const [box, setBox] = useState(null);
@@ -217,15 +305,33 @@ function TShirt3DPreview({
   img.src = imageUrl;
 }, [imageUrl]);
 
-  const texture = useMemo(() => {
-    if (!debouncedText && !imageEl) return null;
-    return createDesignTexture({
-      text: debouncedText,
-      textColor,
-      fontSize: debouncedFontSize,
-      imageEl,
-    });
-  }, [debouncedText, textColor, debouncedFontSize, imageEl]);
+const texture = useMemo(() => {
+  if (!debouncedText && !imageEl) return null;
+
+  return createDesignTexture({
+    text: debouncedText,
+    textColor,
+    fontSize: debouncedFontSize,
+    imageEl,
+
+    imagePosition,
+    imageSize,
+
+    textPosition,
+    textSize,
+  });
+}, [
+  debouncedText,
+  textColor,
+  debouncedFontSize,
+  imageEl,
+
+  imagePosition,
+  imageSize,
+
+  textPosition,
+  textSize,
+]);
 
   const handleReady = (m, b) => {
     setMeshes(m);

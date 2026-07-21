@@ -2,7 +2,6 @@ import React from "react";
 import {
   FaShoppingBag,
   FaRupeeSign,
-  FaChartLine,
   FaUserPlus,
 } from "react-icons/fa";
 

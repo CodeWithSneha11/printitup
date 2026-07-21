@@ -25,10 +25,19 @@ import {
   FaSquare,
   FaTimes,
   FaCrosshairs,
+  FaMinus,
+  FaPlus,
 } from "react-icons/fa";
 import { Rnd } from "react-rnd";
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5mb
+const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+const MAX_QUANTITY = 10;
+const ALLOWED_IMAGE_TYPES = [
+  "image/png",
+  "image/jpeg",
+  "image/jpg",
+  "image/webp",
+];
 
 const tshirtColors = [
   { name: "White", code: "#ffffff" },
@@ -44,10 +53,14 @@ const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
 const Customize = () => {
   const location = useLocation();
 
-  // Product passed in from Collections page (if any)
+  // Product passed in from the Collections page, if the user arrived
+  // via "Customize this product" rather than a direct visit.
   const incomingProduct = location.state?.product || null;
   const fromCollection = location.state?.fromCollection || false;
   const [selectedProduct, setSelectedProduct] = useState(incomingProduct);
+
+  // Existing design passed in for editing, if the user arrived via
+  // "Edit design" from My Designs.
   const incomingDesign = location.state?.design || null;
   const editMode = location.state?.editMode || false;
   const designDocId = incomingDesign?.id || null;
@@ -60,44 +73,35 @@ const Customize = () => {
   const [textColor, setTextColor] = useState("#000000");
   const [neck, setNeck] = useState("round");
   const [rotate, setRotate] = useState(false);
+  const [quantity, setQuantity] = useState(1);
+
   const [image, setImage] = useState(null);
   const [imageFile, setImageFile] = useState(null);
+  const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
   const [message, setMessage] = useState("");
 
-  // Separate loading states
+  // Save and cart actions have independent loading states so one
+  // doesn't block the other's button from showing its own spinner.
   const [savingDesign, setSavingDesign] = useState(false);
   const [addingCart, setAddingCart] = useState(false);
 
-  // Store uploaded Cloudinary URL
   const [cloudinaryUrl, setCloudinaryUrl] = useState("");
 
-  // 3D / 2D preview toggle
   const [use3D, setUse3D] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
-  const [imagePosition, setImagePosition] = useState({
-    x: 100,
-    y: 80,
-  });
 
-  const [imageSize, setImageSize] = useState({
-    width: 100,
-    height: 100,
-  });
+  const [imagePosition, setImagePosition] = useState({ x: 100, y: 80 });
+  const [imageSize, setImageSize] = useState({ width: 100, height: 100 });
+  const [textPosition, setTextPosition] = useState({ x: 90, y: 220 });
+  const [textSize, setTextSize] = useState({ width: 150, height: 50 });
 
-  const [textPosition, setTextPosition] = useState({
-    x: 90,
-    y: 220,
-  });
-
-  const [textSize, setTextSize] = useState({
-    width: 150,
-    height: 50,
-  });
-
-  // Ref to the actual rendered shirt canvas so "Center" can measure
+  // Reference to the rendered shirt canvas, used to measure available
+  // space when centering an element.
   const canvasRef = useRef(null);
+
+  const hasDesignContent = Boolean(text.trim() || image);
 
   useEffect(() => {
     if (!isWebGLAvailable()) {
@@ -105,8 +109,8 @@ const Customize = () => {
     }
   }, []);
 
-  // Pre-fill fields from the product passed via Collections page.
-  // Runs once on mount; only overrides fields the product actually
+  // Pre-fill fields from the product passed via the Collections page.
+  // Runs once on mount and only overrides fields the product actually
   // specifies, so a direct visit to /customize is unaffected.
   useEffect(() => {
     if (!incomingProduct) return;
@@ -115,30 +119,25 @@ const Customize = () => {
     if (incomingProduct.size) setSelectedSize(incomingProduct.size);
     if (incomingProduct.neck) setNeck(incomingProduct.neck);
 
-    // Show the product's own image as the starting design image.
-    // This is a remote URL, not a blob, so it's never passed to
-    // URL.revokeObjectURL as a blob (see cleanup effect below).
+    // The product image is a remote URL, not a blob, so it's never
+    // passed to URL.revokeObjectURL in the cleanup effect below.
     if (incomingProduct.image) {
       setImage(incomingProduct.image);
       setCloudinaryUrl(incomingProduct.image);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // Restore a previously saved design when arriving in edit mode.
   useEffect(() => {
     if (!editMode || !incomingDesign) return;
 
     setText(incomingDesign.text || "");
-
     setSide(incomingDesign.side || "front");
-
     setSelectedColor(incomingDesign.tshirtColor || "#ffffff");
-
     setSelectedSize(incomingDesign.size || "M");
-
     setTextColor(incomingDesign.textColor || "#000000");
-
     setFontSize(Number(incomingDesign.fontSize) || 18);
-
     setNeck(incomingDesign.neck || "round");
 
     if (incomingDesign.imageUrl) {
@@ -146,21 +145,12 @@ const Customize = () => {
       setCloudinaryUrl(incomingDesign.imageUrl);
     }
 
-    if (incomingDesign.imagePosition) {
+    if (incomingDesign.imagePosition)
       setImagePosition(incomingDesign.imagePosition);
-    }
-
-    if (incomingDesign.imageSize) {
-      setImageSize(incomingDesign.imageSize);
-    }
-
-    if (incomingDesign.textPosition) {
+    if (incomingDesign.imageSize) setImageSize(incomingDesign.imageSize);
+    if (incomingDesign.textPosition)
       setTextPosition(incomingDesign.textPosition);
-    }
-
-    if (incomingDesign.textSize) {
-      setTextSize(incomingDesign.textSize);
-    }
+    if (incomingDesign.textSize) setTextSize(incomingDesign.textSize);
   }, [editMode, incomingDesign]);
 
   let finalPrice = 499;
@@ -169,50 +159,82 @@ const Customize = () => {
   if (selectedSize === "XL") finalPrice += 50;
   if (selectedSize === "XXL") finalPrice += 80;
 
+  const orderTotal = finalPrice * quantity;
+
+  // Brief flip animation whenever the print side is toggled.
   useEffect(() => {
     setRotate(true);
     const timer = setTimeout(() => setRotate(false), 600);
     return () => clearTimeout(timer);
   }, [side]);
 
-  // Clean up object URL when image changes/unmounts to avoid memory leaks.
-  // Only revoke if it's actually a blob URL we created ourselves —
-  // a remote (http/https) product image must not be revoked.
+  // Revoke object URLs we created ourselves to avoid leaking memory.
+  // A remote (http/https) product or saved-design image must never
+  // be revoked, since we don't own that URL.
   useEffect(() => {
     return () => {
       if (image && image.startsWith("blob:")) URL.revokeObjectURL(image);
     };
   }, [image]);
-useEffect(() => {
-  const handleKeyDown = (e) => {
-    if (e.key !== "Delete") return;
 
-if (selectedElement === "image") {
-  removeImage();
-  setSelectedElement(null);
-}
+  // Keyboard shortcuts for the selected canvas element:
+  // Delete/Backspace removes it, Escape deselects it, and the arrow
+  // keys nudge its position (hold Shift to move in larger steps).
+  useEffect(() => {
+    const handleKeyDown = (e) => {
+      if (e.key === "Escape") {
+        setSelectedElement(null);
+        return;
+      }
 
-if (selectedElement === "text") {
-  setText("");
-  setSelectedElement(null);
-}
-  };
+      if (!selectedElement) return;
 
-  window.addEventListener("keydown", handleKeyDown);
+      if (e.key === "Delete" || e.key === "Backspace") {
+        if (selectedElement === "image") removeImage();
+        if (selectedElement === "text") setText("");
+        setSelectedElement(null);
+        return;
+      }
 
-  return () => {
-    window.removeEventListener("keydown", handleKeyDown);
-  };
-}, [selectedElement, image]);
-  const handleImageUpload = async (e) => {
-    setCloudinaryUrl("");
-    const file = e.target.files[0];
+      const arrowDeltas = {
+        ArrowUp: [0, -1],
+        ArrowDown: [0, 1],
+        ArrowLeft: [-1, 0],
+        ArrowRight: [1, 0],
+      };
 
+      if (arrowDeltas[e.key]) {
+        e.preventDefault();
+        const step = e.shiftKey ? 10 : 1;
+        const [dx, dy] = arrowDeltas[e.key];
+        const offset = { x: dx * step, y: dy * step };
+
+        if (selectedElement === "image") {
+          setImagePosition((prev) => ({
+            x: prev.x + offset.x,
+            y: prev.y + offset.y,
+          }));
+        } else {
+          setTextPosition((prev) => ({
+            x: prev.x + offset.x,
+            y: prev.y + offset.y,
+          }));
+        }
+      }
+    };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [selectedElement, image]);
+
+  // Shared validation + upload path for a chosen image, used by both
+  // the file input and the drag-and-drop dropzone.
+  const processImageFile = async (file) => {
     if (!file) return;
 
-    const allowedTypes = ["image/png", "image/jpeg", "image/jpg", "image/webp"];
+    setCloudinaryUrl("");
 
-    if (!allowedTypes.includes(file.type)) {
+    if (!ALLOWED_IMAGE_TYPES.includes(file.type)) {
       setMessage("❌ Only PNG, JPG, JPEG and WEBP images are allowed.");
       return;
     }
@@ -227,13 +249,27 @@ if (selectedElement === "text") {
     setImage(URL.createObjectURL(file));
     setSelectedElement("image");
 
-    // Upload immediately in background
     try {
       await uploadImageToCloudinary(file);
     } catch (error) {
-      console.log(error);
+      console.error("Image upload failed:", error);
       setMessage("❌ Image upload failed.");
     }
+  };
+
+  const handleImageUpload = (e) => processImageFile(e.target.files[0]);
+
+  const handleDropzoneDragOver = (e) => {
+    e.preventDefault();
+    setIsDraggingFile(true);
+  };
+
+  const handleDropzoneDragLeave = () => setIsDraggingFile(false);
+
+  const handleDropzoneDrop = (e) => {
+    e.preventDefault();
+    setIsDraggingFile(false);
+    processImageFile(e.dataTransfer.files?.[0]);
   };
 
   const removeImage = () => {
@@ -246,6 +282,13 @@ if (selectedElement === "text") {
   };
 
   const resetDesign = () => {
+    if (
+      hasDesignContent &&
+      !window.confirm("Discard your current design? This can't be undone.")
+    ) {
+      return;
+    }
+
     if (image && image.startsWith("blob:")) {
       URL.revokeObjectURL(image);
     }
@@ -257,6 +300,7 @@ if (selectedElement === "text") {
     setFontSize(18);
     setTextColor("#000000");
     setNeck("round");
+    setQuantity(1);
 
     setImage(null);
     setImageFile(null);
@@ -264,8 +308,8 @@ if (selectedElement === "text") {
     setMessage("");
     setSelectedElement(null);
 
-    // Reset also clears the product association, since the design
-    // no longer reflects the product that was passed in
+    // Clears the product association too, since the design no longer
+    // reflects the product that was originally passed in.
     setSelectedProduct(null);
   };
 
@@ -282,10 +326,7 @@ if (selectedElement === "text") {
 
       const response = await fetch(
         "https://api.cloudinary.com/v1_1/dfq3c3jkm/image/upload",
-        {
-          method: "POST",
-          body: formData,
-        },
+        { method: "POST", body: formData },
       );
 
       const data = await response.json();
@@ -306,15 +347,18 @@ if (selectedElement === "text") {
     }
   };
 
+  // Deterministic ID for a design's current configuration, used to
+  // detect duplicate cart entries so we can bump quantity instead of
+  // inserting a second row for the same design.
   const generateDesignId = async (design) => {
     const encoder = new TextEncoder();
     const data = encoder.encode(JSON.stringify(design));
     const hashBuffer = await crypto.subtle.digest("SHA-256", data);
     const hashArray = Array.from(new Uint8Array(hashBuffer));
-    const hashHex = hashArray
+    return hashArray
       .map((b) => b.toString(16).padStart(2, "0"))
-      .join("");
-    return hashHex.substring(0, 20);
+      .join("")
+      .substring(0, 20);
   };
 
   const buildDesignData = async () => {
@@ -330,28 +374,22 @@ if (selectedElement === "text") {
       imageUrl = await uploadImageToCloudinary(imageFile);
       setCloudinaryUrl(imageUrl);
     }
+
     const designId = await generateDesignId({
       text,
       side,
-
       tshirtColor: selectedColor,
       size: selectedSize,
-
       textColor,
       fontSize: Number(fontSize),
-
       neck,
-
       imageName: imageFile?.name || "",
       imageFileSize: imageFile?.size || 0,
       imageModified: imageFile?.lastModified || 0,
-
       imagePosition,
       imageSize,
-
       textPosition,
       textSize,
-
       productId: selectedProduct?.id || "",
     });
 
@@ -360,33 +398,29 @@ if (selectedElement === "text") {
       designId,
       productId: selectedProduct?.id || null,
       productName: selectedProduct?.name || null,
-
       text,
       side,
-
       tshirtColor: selectedColor,
       size: selectedSize,
-
       textColor,
       fontSize: Number(fontSize),
-
       neck,
-
       imageUrl,
-
       imagePosition,
       imageSize,
-
       textPosition,
       textSize,
-
       price: finalPrice,
-
       createdAt: serverTimestamp(),
     };
   };
 
   const saveDesign = async () => {
+    if (!hasDesignContent) {
+      setMessage("❌ Add some text or an image before saving.");
+      return;
+    }
+
     try {
       setSavingDesign(true);
       setMessage("");
@@ -395,15 +429,13 @@ if (selectedElement === "text") {
 
       if (editMode && designDocId) {
         await updateDoc(doc(db, "designs", designDocId), designData);
-
         setMessage("✅ Design updated successfully!");
       } else {
         await addDoc(collection(db, "designs"), designData);
-
         setMessage("✅ Design saved successfully!");
       }
     } catch (err) {
-      console.log(err);
+      console.error("Save design failed:", err);
       setMessage("❌ " + (err.message || "Unable to save design."));
     } finally {
       setSavingDesign(false);
@@ -411,6 +443,11 @@ if (selectedElement === "text") {
   };
 
   const addToCart = async () => {
+    if (!hasDesignContent) {
+      setMessage("❌ Add some text or an image before adding to cart.");
+      return;
+    }
+
     try {
       setAddingCart(true);
       setMessage("");
@@ -430,16 +467,15 @@ if (selectedElement === "text") {
       );
 
       const snapshot = await getDocs(q);
-
-      const existingDoc = snapshot.docs.find((docSnap) => {
-        return docSnap.data().designId === designData.designId;
-      });
+      const existingDoc = snapshot.docs.find(
+        (docSnap) => docSnap.data().designId === designData.designId,
+      );
 
       if (existingDoc) {
         const existingData = existingDoc.data();
 
         await updateDoc(doc(db, "cart", existingDoc.id), {
-          quantity: (existingData.quantity || 1) + 1,
+          quantity: (existingData.quantity || 1) + quantity,
         });
 
         setMessage("🛒 Quantity updated in cart!");
@@ -448,27 +484,23 @@ if (selectedElement === "text") {
 
       await addDoc(collection(db, "cart"), {
         ...designData,
-        quantity: 1,
+        quantity,
       });
 
       setMessage("✅ Added to cart!");
     } catch (err) {
-      console.log(err);
+      console.error("Add to cart failed:", err);
       setMessage("❌ " + (err.message || "Failed to add to cart."));
     } finally {
       setAddingCart(false);
     }
   };
 
-  // ==========================
-  // DRAG-CANVAS HELPERS
-  // ==========================
-
-  // Clicking empty shirt space deselects whatever's selected.
+  // Clicking empty shirt space deselects whatever's currently selected.
   const handleCanvasBackgroundClick = () => setSelectedElement(null);
 
-  // Quick "snap to horizontal center" — the practical replacement for
-  // the old center/left/right preset now that placement is freeform.
+  // Snaps an element to horizontal center — the practical replacement
+  // for the old center/left/right presets now that placement is freeform.
   const centerElement = (type) => {
     if (!canvasRef.current) return;
     const { width } = canvasRef.current.getBoundingClientRect();
@@ -513,15 +545,20 @@ if (selectedElement === "text") {
             id="custom-text"
             type="text"
             placeholder="Enter your text..."
-            maxLength={30}
+            maxLength={50}
             value={text}
             onChange={(e) => setText(e.target.value)}
             onFocus={() => text && setSelectedElement("text")}
           />
-          <small className="character-count">{text.length}/30 characters</small>
+          <small className="character-count">{text.length}/50 characters</small>
 
           <label htmlFor="image-upload">Upload Image</label>
-          <div className="file-upload-wrap">
+          <div
+            className={`file-upload-wrap${isDraggingFile ? " dragging" : ""}`}
+            onDragOver={handleDropzoneDragOver}
+            onDragLeave={handleDropzoneDragLeave}
+            onDrop={handleDropzoneDrop}
+          >
             <input
               id="image-upload"
               type="file"
@@ -627,6 +664,27 @@ if (selectedElement === "text") {
             <option value="vneck">V-Neck</option>
             <option value="collar">Collar</option>
           </select>
+
+          <label>Quantity</label>
+          <div className="quantity-stepper">
+            <button
+              type="button"
+              aria-label="Decrease quantity"
+              onClick={() => setQuantity((q) => Math.max(1, q - 1))}
+              disabled={quantity <= 1}
+            >
+              <FaMinus />
+            </button>
+            <span className="quantity-value">{quantity}</span>
+            <button
+              type="button"
+              aria-label="Increase quantity"
+              onClick={() => setQuantity((q) => Math.min(MAX_QUANTITY, q + 1))}
+              disabled={quantity >= MAX_QUANTITY}
+            >
+              <FaPlus />
+            </button>
+          </div>
         </div>
 
         {/* SECTION 4 — TEXT STYLING */}
@@ -735,6 +793,10 @@ if (selectedElement === "text") {
             fontSize={fontSize}
             imageUrl={image}
             side={side}
+            imagePosition={imagePosition}
+            imageSize={imageSize}
+            textPosition={textPosition}
+            textSize={textSize}
           />
         ) : (
           <>
@@ -758,14 +820,8 @@ if (selectedElement === "text") {
 
                 {image && (
                   <Rnd
-                    size={{
-                      width: imageSize.width,
-                      height: imageSize.height,
-                    }}
-                    position={{
-                      x: imagePosition.x,
-                      y: imagePosition.y,
-                    }}
+                    size={{ width: imageSize.width, height: imageSize.height }}
+                    position={{ x: imagePosition.x, y: imagePosition.y }}
                     bounds="parent"
                     style={{ zIndex: selectedElement === "image" ? 25 : 20 }}
                     onClick={(e) => {
@@ -774,22 +830,13 @@ if (selectedElement === "text") {
                     }}
                     enableResizing={selectedElement === "image"}
                     disableDragging={selectedElement !== "image"}
-                    onDragStop={(e, d) => {
-                      setImagePosition({
-                        x: d.x,
-                        y: d.y,
-                      });
-                    }}
+                    onDragStop={(e, d) => setImagePosition({ x: d.x, y: d.y })}
                     onResizeStop={(e, direction, ref, delta, position) => {
                       setImageSize({
                         width: ref.offsetWidth,
                         height: ref.offsetHeight,
                       });
-
-                      setImagePosition({
-                        x: position.x,
-                        y: position.y,
-                      });
+                      setImagePosition({ x: position.x, y: position.y });
                     }}
                   >
                     <img
@@ -801,16 +848,11 @@ if (selectedElement === "text") {
                     />
                   </Rnd>
                 )}
+
                 {text && (
                   <Rnd
-                    size={{
-                      width: textSize.width,
-                      height: textSize.height,
-                    }}
-                    position={{
-                      x: textPosition.x,
-                      y: textPosition.y,
-                    }}
+                    size={{ width: textSize.width, height: textSize.height }}
+                    position={{ x: textPosition.x, y: textPosition.y }}
                     bounds="parent"
                     style={{ zIndex: selectedElement === "text" ? 25 : 20 }}
                     onClick={(e) => {
@@ -818,33 +860,21 @@ if (selectedElement === "text") {
                       setSelectedElement("text");
                     }}
                     enableResizing={selectedElement === "text"}
-                     disableDragging={selectedElement !== "text"}
-                    onDragStop={(e, d) => {
-                      setTextPosition({
-                        x: d.x,
-                        y: d.y,
-                      });
-                    }}
+                    disableDragging={selectedElement !== "text"}
+                    onDragStop={(e, d) => setTextPosition({ x: d.x, y: d.y })}
                     onResizeStop={(e, direction, ref, delta, position) => {
                       setTextSize({
                         width: ref.offsetWidth,
                         height: ref.offsetHeight,
                       });
-
-                      setTextPosition({
-                        x: position.x,
-                        y: position.y,
-                      });
+                      setTextPosition({ x: position.x, y: position.y });
                     }}
                   >
                     <div
                       className={`design-text${
                         selectedElement === "text" ? " design-selected" : ""
                       }`}
-                      style={{
-                        color: textColor,
-                        fontSize: `${fontSize}px`,
-                      }}
+                      style={{ color: textColor, fontSize: `${fontSize}px` }}
                     >
                       {text}
                     </div>
@@ -863,7 +893,9 @@ if (selectedElement === "text") {
             {selectedElement && (
               <div className="element-toolbar">
                 <span>
-                  {selectedElement === "image" ? "Image selected" : "Text selected"}
+                  {selectedElement === "image"
+                    ? "Image selected"
+                    : "Text selected"}
                 </span>
                 <button
                   type="button"
@@ -914,11 +946,16 @@ if (selectedElement === "text") {
             <span>{selectedSize}</span>
           </div>
 
+          <div className="price-row">
+            <span>Quantity</span>
+            <span>× {quantity}</span>
+          </div>
+
           <hr />
 
           <h2>
             Total
-            <span>₹{finalPrice}</span>
+            <span>₹{orderTotal}</span>
           </h2>
         </div>
       </div>

@@ -8,6 +8,10 @@ import {
   addDoc,
   updateDoc,
   serverTimestamp,
+  query,
+  where,
+  getDocs,
+  writeBatch,
 } from "firebase/firestore";
 
 import "../styles/Collections.css";
@@ -72,7 +76,8 @@ const Collections = () => {
   const [editProductPreview, setEditProductPreview] = useState("");
 
   const [updatingProduct, setUpdatingProduct] = useState(false);
-
+  const [editCollectionDescription, setEditCollectionDescription] =
+    useState("");
   // Fetch Collections
 
   useEffect(() => {
@@ -235,6 +240,8 @@ const Collections = () => {
     setEditingCollection(item);
 
     setEditCollectionName(item.name);
+    setEditCollectionDescription(item.description || "");
+
     setEditCollectionImageFile(null);
     setEditCollectionPreview(item.image);
 
@@ -260,7 +267,6 @@ const Collections = () => {
 
     if (!editCollectionName) {
       alert("Please fill required fields");
-
       return;
     }
 
@@ -273,10 +279,30 @@ const Collections = () => {
         imageUrl = await uploadImage(editCollectionImageFile);
       }
 
+      // Update collection document
       await updateDoc(doc(db, "collections", editingCollection.id), {
         name: editCollectionName,
+        description: editCollectionDescription,
         image: imageUrl,
       });
+
+      // Update collectionName in all related products
+      const productsQuery = query(
+        collection(db, "products"),
+        where("collectionId", "==", editingCollection.id),
+      );
+
+      const snapshot = await getDocs(productsQuery);
+
+      const batch = writeBatch(db);
+
+      snapshot.forEach((productDoc) => {
+        batch.update(productDoc.ref, {
+          collectionName: editCollectionName,
+        });
+      });
+
+      await batch.commit();
 
       alert("Collection updated successfully");
 
@@ -285,8 +311,7 @@ const Collections = () => {
       setEditCollectionImageFile(null);
       setEditCollectionPreview("");
     } catch (error) {
-      console.log(error);
-
+      console.error(error);
       alert("Failed to update collection");
     } finally {
       setUpdatingCollection(false);
@@ -611,7 +636,11 @@ const Collections = () => {
                 value={editCollectionName}
                 onChange={(e) => setEditCollectionName(e.target.value)}
               />
-
+              <textarea
+                placeholder="Collection Description"
+                value={editCollectionDescription}
+                onChange={(e) => setEditCollectionDescription(e.target.value)}
+              />
               <input
                 type="file"
                 accept="image/*"
@@ -633,7 +662,12 @@ const Collections = () => {
               <button
                 type="button"
                 className="cancel-btn"
-                onClick={() => setShowEditCollectionModal(false)}
+                onClick={() => {
+                  setShowEditCollectionModal(false);
+                  setEditCollectionDescription("");
+                  setEditCollectionImageFile(null);
+                  setEditCollectionPreview("");
+                }}
               >
                 Cancel
               </button>

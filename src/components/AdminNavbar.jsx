@@ -12,7 +12,6 @@ import {
 import {
   FaBell,
   FaSearch,
-  FaUserCircle,
   FaCog,
   FaSignOutAlt,
   FaBars,

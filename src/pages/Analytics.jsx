@@ -1,17 +1,16 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FaReceipt,
   FaShoppingBag,
   FaUserPlus,
   FaCoins,
   FaArrowUp,
-  FaArrowDown,
   FaBoxOpen,
   FaLayerGroup,
   FaPalette,
 } from "react-icons/fa";
 
-import { collection, getDocs } from "firebase/firestore";
+import { collection, onSnapshot } from "firebase/firestore";
 
 import { db } from "../firebase";
 
@@ -42,86 +41,146 @@ const Analytics = () => {
   const [revenueSeries, setRevenueSeries] = useState([]);
   const [ordersSeries, setOrdersSeries] = useState([]);
   const [labels, setLabels] = useState([]);
-
+  const [orders, setOrders] = useState([]);
+  const [users, setUsers] = useState([]);
+  const [productsCount, setProductsCount] = useState(0);
+  const [collectionsCount, setCollectionsCount] = useState(0);
+  const [designsCount, setDesignsCount] = useState(0);
   const [recentOrders, setRecentOrders] = useState([]);
+  const [comparison, setComparison] = useState({
+    revenue: 0,
+    orders: 0,
+    customers: 0,
+    avgOrder: 0,
+  });
+
   useEffect(() => {
-    loadAnalytics();
-  }, [rangeKey]);
+    setLoading(true);
 
-  const loadAnalytics = async () => {
-    try {
-      setLoading(true);
-
-      const [orderSnap, userSnap, productSnap, collectionSnap, designSnap] =
-        await Promise.all([
-          getDocs(collection(db, "orders")),
-          getDocs(collection(db, "users")),
-          getDocs(collection(db, "products")),
-          getDocs(collection(db, "collections")),
-          getDocs(collection(db, "designs")),
-        ]);
-
-      const allOrders = orderSnap.docs.map((doc) => ({
+    const unsubOrders = onSnapshot(collection(db, "orders"), (snapshot) => {
+      const data = snapshot.docs.map((doc) => ({
         id: doc.id,
         ...doc.data(),
       }));
+      setOrders(data);
+    });
 
-      const users = userSnap.docs.map((d) => d.data());
+    const unsubUsers = onSnapshot(collection(db, "users"), (snapshot) => {
+      setUsers(snapshot.docs.map((doc) => doc.data()));
+    });
 
-      const range = RANGES.find((r) => r.key === rangeKey);
+    const unsubProducts = onSnapshot(collection(db, "products"), (snapshot) => {
+      setProductsCount(snapshot.size);
+    });
 
-      const today = new Date();
+    const unsubCollections = onSnapshot(
+      collection(db, "collections"),
+      (snapshot) => {
+        setCollectionsCount(snapshot.size);
+      },
+    );
 
-      const filteredOrders = allOrders.filter((order) => {
-        if (!order.createdAt) return false;
+    const unsubDesigns = onSnapshot(collection(db, "designs"), (snapshot) => {
+      setDesignsCount(snapshot.size);
+    });
 
-        const orderDate = order.createdAt.toDate();
+    return () => {
+      unsubOrders();
+      unsubUsers();
+      unsubProducts();
+      unsubCollections();
+      unsubDesigns();
+    };
+  }, []);
 
-        if (range.key === "12m") {
-          return orderDate.getFullYear() === today.getFullYear();
-        }
+  useEffect(() => {
+    const range = RANGES.find((r) => r.key === rangeKey);
 
-        const diff = (today - orderDate) / (1000 * 60 * 60 * 24);
+    const today = new Date();
+    const previousStart = new Date(today);
 
-        return diff <= range.days;
-      });
+    const previousEnd = new Date(today);
 
-      const totalRevenue = filteredOrders.reduce(
-        (sum, order) => sum + Number(order.total || 0),
-        0,
-      );
+    if (range.key === "12m") {
+      previousStart.setFullYear(today.getFullYear() - 1);
 
-      const totalOrders = filteredOrders.length;
+      previousEnd.setFullYear(today.getFullYear() - 1);
+    } else {
+      previousStart.setDate(today.getDate() - range.days * 2);
 
-      const avgOrder = totalOrders === 0 ? 0 : totalRevenue / totalOrders;
-
-      setStats({
-        revenue: totalRevenue,
-        orders: totalOrders,
-        customers: users.length,
-        avgOrder,
-        products: productSnap.size,
-        collections: collectionSnap.size,
-        designs: designSnap.size,
-      });
-
-      buildCharts(filteredOrders);
-
-      setRecentOrders(
-        filteredOrders
-          .sort((a, b) => {
-            if (!a.createdAt || !b.createdAt) return 0;
-
-            return b.createdAt.toDate() - a.createdAt.toDate();
-          })
-          .slice(0, 5),
-      );
-    } catch (err) {
-      console.log(err);
-    } finally {
-      setLoading(false);
+      previousEnd.setDate(today.getDate() - range.days);
     }
-  };
+
+    const filteredOrders = orders.filter((order) => {
+      if (!order.createdAt) return false;
+
+      const orderDate = order.createdAt.toDate();
+
+      if (range.key === "12m") {
+        return orderDate.getFullYear() === today.getFullYear();
+      }
+
+      const diff = (today - orderDate) / (1000 * 60 * 60 * 24);
+
+      return diff <= range.days;
+    });
+    const validOrders = filteredOrders.filter(
+      (order) => order.status !== "Cancelled",
+    );
+    const previousOrders = orders.filter((order) => {
+      if (!order.createdAt) return false;
+
+      const orderDate = order.createdAt.toDate();
+
+      return (
+        orderDate >= previousStart &&
+        orderDate < previousEnd &&
+        order.status !== "Cancelled"
+      );
+    });
+
+    const totalRevenue = validOrders.reduce(
+      (sum, order) => sum + Number(order.total || 0),
+      0,
+    );
+    const previousRevenue = previousOrders.reduce(
+      (sum, order) => sum + Number(order.total || 0),
+      0,
+    );
+    const revenueChange =
+      previousRevenue === 0
+        ? 0
+        : ((totalRevenue - previousRevenue) / previousRevenue) * 100;
+
+    const totalOrders = filteredOrders.length;
+
+    const avgOrder =
+      validOrders.length === 0 ? 0 : totalRevenue / validOrders.length;
+
+    setStats({
+      revenue: totalRevenue,
+      orders: totalOrders,
+      customers: users.length,
+      avgOrder,
+      products: productsCount,
+      collections: collectionsCount,
+      designs: designsCount,
+    });
+setComparison((prev) => ({
+  ...prev,
+  revenue: revenueChange,
+}));
+    buildCharts(validOrders);
+
+    setRecentOrders(
+      [...filteredOrders]
+        .sort((a, b) => b.createdAt.toDate() - a.createdAt.toDate())
+        .slice(0, 5),
+    );
+
+    setLoading(false);
+  }, [orders, users, productsCount, collectionsCount, designsCount, rangeKey]);
+
   const buildCharts = (orders) => {
     const revenueMap = {};
     const orderMap = {};
@@ -129,20 +188,32 @@ const Analytics = () => {
     orders.forEach((order) => {
       if (!order.createdAt) return;
 
-      const date = order.createdAt.toDate().toLocaleDateString();
+      const dateObj = order.createdAt.toDate();
 
-      revenueMap[date] = (revenueMap[date] || 0) + Number(order.total || 0);
+      // ISO key for sorting
+      const key = dateObj.toISOString().split("T")[0];
 
-      orderMap[date] = (orderMap[date] || 0) + 1;
+      revenueMap[key] = (revenueMap[key] || 0) + Number(order.total || 0);
+      orderMap[key] = (orderMap[key] || 0) + 1;
     });
 
-    const chartLabels = Object.keys(revenueMap);
+    // Sort dates chronologically
+    const sortedDates = Object.keys(revenueMap).sort(
+      (a, b) => new Date(a) - new Date(b),
+    );
+
+    // Convert ISO dates into readable labels
+    const chartLabels = sortedDates.map((date) =>
+      new Date(date).toLocaleDateString("en-IN", {
+        day: "numeric",
+        month: "short",
+      }),
+    );
 
     setLabels(chartLabels);
 
-    setRevenueSeries(Object.values(revenueMap));
-
-    setOrdersSeries(Object.values(orderMap));
+    setRevenueSeries(sortedDates.map((date) => revenueMap[date]));
+    setOrdersSeries(sortedDates.map((date) => orderMap[date]));
   };
   // ==========================================
   // Sparkline
@@ -272,7 +343,7 @@ const Analytics = () => {
     const h = 220;
     const padding = 24;
 
-    const max = Math.max(...points);
+    const max = Math.max(...points, 1);
 
     const barWidth = (w - padding * 2) / points.length - 6;
 
@@ -363,7 +434,9 @@ const Analytics = () => {
             </span>
           </div>
 
-          <div className="stat-value">₹{stats.revenue.toLocaleString("en-IN")}</div>
+          <div className="stat-value">
+            ₹{stats.revenue.toLocaleString("en-IN")}
+          </div>
 
           <div className="stat-label">Total Revenue</div>
 
@@ -488,7 +561,7 @@ const Analytics = () => {
             <h2>Revenue Trend</h2>
 
             <span className="chart-card-meta">
-             ₹{stats.revenue.toLocaleString("en-IN")}
+              ₹{stats.revenue.toLocaleString("en-IN")}
             </span>
           </div>
 
