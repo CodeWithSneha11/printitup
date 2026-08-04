@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from "react";
 import { useLocation } from "react-router-dom";
-import { db } from "../firebase";
+import { auth, db } from "../firebase";
 import "../styles/Customize.css";
 import TShirt3DPreview, {
   isWebGLAvailable,
@@ -27,11 +27,13 @@ import {
   FaCrosshairs,
   FaMinus,
   FaPlus,
+  FaMagic,
 } from "react-icons/fa";
 import { Rnd } from "react-rnd";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_QUANTITY = 10;
+const MAX_AI_PROMPT_LENGTH = 500;
 const ALLOWED_IMAGE_TYPES = [
   "image/png",
   "image/jpeg",
@@ -88,6 +90,9 @@ const Customize = () => {
   const [addingCart, setAddingCart] = useState(false);
 
   const [cloudinaryUrl, setCloudinaryUrl] = useState("");
+
+  const [aiPrompt, setAiPrompt] = useState("");
+  const [generatingAI, setGeneratingAI] = useState(false);
 
   const [use3D, setUse3D] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
@@ -305,6 +310,7 @@ const Customize = () => {
     setImage(null);
     setImageFile(null);
     setCloudinaryUrl("");
+    setAiPrompt("");
     setMessage("");
     setSelectedElement(null);
 
@@ -322,10 +328,10 @@ const Customize = () => {
     try {
       const formData = new FormData();
       formData.append("file", file);
-      formData.append("upload_preset", "printitup");
+      formData.append("upload_preset", process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET);
 
       const response = await fetch(
-        "https://api.cloudinary.com/v1_1/dfq3c3jkm/image/upload",
+        `https://api.cloudinary.com/v1_1/${process.env.REACT_APP_CLOUDINARY_CLOUD_NAME}/image/upload`,
         { method: "POST", body: formData },
       );
 
@@ -343,6 +349,106 @@ const Customize = () => {
       setUploadProgress("Upload failed");
       throw error;
     } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  // Sends the prompt to a standalone backend server (server/), which
+  // holds the Gemini API key and proxies the request to Google's
+  // gemini-2.5-flash-image model. It's a plain Express server rather
+  // than a Firebase Cloud Function, so it can run for free without
+  // needing the Firebase Blaze plan. Note: Gemini's own free tier for
+  // image generation is 0 IPM as of late 2025 — billing must be
+  // enabled on the Google Cloud project behind the API key, or every
+  // request here will fail with a quota error (see server/index.js).
+  // The user's Firebase ID token is sent so the backend can confirm
+  // they're actually logged in before calling Gemini. The returned
+  // image is uploaded to Cloudinary (same as a normal file upload) so
+  // it becomes a permanent, shareable design image.
+  const generateAIImage = async () => {
+    const prompt = aiPrompt.trim();
+
+    if (!prompt) {
+      setMessage("❌ Enter a prompt to generate an image.");
+      return;
+    }
+
+    if (image && image.startsWith("blob:")) {
+      URL.revokeObjectURL(image);
+    }
+
+    setGeneratingAI(true);
+    setMessage("");
+    setCloudinaryUrl("");
+
+    try {
+      setUploadProgress("Generating image...");
+
+      const idToken = await auth.currentUser?.getIdToken();
+      if (!idToken) {
+        throw new Error("Please log in again and retry.");
+      }
+
+      const genResponse = await fetch(
+        `${process.env.REACT_APP_API_BASE_URL}/api/generate-image`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${idToken}`,
+          },
+          body: JSON.stringify({ prompt }),
+        },
+      );
+
+      const genData = await genResponse.json();
+
+      if (!genResponse.ok) {
+        throw new Error(genData.error || "Image generation failed.");
+      }
+
+      const { imageBase64, mimeType } = genData;
+
+      if (!imageBase64) {
+        throw new Error("No image was returned.");
+      }
+
+      setUploadingImage(true);
+      setUploadProgress("Saving generated image...");
+
+      const dataUri = `data:${mimeType || "image/png"};base64,${imageBase64}`;
+
+      const formData = new FormData();
+      formData.append("file", dataUri);
+      formData.append(
+        "upload_preset",
+        process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET,
+      );
+
+      const response = await fetch(
+        `https://api.cloudinary.com/v1_1/${process.env.REACT_APP_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        { method: "POST", body: formData },
+      );
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error?.message || "Failed to save generated image.");
+      }
+
+      setImageFile(null);
+      setImage(data.secure_url);
+      setCloudinaryUrl(data.secure_url);
+      setSelectedElement("image");
+      setUploadProgress("Image ready ✅");
+    } catch (error) {
+      console.error("AI image generation failed:", error);
+      setUploadProgress("");
+      setMessage(
+        `❌ ${error.message || "Image generation failed. Please try again."}`,
+      );
+    } finally {
+      setGeneratingAI(false);
       setUploadingImage(false);
     }
   };
@@ -565,6 +671,32 @@ const Customize = () => {
               accept="image/*"
               onChange={handleImageUpload}
             />
+          </div>
+
+          <div className="ai-generate-wrap">
+            <label htmlFor="ai-prompt">
+              <FaMagic className="ai-generate-icon" /> Or Generate with AI
+            </label>
+            <textarea
+              id="ai-prompt"
+              rows={2}
+              placeholder="Describe the image you want, e.g. 'a minimalist mountain line drawing'"
+              maxLength={MAX_AI_PROMPT_LENGTH}
+              value={aiPrompt}
+              onChange={(e) => setAiPrompt(e.target.value)}
+              disabled={generatingAI}
+            />
+            <small className="character-count">
+              {aiPrompt.length}/{MAX_AI_PROMPT_LENGTH} characters
+            </small>
+            <button
+              type="button"
+              className="ai-generate-btn"
+              onClick={generateAIImage}
+              disabled={generatingAI || !aiPrompt.trim()}
+            >
+              {generatingAI ? "Generating..." : "Generate Image"}
+            </button>
           </div>
 
           {image && (

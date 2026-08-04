@@ -1,0 +1,20 @@
+{
+  "name": "printitup-server",
+  "description": "Standalone backend for PrintItUp — proxies AI image generation (Gemini) so the API key never reaches the browser. Runs anywhere (Render, Railway, Fly.io, a VPS, or locally); does not require Firebase Blaze.",
+  "version": "1.0.0",
+  "private": true,
+  "main": "index.js",
+  "engines": {
+    "node": ">=20"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "dev": "node --watch index.js"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^16.4.5",
+    "express": "^4.21.2",
+    "firebase-admin": "^12.7.0"
+  }
+}
