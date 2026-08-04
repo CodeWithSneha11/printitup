@@ -1,12 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 
 import { auth, db } from "../firebase";
 import "../styles/AdminLogin.css";
@@ -36,33 +31,34 @@ const AdminLogin = () => {
 
       const user = userCredential.user;
 
-      // Check Firestore admins collection using email
-      const q = query(
-        collection(db, "admins"),
-        where("email", "==", user.email)
-      );
+      // The `admin` custom claim lives on the ID token itself — it's
+      // set server-side (see server/scripts/setAdminClaim.js) and
+      // can't be forged from the client. `true` forces a fresh token
+      // fetch, since a cached one could predate the claim being set.
+      const tokenResult = await user.getIdTokenResult(true);
 
-      const snapshot = await getDocs(q);
-
-      if (snapshot.empty) {
+      if (tokenResult.claims.admin !== true) {
         setMessage("Access denied. You are not an admin.");
+        await signOut(auth);
         return;
       }
 
-      // Read admin document
-      const adminData = snapshot.docs[0].data();
-localStorage.setItem("adminName", adminData.name || "Admin");
-
-      if (adminData.role !== "admin") {
-        setMessage("Invalid admin account.");
-        return;
+      // Best-effort display name only — not part of the access check.
+      let adminName = user.email;
+      try {
+        const adminDoc = await getDoc(doc(db, "admins", user.uid));
+        if (adminDoc.exists() && adminDoc.data().name) {
+          adminName = adminDoc.data().name;
+        }
+      } catch {
+        // Non-fatal: the login itself already succeeded via the claim check.
       }
+      localStorage.setItem("adminName", adminName);
 
-      // Save session
+      // Save session (AdminRoute re-verifies the claim independently;
+      // these are only used for display/convenience elsewhere in the UI).
       localStorage.setItem("adminUid", user.uid);
       localStorage.setItem("adminEmail", user.email);
-
-      // Also save normal session (AdminRoute uses these)
       localStorage.setItem("uid", user.uid);
       localStorage.setItem("email", user.email);
 

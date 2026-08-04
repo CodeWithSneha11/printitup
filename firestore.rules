@@ -1,0 +1,117 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---- Helpers -----------------------------------------------------
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(uid) {
+      return isSignedIn() && request.auth.uid == uid;
+    }
+
+    // Admin status lives on the Firebase Auth token itself (a custom
+    // claim set server-side — see server/scripts/setAdminClaim.js),
+    // not in a client-readable/writable collection. This is what
+    // actually enforces "admin-only" access; the React route guard is
+    // just a convenience for showing/hiding UI.
+    function isAdmin() {
+      return isSignedIn() && request.auth.token.admin == true;
+    }
+
+    // ---- Users & their private subcollections --------------------------
+
+    match /users/{uid} {
+      allow read, write: if isOwner(uid) || isAdmin();
+
+      match /addresses/{addressId} {
+        allow read, write: if isOwner(uid) || isAdmin();
+      }
+    }
+
+    // ---- Admin profile metadata (display name, etc.) --------------------
+    // Purely informational now that authorization comes from custom
+    // claims. Only readable by admins, and never writable from the
+    // client — that collection is managed by a trusted script/server
+    // using the Admin SDK, which bypasses these rules entirely.
+    match /admins/{adminDocId} {
+      allow read: if isAdmin();
+      allow write: if false;
+    }
+
+    // ---- Cart: each signed-in user's own cart items ---------------------
+
+    match /cart/{cartId} {
+      allow read, update, delete: if isSignedIn() &&
+        (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == request.auth.uid;
+    }
+
+    // ---- Saved designs: each signed-in user's own designs ----------------
+
+    match /designs/{designId} {
+      allow read, update, delete: if isSignedIn() &&
+        (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == request.auth.uid;
+    }
+
+    // ---- Orders: customers see only their own; admins manage all --------
+
+    match /orders/{orderId} {
+      allow read: if isSignedIn() &&
+        (resource.data.uid == request.auth.uid || isAdmin());
+      allow create: if isSignedIn() &&
+        request.resource.data.uid == request.auth.uid;
+      // Only admins change order status/fulfillment after it's placed.
+      allow update, delete: if isAdmin();
+    }
+
+    // ---- Reviews: public read (product ratings), owner-only write -------
+
+    match /reviews/{reviewId} {
+      allow read: if true;
+      allow create, update: if isSignedIn() &&
+        request.resource.data.uid == request.auth.uid;
+      allow delete: if isAdmin();
+    }
+
+    // ---- Notifications: recipient-only -----------------------------------
+
+    match /notifications/{notificationId} {
+      allow read, update, delete: if isSignedIn() &&
+        (resource.data.userId == request.auth.uid || isAdmin());
+      allow create: if isAdmin();
+    }
+
+    // ---- Product catalog: public read, admin-only write ------------------
+
+    match /products/{productId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    match /collections/{collectionId} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // ---- AI image-generation cooldown tracker: server-only ---------------
+    // Only ever touched by the backend via the Admin SDK, which
+    // bypasses these rules — clients should never read or write it.
+
+    match /aiImageCooldowns/{uid} {
+      allow read, write: if false;
+    }
+
+    // ---- Deny everything else by default ----------------------------------
+
+    match /{document=**} {
+      allow read, write: if false;
+    }
+  }
+}

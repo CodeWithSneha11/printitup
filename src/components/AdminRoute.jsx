@@ -1,47 +1,42 @@
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
-import { db } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../firebase";
 
 const AdminRoute = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAdmin, setIsAdmin] = useState(false);
-
-  const uid = localStorage.getItem("uid");
-  const email = localStorage.getItem("email");
+  const [isSignedIn, setIsSignedIn] = useState(false);
 
   useEffect(() => {
-    checkAdmin();
-  }, []);
-
-  const checkAdmin = async () => {
-    if (!uid || !email) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const q = query(
-        collection(db, "admins"),
-        where("email", "==", email)
-      );
-
-      const snapshot = await getDocs(q);
-
-      if (!snapshot.empty) {
-        setIsAdmin(true);
+    // Firebase's own auth state, not localStorage — this can't be
+    // spoofed by editing browser storage. The `admin` claim itself
+    // lives on the ID token and is set server-side (see
+    // server/scripts/setAdminClaim.js); it's what Firestore Security
+    // Rules also check, so this is real enforcement, not just a UI gate.
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setIsSignedIn(false);
+        setIsAdmin(false);
+        setLoading(false);
+        return;
       }
-    } catch (error) {
-      console.log("Admin check error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      setIsSignedIn(true);
+
+      try {
+        const tokenResult = await user.getIdTokenResult();
+        setIsAdmin(tokenResult.claims.admin === true);
+      } catch (error) {
+        console.error("Admin claim check failed:", error);
+        setIsAdmin(false);
+      } finally {
+        setLoading(false);
+      }
+    });
+
+    return unsubscribe;
+  }, []);
 
   if (loading) {
     return (
@@ -59,7 +54,7 @@ const AdminRoute = ({ children }) => {
     );
   }
 
-  if (!uid) {
+  if (!isSignedIn) {
     return <Navigate to="/admin-login" replace />;
   }
 

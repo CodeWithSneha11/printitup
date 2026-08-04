@@ -150,7 +150,7 @@ app.post("/api/generate-image", requireAuth, async (req, res) => {
     if (geminiResponse.status === 429) {
       return res.status(429).json({
         error:
-          "Image generation quota reached.",
+          "Image generation quota reached. If billing isn't enabled on your Google Cloud project yet, that's why — Gemini's free tier for images is 0 without it.",
       });
     }
     if (geminiResponse.status === 400) {
