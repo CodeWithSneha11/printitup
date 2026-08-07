@@ -35,7 +35,7 @@ import {
 } from "react-icons/fa";
 
 import "../styles/MyOrders.css";
-
+import { restockForCancelledOrder } from "../hooks/useStock";
 // ---------------------------------------------------------------------------
 // Order tracking config
 // ---------------------------------------------------------------------------
@@ -361,6 +361,26 @@ const MyOrders = () => {
   // { item, index } of the product currently being reviewed, or null
   const [reviewTarget, setReviewTarget] = useState(null);
 
+  // Pulls the fields decrementStockForOrder/restockForCancelledOrder need
+  // out of an order's stored items. Only items carrying colorId are
+  // included — collection-sourced items don't store one yet, so they're
+  // skipped rather than throwing. Kept identical to the same helper in
+  // Checkout.jsx so both stay in sync.
+  const getStockItemsFromOrder = (items) =>
+    (items || [])
+      .filter(
+        (item) =>
+          item.colorId &&
+          (item.size || item.sizeId) &&
+          (item.neck || item.neckId),
+      )
+      .map((item) => ({
+        colorId: item.colorId,
+        sizeId: item.sizeId || item.size,
+        neckId: item.neckId || item.neck,
+        quantity: Number(item.quantity) || 1,
+      }));
+
   /**
    * Cancels the currently selected order.
    *
@@ -372,6 +392,10 @@ const MyOrders = () => {
    *  2. Data-level — `canCancelOrder` is re-checked here in case the
    *     order moved into production (e.g. from another tab/device)
    *     between opening the modal and confirming cancellation.
+   *
+   * Stock is restocked BEFORE the order is marked Cancelled — if the
+   * restock write fails, the order stays in its current status rather
+   * than silently showing "Cancelled" while stock is still short.
    */
   const handleCancelOrder = async () => {
     if (!canCancelOrder(selectedOrder?.status)) {
@@ -380,6 +404,11 @@ const MyOrders = () => {
     }
 
     try {
+      const stockItems = getStockItemsFromOrder(selectedOrder.items);
+      if (stockItems.length > 0) {
+        await restockForCancelledOrder(stockItems);
+      }
+
       const orderRef = doc(db, "orders", selectedOrder.id);
       await updateDoc(orderRef, {
         status: "Cancelled",

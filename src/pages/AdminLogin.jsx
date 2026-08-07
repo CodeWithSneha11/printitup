@@ -91,43 +91,56 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="admin-login-page">
-      <div className="admin-login-card">
-        <h1>PrintItUp Admin</h1>
-        <p>Login to manage your store</p>
+  <div className="admin-login-container">
 
-        {message && <div className="admin-message">{message}</div>}
+    <div className="admin-login-card">
 
-        <form onSubmit={handleLogin}>
-          <label>Email</label>
+      <h1>PrintItUp Admin</h1>
 
-          <input
-            type="email"
-            placeholder="Admin Email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            required
-            autoComplete="email"
-          />
+      <p>Login to manage your store</p>
 
-          <label>Password</label>
+      {message && (
+        <div className="admin-message">
+          {message}
+        </div>
+      )}
 
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            required
-            autoComplete="current-password"
-          />
+      <form onSubmit={handleLogin}>
 
-          <button type="submit" disabled={loading}>
-            {loading ? "Logging in..." : "Login"}
-          </button>
-        </form>
-      </div>
+        <label>Email</label>
+
+        <input
+          type="email"
+          placeholder="Admin Email"
+          value={email}
+          onChange={(e) => setEmail(e.target.value)}
+          required
+          autoComplete="email"
+        />
+
+
+        <label>Password</label>
+
+        <input
+          type="password"
+          placeholder="Password"
+          value={password}
+          onChange={(e) => setPassword(e.target.value)}
+          required
+          autoComplete="current-password"
+        />
+
+
+        <button type="submit" disabled={loading}>
+          {loading ? "Logging in..." : "Login"}
+        </button>
+
+      </form>
+
     </div>
-  );
+
+  </div>
+);
 };
 
 export default AdminLogin;

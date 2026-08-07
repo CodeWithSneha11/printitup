@@ -9,6 +9,8 @@ import {
   FaBars,
   FaTimes,
   FaRupeeSign,
+  FaTshirt,
+  FaWarehouse,
 } from "react-icons/fa";
 
 import "../styles/Sidebar.css";
@@ -23,12 +25,14 @@ const Sidebar = () => {
   }, [location.pathname]);
 
   const navItems = [
-    { to: "/admin-dashboard", end: true, icon: <FaHome />, label: "Dashboard" },
-    { to: "/admin-dashboard/orders", icon: <FaShoppingCart />, label: "Orders" },
-    { to: "/admin-dashboard/collections", icon: <FaBoxOpen />, label: "Collections" },
-    { to: "/admin-dashboard/users", icon: <FaUsers />, label: "Users" },
-    { to: "/admin-dashboard/analytics", icon: <FaChartBar />, label: "Analytics" },
-    { to: "/admin-dashboard/pricing", icon: <FaRupeeSign />, label: "Pricing" },
+  { to: "/admin-dashboard", end: true, icon: <FaHome />, label: "Dashboard" },
+  { to: "/admin-dashboard/orders", icon: <FaShoppingCart />, label: "Orders" },
+  { to: "/admin-dashboard/collections", icon: <FaBoxOpen />, label: "Collections" },
+  { to: "/admin-dashboard/users", icon: <FaUsers />, label: "Users" },
+  { to: "/admin-dashboard/analytics", icon: <FaChartBar />, label: "Analytics" },
+  { to: "/admin-dashboard/pricing", icon: <FaRupeeSign />, label: "Pricing" },
+  { to: "/admin-dashboard/product-options", icon: <FaTshirt />, label: "Product Options" },
+  { to: "/admin-dashboard/stock", icon: <FaWarehouse />, label: "Stock" },
   ];
 
   return (

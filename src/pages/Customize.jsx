@@ -34,6 +34,8 @@ import {
   FaBolt,
 } from "react-icons/fa";
 import { Rnd } from "react-rnd";
+import { useProductOptions } from "../hooks/useProductOptions";
+import { useStock, stockDocId } from "../hooks/useStock";
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const MAX_QUANTITY = 10;
@@ -61,17 +63,6 @@ const DEFAULT_IMAGE_POSITION = { x: 100, y: 80 };
 const DEFAULT_IMAGE_SIZE = { width: 100, height: 100 };
 const DEFAULT_TEXT_POSITION = { x: 90, y: 220 };
 const DEFAULT_TEXT_SIZE = { width: 150, height: 50 };
-
-const tshirtColors = [
-  { name: "White", code: "#ffffff" },
-  { name: "Black", code: "#111111" },
-  { name: "Red", code: "#ef4444" },
-  { name: "Navy", code: "#1e3a8a" },
-  { name: "Green", code: "#16a34a" },
-  { name: "Grey", code: "#9ca3af" },
-];
-
-const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
 
 // Fallback pricing used only until the live config loads from Firestore,
 // or if that document doesn't exist / fails to load. Keep these in sync
@@ -101,6 +92,17 @@ const Customize = () => {
   const incomingDesign = location.state?.design || null;
   const editMode = location.state?.editMode || false;
   const designDocId = incomingDesign?.id || null;
+
+  // Admin-configurable colors / sizes / neck styles, loaded live from
+  // Firestore (settings/productOptions). Falls back to sane defaults
+  // internally, so this is never empty.
+  const { options, loaded: optionsLoaded } = useProductOptions();
+  const activeColors = options.colors.filter((c) => c.active);
+  const activeSizes = options.sizes.filter((s) => s.active);
+  const activeNecks = options.necks.filter((n) => n.active);
+
+  // Admin-managed stock per color+size+neck combo.
+  const { stockMap, loaded: stockLoaded } = useStock();
 
   const [text, setText] = useState("");
   const [side, setSide] = useState("front");
@@ -155,6 +157,42 @@ const Customize = () => {
   const pendingQualityCheckRef = useRef(null);
 
   const hasDesignContent = Boolean(text.trim() || image);
+
+  // Resolve the selected color hex back to its option id, for stock
+  // lookups (stock is keyed by id, not hex code).
+  const selectedColorId =
+    activeColors.find((c) => c.code === selectedColor)?.id || null;
+
+  // Stock for the currently selected color + size + neck combo.
+  // No matching entry = treated as always available.
+  const currentStockEntry =
+    selectedColorId && stockLoaded
+      ? stockMap[stockDocId(selectedColorId, selectedSize, neck)]
+      : null;
+
+  const isOutOfStock =
+  !!currentStockEntry &&
+  (!currentStockEntry.inStock || currentStockEntry.quantity <= 0);
+
+const stockLimit =
+  currentStockEntry && currentStockEntry.inStock
+    ? currentStockEntry.quantity
+    : MAX_QUANTITY;
+
+// Different stock states
+const hasStockEntry = !!currentStockEntry;
+const availableQty = currentStockEntry?.quantity || 0;
+
+const stockStatus = !hasStockEntry
+  ? "available"
+  : isOutOfStock
+  ? "out"
+  : availableQty <= 3
+  ? "critical"
+  : availableQty <= 10
+  ? "low"
+  : "good";
+
   const anyActionInProgress = savingDesign || addingCart || buyingNow;
 
   useEffect(() => {
@@ -246,6 +284,40 @@ const Customize = () => {
       setTextPosition(incomingDesign.textPosition);
     if (incomingDesign.textSize) setTextSize(incomingDesign.textSize);
   }, [editMode, incomingDesign]);
+
+  // If the currently-selected color/size/neck was deactivated or removed
+  // by the admin, fall back to the first still-active option once the
+  // live options have loaded. Skipped in edit mode's first render pass
+  // since that effect above may still be applying the saved design.
+  useEffect(() => {
+    if (!optionsLoaded) return;
+
+    if (
+      activeColors.length &&
+      !activeColors.some((c) => c.code === selectedColor)
+    ) {
+      setSelectedColor(activeColors[0].code);
+    }
+    if (
+      activeSizes.length &&
+      !activeSizes.some((s) => s.id === selectedSize)
+    ) {
+      setSelectedSize(activeSizes[0].id);
+    }
+    if (activeNecks.length && !activeNecks.some((n) => n.id === neck)) {
+      setNeck(activeNecks[0].id);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [optionsLoaded, options]);
+
+  // Clamp quantity down if the selected combo's stock is lower than
+  // what the user had picked for a previous (now-changed) combo.
+  useEffect(() => {
+    if (stockLimit > 0 && quantity > stockLimit) {
+      setQuantity(Math.max(1, stockLimit));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stockLimit]);
 
   // Price is now fully driven by pricingConfig (admin-controlled via
   // Firestore) instead of hardcoded numbers.
@@ -462,11 +534,11 @@ const Customize = () => {
 
     setText("");
     setSide("front");
-    setSelectedColor("#ffffff");
-    setSelectedSize("M");
+    setSelectedColor(activeColors[0]?.code || "#ffffff");
+    setSelectedSize(activeSizes[0]?.id || "M");
     setFontSize(18);
     setTextColor("#000000");
-    setNeck("round");
+    setNeck(activeNecks[0]?.id || "round");
     setQuantity(1);
 
     setImage(null);
@@ -567,7 +639,6 @@ const Customize = () => {
       textSize,
       productId: selectedProduct?.id || "",
     });
-
     return {
       uid,
       designId,
@@ -576,6 +647,7 @@ const Customize = () => {
       text,
       side,
       tshirtColor: selectedColor,
+      colorId: selectedColorId, // NEW — lets stock decrement match this line item
       size: selectedSize,
       textColor,
       fontSize: Number(fontSize),
@@ -660,6 +732,13 @@ const Customize = () => {
       return;
     }
 
+    if (isOutOfStock) {
+      setMessage(
+        "❌ This color/size/neck combination is currently out of stock.",
+      );
+      return;
+    }
+
     try {
       setAddingCart(true);
       setMessage("");
@@ -684,6 +763,13 @@ const Customize = () => {
   const buyNow = async () => {
     if (!hasDesignContent) {
       setMessage("❌ Add some text or an image before proceeding to checkout.");
+      return;
+    }
+
+    if (isOutOfStock) {
+      setMessage(
+        "❌ This color/size/neck combination is currently out of stock.",
+      );
       return;
     }
 
@@ -835,8 +921,8 @@ const Customize = () => {
 
           <label>T-Shirt Color</label>
           <div className="color-grid">
-            {tshirtColors.map((color) => (
-              <div key={color.name} className="color-item">
+            {activeColors.map((color) => (
+              <div key={color.id} className="color-item">
                 <div
                   className={`color-circle ${
                     selectedColor === color.code ? "active-color" : ""
@@ -861,16 +947,16 @@ const Customize = () => {
 
           <label>Size</label>
           <div className="size-grid">
-            {sizes.map((size) => (
+            {activeSizes.map((size) => (
               <button
-                key={size}
+                key={size.id}
                 type="button"
                 className={
-                  selectedSize === size ? "size-btn active-size" : "size-btn"
+                  selectedSize === size.id ? "size-btn active-size" : "size-btn"
                 }
-                onClick={() => setSelectedSize(size)}
+                onClick={() => setSelectedSize(size.id)}
               >
-                {size}
+                {size.label}
               </button>
             ))}
           </div>
@@ -881,11 +967,66 @@ const Customize = () => {
             value={neck}
             onChange={(e) => setNeck(e.target.value)}
           >
-            <option value="round">Round</option>
-            <option value="vneck">V-Neck</option>
-            <option value="collar">Collar</option>
+            {activeNecks.map((n) => (
+              <option key={n.id} value={n.id}>
+                {n.label}
+              </option>
+            ))}
           </select>
 
+        {stockLoaded && (
+  <div
+    className={`stock-badge ${
+      stockStatus === "out"
+        ? "out"
+        : stockStatus === "critical"
+        ? "critical"
+        : stockStatus === "low"
+        ? "low"
+        : "in"
+    }`}
+  >
+    {stockStatus === "available" && (
+      <>
+        ✅ Available
+        <small>
+          This combination is currently available for ordering.
+        </small>
+      </>
+    )}
+
+    {stockStatus === "good" && (
+      <>
+        ✅ In Stock
+        <small>{availableQty} pieces available.</small>
+      </>
+    )}
+
+    {stockStatus === "low" && (
+      <>
+        ⚠️ Low Stock
+        <small>Only {availableQty} pieces remaining.</small>
+      </>
+    )}
+
+    {stockStatus === "critical" && (
+      <>
+        🔥 Almost Sold Out
+        <small>Hurry! Only {availableQty} left.</small>
+      </>
+    )}
+
+    {stockStatus === "out" && (
+      <>
+        ❌ Out of Stock
+        <small>
+          This Color + Size + Neck combination is currently unavailable.
+          Please choose another option.
+        </small>
+      </>
+    )}
+  </div>
+)}
           <label>Quantity</label>
           <div className="quantity-stepper">
             <button
@@ -900,8 +1041,10 @@ const Customize = () => {
             <button
               type="button"
               aria-label="Increase quantity"
-              onClick={() => setQuantity((q) => Math.min(MAX_QUANTITY, q + 1))}
-              disabled={quantity >= MAX_QUANTITY}
+              onClick={() =>
+                setQuantity((q) => Math.min(stockLimit, MAX_QUANTITY, q + 1))
+              }
+              disabled={quantity >= Math.min(stockLimit, MAX_QUANTITY)}
             >
               <FaPlus />
             </button>
@@ -947,13 +1090,15 @@ const Customize = () => {
           <button
             className="buy-now-btn"
             onClick={buyNow}
-            disabled={anyActionInProgress}
+            disabled={anyActionInProgress || isOutOfStock}
           >
             {buyingNow ? (
               <>
                 <span className="spinner"></span>
                 Processing...
               </>
+            ) : isOutOfStock ? (
+              "Out of Stock"
             ) : (
               <>
                 <FaBolt /> Buy Now
@@ -964,13 +1109,15 @@ const Customize = () => {
           <button
             className="cart-btn"
             onClick={addToCart}
-            disabled={anyActionInProgress}
+            disabled={anyActionInProgress || isOutOfStock}
           >
             {addingCart ? (
               <>
                 <span className="spinner"></span>
                 Adding...
               </>
+            ) : isOutOfStock ? (
+              "Out of Stock"
             ) : (
               "🛒 Add to Cart"
             )}
@@ -1246,12 +1393,7 @@ const Customize = () => {
                   </Rnd>
                 )}
 
-                {!image && !text && (
-                  <div className="preview-empty-hint">
-                    <FaImage />
-                    <p>Add text or an image to start designing</p>
-                  </div>
-                )}
+                
               </div>
             </div>
 

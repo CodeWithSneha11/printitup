@@ -16,6 +16,10 @@ import { useLocation, useNavigate } from "react-router-dom";
 import { db, auth } from "../firebase";
 
 import AddAddressModal from "../components/AddAddressModal";
+import {
+  decrementStockForOrder,
+  restockForCancelledOrder,
+} from "../hooks/useStock";
 
 import "../styles/Checkout.css";
 
@@ -196,6 +200,26 @@ const Checkout = () => {
     Number(item.price || 0) * Number(item.quantity || 1);
 
   // ==========================
+  // STOCK LINE ITEMS
+  // ==========================
+  // Reduces cartItems down to what decrementStockForOrder needs.
+  // Only items carrying colorId/size/neck are included — collection
+  // items (isCustom: false) don't currently store colorId, so they're
+  // skipped rather than crashing the checkout. That means stock isn't
+  // tracked for collection items yet; custom designs from Customize.jsx
+  // do carry colorId and are covered.
+
+  const getStockItems = (items) =>
+    items
+      .filter((item) => item.colorId && (item.size || item.sizeId) && (item.neck || item.neckId))
+      .map((item) => ({
+        colorId: item.colorId,
+        sizeId: item.sizeId || item.size,
+        neckId: item.neckId || item.neck,
+        quantity: Number(item.quantity) || 1,
+      }));
+
+  // ==========================
   // TOTAL
   // ==========================
   // Always recomputed from cartItems (whichever source populated it)
@@ -206,13 +230,6 @@ const Checkout = () => {
     (sum, item) => sum + getLineTotal(item),
     0
   );
-
-  // ==========================
-  // PLACE ORDER
-  // ==========================
-// ==========================
-// GENERATE SIMPLE ORDER ID
-// ==========================
 
   // ==========================
   // GENERATE SIMPLE ORDER ID
@@ -238,75 +255,93 @@ const Checkout = () => {
     const randomPart = Math.random().toString(36).slice(2, 6).toUpperCase();
     return `ORD${timestampPart}${randomPart}`;
   };
+
   // ==========================
-// PLACE ORDER
-// ==========================
+  // PLACE ORDER
+  // ==========================
+  // Order: decrement stock FIRST (inside its own transaction, so
+  // concurrent checkouts can't oversell), then create the order doc,
+  // then clear the cart. If stock decrement fails (not enough left),
+  // nothing else happens and the customer sees why. If the order or
+  // cart-clear step fails AFTER stock was already decremented, we
+  // restock what we took so the failure doesn't silently eat inventory.
 
-const placeOrder = async () => {
-  if (!selectedAddress) {
-    setMessage("Please select or add a delivery address.");
-    return;
-  }
-
-  if (cartItems.length === 0) {
-    setMessage("Your cart is empty.");
-    return;
-  }
-
-  try {
-    setPlacingOrder(true);
-    setMessage("");
-
-    // Generate a simple order number
-    const orderId = generateOrderId();
-
-    // Firestore document reference
-    const orderRef = doc(collection(db, "orders"));
-
-    await setDoc(orderRef, {
-      orderId,
-
-      uid,
-
-      customer: {
-        name: selectedAddress.fullName,
-        phone: selectedAddress.phone,
-        email: auth.currentUser?.email || "",
-      },
-
-      deliveryAddress: selectedAddress,
-
-      payment: paymentMethod,
-
-      items: cartItems,
-
-      total,
-
-      status: "Pending",
-
-      createdAt: serverTimestamp(),
-    });
-
-    // Empty Cart — only removes the items that were actually part of
-    // this order (cartItems is either the user's selection or, in the
-    // fallback path, the whole cart), so anything left unchecked in
-    // the cart stays there untouched.
-    for (const item of cartItems) {
-      await deleteDoc(doc(db, "cart", item.id));
+  const placeOrder = async () => {
+    if (!selectedAddress) {
+      setMessage("Please select or add a delivery address.");
+      return;
     }
 
-    setMessage("✅ Order placed successfully!");
+    if (cartItems.length === 0) {
+      setMessage("Your cart is empty.");
+      return;
+    }
 
-    setTimeout(() => {
-      navigate("/my-orders");
-    }, 1200);
-  } catch (error) {
-    console.error(error);
-    setMessage("❌ Failed to place order.");
-  } finally {
-    setPlacingOrder(false);
-  }
-};
+    const stockItems = getStockItems(cartItems);
+    let stockDecremented = false;
+
+    try {
+      setPlacingOrder(true);
+      setMessage("");
+
+      // Step 1 — reserve stock. Throws (and stops here) if any combo
+      // doesn't have enough quantity left.
+      if (stockItems.length > 0) {
+        await decrementStockForOrder(stockItems);
+        stockDecremented = true;
+      }
+
+      // Step 2 — create the order.
+      const orderId = generateOrderId();
+      const orderRef = doc(collection(db, "orders"));
+
+      await setDoc(orderRef, {
+        orderId,
+        uid,
+        customer: {
+          name: selectedAddress.fullName,
+          phone: selectedAddress.phone,
+          email: auth.currentUser?.email || "",
+        },
+        deliveryAddress: selectedAddress,
+        payment: paymentMethod,
+        items: cartItems,
+        total,
+        status: "Pending",
+        createdAt: serverTimestamp(),
+      });
+
+      // Step 3 — empty cart (only the items actually part of this
+      // order; anything left unchecked in the cart stays there).
+      for (const item of cartItems) {
+        await deleteDoc(doc(db, "cart", item.id));
+      }
+
+      setMessage("✅ Order placed successfully!");
+
+      setTimeout(() => {
+        navigate("/my-orders");
+      }, 1200);
+    } catch (error) {
+      console.error(error);
+
+      // Order/cart step failed after stock was already taken — give
+      // it back rather than leaving inventory silently short.
+      if (stockDecremented) {
+        try {
+          await restockForCancelledOrder(stockItems);
+        } catch (restockError) {
+          console.error("Failed to restock after order error:", restockError);
+        }
+      }
+
+      setMessage(
+        "❌ " + (error.message || "Failed to place order."),
+      );
+    } finally {
+      setPlacingOrder(false);
+    }
+  };
 
   if (loading) {
     return (

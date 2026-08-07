@@ -36,7 +36,8 @@ import Analytics from "./pages/Analytics";
 import AdminSettings from "./pages/AdminSettings";
 import AdminSearch from "./pages/AdminSearch";
 import AdminPricingSettings from "./pages/AdminPricingSettings";
-
+import AdminProductOptions from "./pages/Admin/AdminProductOptions";
+import AdminStockManager from "./pages/Admin/AdminStockManager";
 
 
 function AppContent() {
@@ -171,6 +172,8 @@ element={<ManageAddress/>}
   <Route path="settings"element={<AdminSettings />}/>
   <Route path="pricing" element={<AdminPricingSettings />} />
 <Route path="search" element={<AdminSearch />} />
+<Route path="product-options" element={<AdminProductOptions />} />
+<Route path="stock" element={<AdminStockManager />} />
 </Route>
 
       </Routes>

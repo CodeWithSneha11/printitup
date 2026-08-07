@@ -1196,7 +1196,88 @@ body {
   animation: none;
   transform: rotateY(180deg);
 }
+/* Stock badge shown under the neck-style dropdown */
+.stock-badge {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 10px;
+  border-radius: 6px;
+  margin: 8px 0 4px;
+  display: inline-block;
+}
 
+.stock-badge.in {
+  color: #b45309;
+  background: #fffbeb;
+  border: 1px solid #fde68a;
+}
+
+.stock-badge.out {
+  color: #dc2626;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+}
+
+/* Disabled state for the buy-now / add-to-cart buttons, e.g. when
+   out of stock or an action is already in progress. */
+.buy-now-btn:disabled,
+.cart-btn:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+  background: #9ca3af !important;
+}
+.stock-badge{
+    margin-top:14px;
+    padding:14px 16px;
+    border-radius:12px;
+    display:flex;
+    flex-direction:column;
+    gap:4px;
+    font-weight:600;
+    animation:fadeIn .25s;
+}
+
+.stock-badge small{
+    font-size:13px;
+    font-weight:500;
+    opacity:.9;
+    line-height:1.4;
+}
+
+.stock-badge.in{
+    background:#ecfdf5;
+    border:1px solid #16a34a;
+    color:#166534;
+}
+
+.stock-badge.low{
+    background:#fff7ed;
+    border:1px solid #f59e0b;
+    color:#b45309;
+}
+
+.stock-badge.critical{
+    background:#fef2f2;
+    border:1px solid #ef4444;
+    color:#b91c1c;
+}
+
+.stock-badge.out{
+    background:#fef2f2;
+    border:1px solid #dc2626;
+    color:#991b1b;
+}
+
+@keyframes fadeIn{
+    from{
+        opacity:0;
+        transform:translateY(-5px);
+    }
+    to{
+        opacity:1;
+        transform:translateY(0);
+    }
+}
 /* ===================================================
    MOBILE
 =================================================== */

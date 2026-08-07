@@ -1,0 +1,189 @@
+.admin-options-page {
+  padding: 32px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+.admin-options-page h2 {
+  font-size: 24px;
+  font-weight: 700;
+  color: #111827;
+  margin-bottom: 6px;
+}
+
+.admin-options-subtitle {
+  color: #6b7280;
+  font-size: 14px;
+  margin-bottom: 24px;
+  max-width: 640px;
+  line-height: 1.5;
+}
+
+.admin-options-message {
+  padding: 10px 14px;
+  border-radius: 8px;
+  background: #ecfdf5;
+  color: #047857;
+  font-size: 14px;
+  font-weight: 500;
+  margin-bottom: 16px;
+  display: inline-block;
+}
+
+.admin-options-saving {
+  color: #6b7280;
+  font-size: 13px;
+  margin-bottom: 12px;
+}
+
+.admin-options-section {
+  background: #ffffff;
+  border: 1px solid #e5e7eb;
+  border-radius: 12px;
+  padding: 20px 24px;
+  margin-bottom: 24px;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+}
+
+.admin-options-section h3 {
+  font-size: 16px;
+  font-weight: 600;
+  color: #111827;
+  margin-bottom: 16px;
+}
+
+.admin-options-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.admin-option-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 10px 14px;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background: #f9fafb;
+  transition: opacity 0.15s ease;
+}
+
+.admin-option-row.inactive {
+  opacity: 0.5;
+}
+
+.admin-option-row input[type="color"] {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 6px;
+  cursor: pointer;
+  background: none;
+}
+
+.admin-option-name {
+  flex: 1;
+  font-size: 14px;
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.admin-option-row button {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #d1d5db;
+  background: #ffffff;
+  color: #374151;
+  cursor: pointer;
+  transition: background 0.15s ease, border-color 0.15s ease;
+  white-space: nowrap;
+}
+
+.admin-option-row button:hover {
+  background: #f3f4f6;
+  border-color: #9ca3af;
+}
+
+.admin-option-row button.danger {
+  color: #dc2626;
+  border-color: #fecaca;
+}
+
+.admin-option-row button.danger:hover {
+  background: #fef2f2;
+  border-color: #dc2626;
+}
+
+.admin-option-add {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-option-add input[type="text"] {
+  flex: 1;
+  min-width: 180px;
+  padding: 9px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+}
+
+.admin-option-add input[type="text"]:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.admin-option-add input[type="color"] {
+  width: 40px;
+  height: 38px;
+  padding: 0;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  cursor: pointer;
+  background: none;
+}
+
+.admin-option-add button {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #111827;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.admin-option-add button:hover {
+  background: #1f2937;
+}
+
+@media (max-width: 640px) {
+  .admin-options-page {
+    padding: 20px 16px;
+  }
+
+  .admin-option-row {
+    flex-wrap: wrap;
+  }
+
+  .admin-option-add {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .admin-option-add input[type="color"] {
+    width: 100%;
+  }
+}
