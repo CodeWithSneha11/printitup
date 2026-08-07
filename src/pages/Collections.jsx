@@ -16,8 +16,8 @@ import {
 
 import "../styles/Collections.css";
 
-const CLOUD_NAME = "dfq3c3jkm";
-const UPLOAD_PRESET = "printitup";
+const CLOUD_NAME = process.env.REACT_APP_CLOUDINARY_CLOUD_NAME;
+const UPLOAD_PRESET = process.env.REACT_APP_CLOUDINARY_UPLOAD_PRESET;
 
 const Collections = () => {
   const [collections, setCollections] = useState([]);

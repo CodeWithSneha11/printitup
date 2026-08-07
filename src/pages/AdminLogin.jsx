@@ -1,14 +1,7 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import {
-  signInWithEmailAndPassword,
-  signOut,
-} from "firebase/auth";
-import {
-  doc,
-  getDoc,
-} from "firebase/firestore";
-
+import { signInWithEmailAndPassword, signOut } from "firebase/auth";
+import { doc, getDoc } from "firebase/firestore";
 import { auth, db } from "../firebase";
 import "../styles/AdminLogin.css";
 
@@ -17,7 +10,6 @@ const AdminLogin = () => {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-
   const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
 
@@ -30,46 +22,37 @@ const AdminLogin = () => {
     setMessage("");
 
     try {
-      // Authenticate with Firebase
       const { user } = await signInWithEmailAndPassword(
         auth,
         email.trim(),
         password
       );
 
-      // Fetch admin document using UID
-      const adminRef = doc(db, "admins", user.uid);
-      const adminSnap = await getDoc(adminRef);
+      // Force a fresh ID token so newly-added admin claims are included.
+      const tokenResult = await user.getIdTokenResult(true);
 
-      // Admin document doesn't exist
-      if (!adminSnap.exists()) {
-        await signOut(auth);
+      if (tokenResult.claims.admin !== true) {
         setMessage("Access denied. You are not an admin.");
-        return;
-      }
-
-      const adminData = adminSnap.data();
-
-      // Validate role
-      if (adminData.role !== "admin") {
         await signOut(auth);
-        setMessage("Invalid admin account.");
         return;
       }
 
-      // Clear any previous session values
-      localStorage.removeItem("adminUid");
-      localStorage.removeItem("adminEmail");
-      localStorage.removeItem("adminName");
-      localStorage.removeItem("uid");
-      localStorage.removeItem("email");
+      // Optional: fetch admin name for display.
+      let adminName = user.email;
 
-      // Save admin session
+      try {
+        const adminDoc = await getDoc(doc(db, "admins", user.uid));
+        if (adminDoc.exists() && adminDoc.data().name) {
+          adminName = adminDoc.data().name;
+        }
+      } catch {
+        // Ignore if the document doesn't exist.
+      }
+
+      // Store session information for display purposes.
       localStorage.setItem("adminUid", user.uid);
       localStorage.setItem("adminEmail", user.email);
-      localStorage.setItem("adminName", adminData.name || "Admin");
-
-      // Save common session (used elsewhere in your app)
+      localStorage.setItem("adminName", adminName);
       localStorage.setItem("uid", user.uid);
       localStorage.setItem("email", user.email);
 
@@ -108,10 +91,9 @@ const AdminLogin = () => {
   };
 
   return (
-    <div className="admin-login-container">
+    <div className="admin-login-page">
       <div className="admin-login-card">
         <h1>PrintItUp Admin</h1>
-
         <p>Login to manage your store</p>
 
         {message && <div className="admin-message">{message}</div>}

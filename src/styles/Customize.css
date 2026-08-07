@@ -227,6 +227,81 @@ body {
   font-size: 12px;
 }
 
+/* AI image generation panel, sits below the upload dropzone. */
+.ai-generate-wrap {
+  margin-top: 16px;
+  padding-top: 16px;
+  border-top: 1px dashed #e5e7eb;
+}
+
+.ai-generate-wrap label {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ai-generate-icon {
+  color: var(--color-primary);
+}
+
+.ai-generate-wrap textarea {
+  width: 100%;
+  margin-top: 8px;
+  padding: 10px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: var(--radius-md);
+  font-family: inherit;
+  font-size: 13.5px;
+  resize: vertical;
+  transition: var(--transition-base);
+}
+
+.ai-generate-wrap textarea:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+  border-color: var(--color-primary);
+}
+
+.ai-generate-wrap textarea:disabled {
+  background: #f3f4f6;
+  cursor: not-allowed;
+}
+
+.ai-generate-btn {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  height: 42px;
+  margin-top: 8px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: linear-gradient(135deg, var(--color-primary), #3b82f6);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-base);
+}
+
+.ai-generate-btn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 24px rgba(37, 99, 235, 0.25);
+}
+
+.ai-generate-btn:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.ai-generate-btn:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 .options input[type="file"] {
   width: 100%;
   font-size: 13px;

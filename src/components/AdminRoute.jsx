@@ -1,49 +1,37 @@
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import { doc, getDoc } from "firebase/firestore";
-import { db } from "../firebase";
+import { onAuthStateChanged } from "firebase/auth";
+import { auth } from "../firebase";
 
 const AdminRoute = ({ children }) => {
   const [loading, setLoading] = useState(true);
+  const [isSignedIn, setIsSignedIn] = useState(false);
   const [isAdmin, setIsAdmin] = useState(false);
 
-  const uid = localStorage.getItem("uid");
-
   useEffect(() => {
-    let isMounted = true;
-
-    const checkAdmin = async () => {
-      if (!uid) {
-        if (isMounted) setLoading(false);
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        setIsSignedIn(false);
+        setIsAdmin(false);
+        setLoading(false);
         return;
       }
 
+      setIsSignedIn(true);
+
       try {
-        const adminRef = doc(db, "admins", uid);
-        const adminSnap = await getDoc(adminRef);
-
-        if (
-          isMounted &&
-          adminSnap.exists() &&
-          adminSnap.data().role === "admin"
-        ) {
-          setIsAdmin(true);
-        }
+        const tokenResult = await user.getIdTokenResult();
+        setIsAdmin(tokenResult.claims.admin === true);
       } catch (error) {
-        console.error("Admin check error:", error);
+        console.error("Admin claim check failed:", error);
+        setIsAdmin(false);
       } finally {
-        if (isMounted) {
-          setLoading(false);
-        }
+        setLoading(false);
       }
-    };
+    });
 
-    checkAdmin();
-
-    return () => {
-      isMounted = false;
-    };
-  }, [uid]);
+    return unsubscribe;
+  }, []);
 
   if (loading) {
     return (
@@ -62,7 +50,7 @@ const AdminRoute = ({ children }) => {
     );
   }
 
-  if (!uid) {
+  if (!isSignedIn) {
     return <Navigate to="/admin-login" replace />;
   }
 
