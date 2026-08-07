@@ -12,6 +12,7 @@
   padding: 0;
   box-sizing: border-box;
   font-family: "Poppins", sans-serif;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html {
@@ -43,8 +44,10 @@ body {
 .grid-bg {
   position: absolute;
   inset: 0;
-  background-image:
-    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+  background-image: linear-gradient(
+      rgba(255, 255, 255, 0.04) 1px,
+      transparent 1px
+    ),
     linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px);
   background-size: 60px 60px;
   opacity: 0.35;
@@ -91,11 +94,9 @@ body {
   0% {
     transform: translate(0, 0) scale(1);
   }
-
   50% {
     transform: translate(40px, -30px) scale(1.1);
   }
-
   100% {
     transform: translate(0, 0) scale(1);
   }
@@ -140,11 +141,9 @@ body {
   0% {
     transform: translateY(0);
   }
-
   50% {
     transform: translateY(-20px);
   }
-
   100% {
     transform: translateY(0);
   }
@@ -185,18 +184,19 @@ body {
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: #f8fafc;
   margin-bottom: 25px;
-  font-size: 14px;
+  font-size: clamp(12px, 2vw, 14px);
   font-weight: 500;
   backdrop-filter: blur(15px);
 }
 
 .hero-tag svg {
   color: #facc15;
+  flex-shrink: 0;
 }
 
 .hero-left h1 {
-  font-size: 68px;
-  line-height: 1.1;
+  font-size: clamp(32px, 6vw, 68px);
+  line-height: 1.15;
   font-weight: 800;
   margin-bottom: 28px;
 }
@@ -210,7 +210,7 @@ body {
 }
 
 .hero-left p {
-  font-size: 19px;
+  font-size: clamp(15px, 2vw, 19px);
   color: #cbd5e1;
   line-height: 1.8;
   max-width: 620px;
@@ -224,6 +224,7 @@ body {
   display: flex;
   gap: 20px;
   margin-top: 40px;
+  flex-wrap: wrap;
 }
 
 .hero-buttons a {
@@ -234,6 +235,7 @@ body {
 .secondary-btn {
   display: flex;
   align-items: center;
+  justify-content: center;
   gap: 10px;
   padding: 16px 34px;
   border: none;
@@ -241,7 +243,8 @@ body {
   cursor: pointer;
   font-size: 16px;
   font-weight: 600;
-  transition: 0.35s;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+  min-height: 48px;
 }
 
 .primary-btn {
@@ -253,6 +256,10 @@ body {
 .primary-btn:hover {
   transform: translateY(-5px);
   box-shadow: 0 20px 45px rgba(37, 99, 235, 0.5);
+}
+
+.primary-btn:active {
+  transform: translateY(-1px) scale(0.98);
 }
 
 .secondary-btn {
@@ -269,29 +276,14 @@ body {
 }
 
 /* ==========================================
-   HERO STATS
+   FOCUS STATES (ACCESSIBILITY)
 ========================================== */
 
-.hero-stats {
-  display: flex;
-  gap: 60px;
-  margin-top: 60px;
-}
-
-.hero-stats div {
-  text-align: left;
-}
-
-.hero-stats h2 {
-  font-size: 42px;
-  font-weight: 700;
-  color: #60a5fa;
-}
-
-.hero-stats p {
-  color: #94a3b8;
-  font-size: 15px;
-  margin-top: 6px;
+button:focus-visible,
+a:focus-visible,
+.color-circle:focus-visible {
+  outline: 2px solid #60a5fa;
+  outline-offset: 3px;
 }
 
 /* ==========================================
@@ -314,31 +306,30 @@ body {
     opacity: 0;
     transform: translateY(40px);
   }
-
   to {
     opacity: 1;
     transform: translateY(0);
   }
-} /* ==================================================
+}
+
+/* ==================================================
    SHIRT CARD
 ================================================== */
 
 .shirt-card {
   width: 550px;
   height: 550px;
+  max-width: 100%;
   position: relative;
-
   background: rgba(255, 255, 255, 0.06);
-
   border-radius: 30px;
-
   overflow: hidden;
-
   backdrop-filter: blur(20px);
-
   border: 1px solid rgba(255, 255, 255, 0.12);
-
   box-shadow: 0 25px 60px rgba(0, 0, 0, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .shirt-card::before {
@@ -348,13 +339,8 @@ body {
   border-radius: 35px;
   padding: 2px;
   background: linear-gradient(135deg, #2563eb, #7c3aed, #ec4899);
-  /* Standard mask for broader browser compatibility */
-  mask:
-    linear-gradient(#fff 0 0) content-box,
-    linear-gradient(#fff 0 0);
-  /* WebKit-specific mask for older Safari/Chrome */
-  -webkit-mask:
-    linear-gradient(#fff 0 0) content-box,
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  -webkit-mask: linear-gradient(#fff 0 0) content-box,
     linear-gradient(#fff 0 0);
   -webkit-mask-composite: xor;
   mask-composite: exclude;
@@ -362,28 +348,23 @@ body {
 
 .shirt-card img {
   width: 360px;
+  max-width: 70%;
   z-index: 2;
   animation: shirtFloat 5s ease-in-out infinite;
-  transition: 0.4s;
+  transition: transform 0.4s ease;
 }
 
 .shirt-card:hover img {
   transform: scale(1.05) rotate(-3deg);
 }
 
-/* ==================================================
-   SHIRT FLOAT
-================================================== */
-
 @keyframes shirtFloat {
   0% {
     transform: translateY(0);
   }
-
   50% {
     transform: translateY(-18px);
   }
-
   100% {
     transform: translateY(0);
   }
@@ -427,6 +408,7 @@ body {
   font-weight: 600;
   animation: miniFloat 4s ease-in-out infinite;
   z-index: 5;
+  white-space: nowrap;
 }
 
 .floating-mini-card svg {
@@ -449,39 +431,27 @@ body {
   0% {
     transform: translateY(0);
   }
-
   50% {
     transform: translateY(-12px);
   }
-
   100% {
     transform: translateY(0);
   }
 }
+
 .shirt-card::after {
   content: "";
-
   position: absolute;
-
   width: 350px;
   height: 350px;
-
   background: #2563eb;
-
   filter: blur(120px);
-
   opacity: 0.35;
-
   border-radius: 50%;
-
   left: 50%;
-
   top: 50%;
-
   transform: translate(-50%, -50%);
-
   z-index: 0;
-
   animation: pulseGlow 5s infinite;
 }
 
@@ -489,11 +459,9 @@ body {
   0% {
     transform: translate(-50%, -50%) scale(1);
   }
-
   50% {
     transform: translate(-50%, -50%) scale(1.25);
   }
-
   100% {
     transform: translate(-50%, -50%) scale(1);
   }
@@ -501,8 +469,8 @@ body {
 
 canvas {
   position: relative;
-
   z-index: 2;
+  max-width: 100%;
 }
 
 /* ==================================================
@@ -517,14 +485,14 @@ canvas {
 }
 
 .colors-section h2 {
-  font-size: 42px;
+  font-size: clamp(26px, 4vw, 42px);
   margin-bottom: 12px;
   font-weight: 700;
 }
 
 .colors-section p {
   color: #94a3b8;
-  font-size: 18px;
+  font-size: clamp(15px, 2vw, 18px);
 }
 
 .color-list {
@@ -538,16 +506,48 @@ canvas {
 .color-circle {
   width: 65px;
   height: 65px;
+  min-width: 44px;
+  min-height: 44px;
   border-radius: 50%;
   cursor: pointer;
   border: 4px solid rgba(255, 255, 255, 0.12);
-  transition: 0.35s;
+  transition: transform 0.3s ease, box-shadow 0.3s ease, border-color 0.3s ease;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.3);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
 }
 
 .color-circle:hover {
   transform: translateY(-8px) scale(1.15);
   box-shadow: 0 18px 35px rgba(37, 99, 235, 0.35);
+}
+
+.color-circle:active {
+  transform: translateY(-4px) scale(1.05);
+}
+
+/* Selected color indicator */
+.color-circle.active {
+  border-color: #fff;
+  box-shadow: 0 0 0 4px rgba(96, 165, 250, 0.45), 0 18px 35px rgba(37, 99, 235, 0.35);
+}
+
+.color-circle.active::after {
+  content: "✓";
+  color: #fff;
+  font-size: 22px;
+  font-weight: 700;
+  text-shadow: 0 1px 4px rgba(0, 0, 0, 0.6);
+}
+
+/* Ensure the checkmark stays visible on white */
+.color-circle[style*="255, 255, 255"].active::after,
+.color-circle.active[style*="#ffffff"]::after {
+  color: #111827;
+  text-shadow: none;
 }
 
 /* ==================================================
@@ -566,14 +566,14 @@ canvas {
 }
 
 .section-title h2 {
-  font-size: 42px;
+  font-size: clamp(26px, 4vw, 42px);
   margin-bottom: 12px;
   font-weight: 700;
 }
 
 .section-title p {
   color: #94a3b8;
-  font-size: 18px;
+  font-size: clamp(15px, 2vw, 18px);
 }
 
 /* ==================================================
@@ -597,7 +597,7 @@ canvas {
   height: 380px;
   cursor: pointer;
   box-shadow: 0 20px 45px rgba(0, 0, 0, 0.35);
-  transition: 0.4s;
+  transition: transform 0.4s ease;
 }
 
 .category-card:hover {
@@ -608,7 +608,7 @@ canvas {
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: 0.45s;
+  transition: transform 0.45s ease;
 }
 
 .category-card:hover img {
@@ -631,11 +631,10 @@ canvas {
   flex-direction: column;
   justify-content: flex-end;
   padding: 30px;
-  transition: 0.4s;
 }
 
 .category-overlay h3 {
-  font-size: 30px;
+  font-size: clamp(22px, 3vw, 30px);
   margin-bottom: 18px;
   color: #fff;
 }
@@ -650,13 +649,20 @@ canvas {
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: 0.35s;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  min-height: 44px;
 }
 
 .category-overlay button:hover {
   transform: translateY(-4px);
   box-shadow: 0 15px 30px rgba(37, 99, 235, 0.4);
-} /* ==========================================
+}
+
+.category-overlay button:active {
+  transform: translateY(-1px) scale(0.98);
+}
+
+/* ==========================================
    DESIGN PROCESS
 ========================================== */
 
@@ -681,7 +687,7 @@ canvas {
   border-radius: 25px;
   padding: 45px 35px;
   text-align: center;
-  transition: 0.4s;
+  transition: transform 0.4s ease, border-color 0.4s ease, box-shadow 0.4s ease;
   overflow: hidden;
 }
 
@@ -698,7 +704,7 @@ canvas {
     rgba(255, 255, 255, 0.08),
     transparent
   );
-  transition: 0.8s;
+  transition: left 0.8s ease;
 }
 
 .process-card:hover::before {
@@ -728,10 +734,10 @@ canvas {
 }
 
 .process-icon {
-  font-size: 55px;
+  font-size: clamp(40px, 5vw, 55px);
   color: #60a5fa;
   margin-bottom: 25px;
-  transition: 0.35s;
+  transition: transform 0.35s ease, color 0.35s ease;
 }
 
 .process-card:hover .process-icon {
@@ -740,7 +746,7 @@ canvas {
 }
 
 .process-card h3 {
-  font-size: 26px;
+  font-size: clamp(20px, 3vw, 26px);
   margin-bottom: 18px;
   font-weight: 700;
 }
@@ -748,7 +754,7 @@ canvas {
 .process-card p {
   color: #cbd5e1;
   line-height: 1.8;
-  font-size: 16px;
+  font-size: clamp(14px, 2vw, 16px);
 }
 
 /* ==========================================
@@ -791,15 +797,18 @@ section {
 }
 
 /* ==========================================
-   GLOBAL HOVER
+   REDUCED MOTION
 ========================================== */
 
-button,
-.category-card,
-.process-card,
-.color-circle,
-.shirt-card {
-  transition: all 0.35s ease;
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
 }
 
 /* ==========================================
@@ -811,10 +820,6 @@ button,
 @media (max-width: 1200px) {
   .hero-section {
     gap: 40px;
-  }
-
-  .hero-left h1 {
-    font-size: 58px;
   }
 
   .shirt-card {
@@ -839,10 +844,6 @@ button,
     align-items: center;
   }
 
-  .hero-left h1 {
-    font-size: 52px;
-  }
-
   .hero-left p {
     max-width: 650px;
   }
@@ -861,11 +862,6 @@ button,
     height: 420px;
   }
 
-  .hero-stats {
-    justify-content: center;
-    gap: 35px;
-  }
-
   .category-grid {
     grid-template-columns: repeat(2, 1fr);
   }
@@ -878,18 +874,18 @@ button,
 /* ---------------- Mobile ---------------- */
 
 @media (max-width: 768px) {
+  /* Lighten blur for smoother scroll performance on mobile GPUs */
+  .blob {
+    filter: blur(70px);
+  }
+
+  .shirt-card::after {
+    filter: blur(70px);
+  }
+
   .hero-section {
     padding: 45px 20px 20px;
     gap: 25px;
-  }
-
-  .hero-left h1 {
-    font-size: 40px;
-    line-height: 1.2;
-  }
-
-  .hero-left p {
-    font-size: 16px;
   }
 
   .hero-buttons {
@@ -931,18 +927,18 @@ button,
     padding: 50px 20px;
   }
 
-  .colors-section h2 {
-    font-size: 32px;
-  }
-
   .color-list {
-    gap: 12px;
+    gap: 14px;
     justify-content: center;
   }
 
   .color-circle {
-    width: 42px;
-    height: 42px;
+    width: 48px;
+    height: 48px;
+  }
+
+  .color-circle.active::after {
+    font-size: 18px;
   }
 
   /* Categories */
@@ -968,26 +964,12 @@ button,
   .process-card {
     padding: 30px 20px;
   }
-
-  .hero-stats {
-    flex-direction: column;
-    gap: 20px;
-  }
 }
 
 /* ---------------- Small Phones ---------------- */
 
 @media (max-width: 480px) {
-  .hero-left h1 {
-    font-size: 32px;
-  }
-
-  .hero-left p {
-    font-size: 15px;
-  }
-
   .hero-tag {
-    font-size: 12px;
     padding: 8px 14px;
   }
 
@@ -996,32 +978,7 @@ button,
   }
 
   .color-circle {
-    width: 38px;
-    height: 38px;
-  }
-
-  .color-circle.active::after {
-    font-size: 18px;
-  }
-
-  .section-title h2,
-  .colors-section h2 {
-    font-size: 28px;
-  }
-
-  .category-overlay h3 {
-    font-size: 22px;
-  }
-
-  .process-icon {
-    font-size: 40px;
-  }
-
-  .process-card h3 {
-    font-size: 22px;
-  }
-
-  .process-card p {
-    font-size: 14px;
+    width: 44px;
+    height: 44px;
   }
 }

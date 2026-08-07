@@ -29,20 +29,30 @@ import {
   FaStar,
   FaRegStar,
   FaPen,
+  FaPrint,
+  FaInfoCircle,
+  FaChevronDown,
 } from "react-icons/fa";
 
 import "../styles/MyOrders.css";
 
-// ---- Order tracking config ----
+// ---------------------------------------------------------------------------
+// Order tracking config
+// ---------------------------------------------------------------------------
 // Edit these labels/order to match the exact status strings you save in Firestore.
+// This mirrors the admin-side pipeline in Orders.jsx — keep both in sync.
 const STATUS_FLOW = [
   { key: "Pending", label: "Order Placed", icon: <FaClipboardCheck /> },
   { key: "Confirmed", label: "Confirmed", icon: <FaCheck /> },
+  { key: "Printing", label: "Printing", icon: <FaPrint /> },
   { key: "Shipped", label: "Shipped", icon: <FaBoxOpen /> },
   { key: "Out for Delivery", label: "Out for Delivery", icon: <FaTruck /> },
   { key: "Delivered", label: "Delivered", icon: <FaHome /> },
 ];
 
+// Older orders in Firestore may still carry a status string from before we
+// renamed "Processing" -> "Confirmed". Map legacy values here instead of
+// touching historical documents.
 const LEGACY_STATUS_MAP = {
   Processing: "Confirmed",
 };
@@ -58,6 +68,10 @@ const getStepIndex = (status) => {
   );
   return idx === -1 ? 0 : idx;
 };
+
+// Cancellation is only allowed before production starts. Once an order
+// moves to "Printing" (or beyond), the shirt is already on the press
+// and can no longer be cancelled.
 const canCancelOrder = (status) => {
   if (!status) return false;
 
@@ -66,24 +80,54 @@ const canCancelOrder = (status) => {
   return normalized === "pending" || normalized === "confirmed";
 };
 
+// Statuses where the shirt is already in production/fulfillment — used
+// to show a friendly "can't cancel anymore" note instead of just
+// silently hiding the cancel button.
+const isInProductionOrBeyond = (status) => {
+  if (!status) return false;
+
+  const normalized = LEGACY_STATUS_MAP[status] || status;
+
+  return ["Printing", "Shipped", "Out for Delivery"].includes(normalized);
+};
+
+// Turns any status string into a safe, single CSS class token
+// ("Out for Delivery" -> "out-for-delivery") so badge styling never breaks.
+const toStatusClass = (status) =>
+  (status || "unknown").toLowerCase().trim().replace(/\s+/g, "-");
+
+const getOrderRef = (order) =>
+  (order.orderId || order.id.slice(0, 8)).toString().toUpperCase();
+
+const getShortOrderRef = (order) => {
+  const ref = getOrderRef(order);
+  return ref.length > 6 ? ref.slice(-6) : ref;
+};
+
+const StatusBadge = ({ status }) => (
+  <span className={`myorders-badge myorders-badge--${toStatusClass(status)}`}>
+    {status}
+  </span>
+);
+
 // Full step tracker shown inside the order details modal
 const OrderTracker = ({ order }) => {
   const currentIndex = getStepIndex(order.status);
 
   if (currentIndex === -1) {
     return (
-      <div className="order-tracker cancelled-tracker">
-        <FaBan size={22} />
+      <div className="cancelled-tracker">
+        <FaBan size={20} />
 
         <div className="cancelled-info">
-          <h4>Order Cancelled</h4>
+          <h4>Order cancelled</h4>
 
           {order.cancellationReason && (
             <p>Reason: {order.cancellationReason}</p>
           )}
           {order.cancelledAt && (
             <p>
-              Cancelled On:{" "}
+              Cancelled on{" "}
               {order.cancelledAt?.toDate
                 ? order.cancelledAt.toDate().toLocaleString()
                 : "-"}
@@ -98,7 +142,6 @@ const OrderTracker = ({ order }) => {
     <div className="order-tracker">
       {STATUS_FLOW.map((step, index) => {
         const isDone = index < currentIndex;
-
         const isCurrent = index === currentIndex;
 
         return (
@@ -131,7 +174,9 @@ const OrderTracker = ({ order }) => {
   );
 };
 
-// ---- Star rating ----
+// ---------------------------------------------------------------------------
+// Star rating
+// ---------------------------------------------------------------------------
 // readOnly renders a static display; otherwise clickable/hoverable input.
 const StarRating = ({ value = 0, onChange, readOnly = false, size = 22 }) => {
   const [hovered, setHovered] = useState(0);
@@ -149,7 +194,7 @@ const StarRating = ({ value = 0, onChange, readOnly = false, size = 22 }) => {
         return (
           <span
             key={star}
-            className="star"
+            className={`star ${filled ? "filled" : ""}`}
             style={{ fontSize: size }}
             onClick={() => !readOnly && onChange?.(star)}
             onMouseEnter={() => !readOnly && setHovered(star)}
@@ -172,7 +217,9 @@ const StarRating = ({ value = 0, onChange, readOnly = false, size = 22 }) => {
   );
 };
 
-// ---- Review modal (write / edit) ----
+// ---------------------------------------------------------------------------
+// Review modal (write / edit)
+// ---------------------------------------------------------------------------
 const ReviewModal = ({
   order,
   item,
@@ -199,6 +246,8 @@ const ReviewModal = ({
 
     try {
       const user = auth.currentUser;
+      // Deterministic doc ID (orderId_itemIndex) so re-submitting the same
+      // item always updates the same review instead of creating duplicates.
       const reviewId = `${order.id}_${itemIndex}`;
       const reviewRef = doc(db, "reviews", reviewId);
 
@@ -225,6 +274,7 @@ const ReviewModal = ({
       onSaved(itemIndex, { rating, comment: comment.trim() });
       onClose();
     } catch (err) {
+      // TODO: wire up to centralized error logging (e.g. Sentry) once added.
       console.error("Error saving review:", err);
       setError("Couldn't save your review. Please try again.");
     } finally {
@@ -251,7 +301,7 @@ const ReviewModal = ({
           )}
 
           <div>
-            <h3>{existingReview ? "Edit Your Review" : "Rate this Product"}</h3>
+            <h3>{existingReview ? "Edit your review" : "Rate this product"}</h3>
             <p>
               {item.text || "Custom T-Shirt"} · {item.size} · {item.tshirtColor}
             </p>
@@ -259,11 +309,11 @@ const ReviewModal = ({
         </div>
 
         <form onSubmit={handleSubmit}>
-          <label className="review-label">Your Rating</label>
-          <StarRating value={rating} onChange={setRating} size={30} />
+          <label className="review-label">Your rating</label>
+          <StarRating value={rating} onChange={setRating} size={28} />
 
           <label className="review-label" htmlFor="review-comment">
-            Your Review
+            Your review
           </label>
           <textarea
             id="review-comment"
@@ -278,23 +328,19 @@ const ReviewModal = ({
           <div className="review-modal-actions">
             <button
               type="button"
-              className="keep-order-btn"
+              className="btn btn-ghost"
               onClick={onClose}
               disabled={saving}
             >
               Cancel
             </button>
 
-            <button
-              type="submit"
-              className="confirm-review-btn"
-              disabled={saving}
-            >
+            <button type="submit" className="btn btn-primary" disabled={saving}>
               {saving
                 ? "Saving..."
                 : existingReview
-                  ? "Update Review"
-                  : "Submit Review"}
+                  ? "Update review"
+                  : "Submit review"}
             </button>
           </div>
         </form>
@@ -315,8 +361,24 @@ const MyOrders = () => {
   // { item, index } of the product currently being reviewed, or null
   const [reviewTarget, setReviewTarget] = useState(null);
 
-  //cancel order
+  /**
+   * Cancels the currently selected order.
+   *
+   * Guarded twice by design:
+   *  1. UI-level — the cancel action only renders once the user has
+   *     scrolled to the bottom of the order details modal (see
+   *     `.order-actions-zone` in JSX below), so it's never the first
+   *     thing a user sees or taps by accident.
+   *  2. Data-level — `canCancelOrder` is re-checked here in case the
+   *     order moved into production (e.g. from another tab/device)
+   *     between opening the modal and confirming cancellation.
+   */
   const handleCancelOrder = async () => {
+    if (!canCancelOrder(selectedOrder?.status)) {
+      setShowCancelConfirm(false);
+      return;
+    }
+
     try {
       const orderRef = doc(db, "orders", selectedOrder.id);
       await updateDoc(orderRef, {
@@ -329,11 +391,16 @@ const MyOrders = () => {
       setShowCancelConfirm(false);
       setSelectedOrder(null);
     } catch (error) {
+      // TODO: replace alert() with the shared toast/notification component
+      // once one exists in this codebase.
       console.error("Error cancelling order:", error);
       alert("Unable to cancel order. Please try again.");
     }
   };
 
+  // Live subscription to the current user's orders. Using onSnapshot
+  // (rather than a one-off getDocs) so status changes made by admin
+  // staff reflect here in real time without a manual refresh.
   useEffect(() => {
     const user = auth.currentUser;
 
@@ -350,6 +417,7 @@ const MyOrders = () => {
         ...doc.data(),
       }));
 
+      // Newest first.
       data.sort((a, b) => {
         const first = a.createdAt?.seconds || 0;
         const second = b.createdAt?.seconds || 0;
@@ -371,6 +439,8 @@ const MyOrders = () => {
       return;
     }
 
+    // Prevents a race where the modal is closed/reopened quickly and a
+    // stale fetch resolves after a newer one, overwriting fresh state.
     let cancelled = false;
 
     const fetchReviews = async () => {
@@ -406,7 +476,12 @@ const MyOrders = () => {
   }, [selectedOrder]);
 
   if (loading) {
-    return <div className="myorders-loading">Loading Orders...</div>;
+    return (
+      <div className="myorders-loading">
+        <span className="spinner" />
+        Loading your orders...
+      </div>
+    );
   }
 
   return (
@@ -414,17 +489,19 @@ const MyOrders = () => {
       <div className="myorders-header">
         <div>
           <h1>My Orders</h1>
-          <p>Track all your custom T-shirt orders</p>
+          <p>Track and manage all your custom T-shirt orders</p>
         </div>
 
-        <div className="orders-count">{orders.length} Orders</div>
+        <div className="orders-count">
+          {orders.length} {orders.length === 1 ? "Order" : "Orders"}
+        </div>
       </div>
 
       {orders.length === 0 ? (
         <div className="empty-orders">
-          <FaShoppingBag size={60} />
+          <FaShoppingBag size={48} />
 
-          <h2>No Orders Yet</h2>
+          <h2>No orders yet</h2>
 
           <p>Your placed orders will appear here.</p>
         </div>
@@ -432,76 +509,65 @@ const MyOrders = () => {
         <div className="orders-grid">
           {orders.map((order) => (
             <div className="order-card" key={order.id}>
-              <div className="order-top">
-                <div>
-                  <h3>Order #{order.id.slice(0, 8)}</h3>
+              <div className="order-card-top">
+                <StatusBadge status={order.status} />
+                <span className="order-ref">#{getShortOrderRef(order)}</span>
+              </div>
 
-                  <p>
-                    <FaCalendarAlt />
-
-                    {order.createdAt?.toDate().toLocaleDateString()}
-                  </p>
-                </div>
-
-                <span className={`status ${order.status?.toLowerCase()}`}>
-                  {order.status}
+              <div className="order-card-main">
+                <span className="order-total">₹{order.total}</span>
+                <span className="order-card-date">
+                  <FaCalendarAlt />
+                  {order.createdAt?.toDate().toLocaleDateString()}
                 </span>
               </div>
 
-              <div className="order-middle">
-                <div className="order-info">
-                  <span>Products</span>
-
-                  <strong>{order.items?.length}</strong>
-                </div>
-
-                <div className="order-info">
-                  <span>Payment</span>
-
-                  <strong>{order.payment}</strong>
-                </div>
-
-                <div className="order-info">
-                  <span>Total</span>
-
-                  <strong className="price">₹{order.total}</strong>
-                </div>
-              </div>
+              <p className="order-card-meta">
+                {order.items?.length}{" "}
+                {order.items?.length === 1 ? "item" : "items"} · {order.payment}
+              </p>
 
               <button
-                className="details-btn"
+                className="btn btn-outline btn-block"
                 onClick={() => setSelectedOrder(order)}
               >
-                View Details
+                View order details
               </button>
             </div>
           ))}
         </div>
       )}
 
+      {/* ===================================================================
+          ORDER DETAILS MODAL
+          Cancel order is intentionally NOT in the sticky footer — it lives
+          at the very bottom of the scrollable content (see
+          `.order-actions-zone` below), past the tracker, contact info,
+          product list, and price summary. This is deliberate friction:
+          a user has to actually review their order before reaching the
+          option to cancel it, rather than tapping it as a reflex.
+      =================================================================== */}
       {selectedOrder && (
         <div className="modal-overlay">
           <div className="order-modal">
             <div className="modal-header">
-              <div>
-                <h2>Order #{selectedOrder.id.slice(0, 8)}</h2>
-
-                <p>
-                  Ordered on{" "}
-                  {selectedOrder.createdAt?.toDate().toLocaleString()}
-                </p>
+              <div className="order-id-block">
+                <span className="order-id-label">Order ID</span>
+                <span className="order-id-value order-id-value-lg">
+                  {getOrderRef(selectedOrder)}
+                </span>
+                <span className="modal-order-date">
+                  Placed on {selectedOrder.createdAt?.toDate().toLocaleString()}
+                </span>
               </div>
 
               <div className="header-right">
-                <span
-                  className={`status ${selectedOrder.status?.toLowerCase()}`}
-                >
-                  {selectedOrder.status}
-                </span>
+                <StatusBadge status={selectedOrder.status} />
 
                 <button
                   className="close-btn"
                   onClick={() => setSelectedOrder(null)}
+                  aria-label="Close order details"
                 >
                   <FaTimes />
                 </button>
@@ -513,21 +579,23 @@ const MyOrders = () => {
 
               <div className="info-grid">
                 <div className="info-card">
+                  <h3>
+                    <FaUser />
+                    Contact
+                  </h3>
+
                   <p>
                     <FaUser />
-
                     {selectedOrder.customer?.name}
                   </p>
 
                   <p>
                     <FaEnvelope />
-
                     {selectedOrder.customer?.email || "-"}
                   </p>
 
                   <p>
                     <FaPhone />
-
                     {selectedOrder.customer?.phone}
                   </p>
                 </div>
@@ -538,27 +606,29 @@ const MyOrders = () => {
                     Delivery Address
                   </h3>
 
-                  <p>
+                  <p className="no-icon">
                     <strong>{selectedOrder.deliveryAddress?.fullName}</strong>
                   </p>
 
-                  <p>{selectedOrder.deliveryAddress?.phone}</p>
+                  <p className="no-icon">{selectedOrder.deliveryAddress?.phone}</p>
 
-                  <p>
+                  <p className="no-icon">
                     {selectedOrder.deliveryAddress?.house},{" "}
                     {selectedOrder.deliveryAddress?.area}
                   </p>
 
                   {selectedOrder.deliveryAddress?.landmark && (
-                    <p>Landmark : {selectedOrder.deliveryAddress.landmark}</p>
+                    <p className="no-icon">
+                      Landmark: {selectedOrder.deliveryAddress.landmark}
+                    </p>
                   )}
 
-                  <p>
+                  <p className="no-icon">
                     {selectedOrder.deliveryAddress?.city},{" "}
                     {selectedOrder.deliveryAddress?.state}
                   </p>
 
-                  <p>{selectedOrder.deliveryAddress?.pincode}</p>
+                  <p className="no-icon">{selectedOrder.deliveryAddress?.pincode}</p>
                 </div>
 
                 <div className="info-card">
@@ -567,11 +637,11 @@ const MyOrders = () => {
                     Payment
                   </h3>
 
-                  <p>{selectedOrder.payment}</p>
-                  <p>
+                  <p className="no-icon">{selectedOrder.payment}</p>
+                  <p className="no-icon">
                     {selectedOrder.status === "Delivered"
-                      ? "Payment Successful"
-                      : "Pay on Delivery"}
+                      ? "Payment successful"
+                      : "Pay on delivery"}
                   </p>
                 </div>
               </div>
@@ -634,18 +704,18 @@ const MyOrders = () => {
                                 size={15}
                               />
                               <button
-                                className="edit-review-btn"
+                                className="btn btn-text"
                                 onClick={() => setReviewTarget({ item, index })}
                               >
-                                <FaPen /> Edit Review
+                                <FaPen /> Edit review
                               </button>
                             </>
                           ) : (
                             <button
-                              className="write-review-btn"
+                              className="btn btn-outline btn-sm"
                               onClick={() => setReviewTarget({ item, index })}
                             >
-                              <FaStar /> Write a Review
+                              <FaStar /> Write a review
                             </button>
                           )}
                         </div>
@@ -660,45 +730,80 @@ const MyOrders = () => {
               <div className="summary-card">
                 <div className="summary-row">
                   <span>Subtotal</span>
-
                   <strong>₹{selectedOrder.total}</strong>
                 </div>
 
                 <div className="summary-row">
-                  <span>Delivery Charges</span>
-
+                  <span>Delivery charges</span>
                   <strong className="free">FREE</strong>
                 </div>
 
                 <div className="summary-row">
                   <span>GST</span>
-
                   <strong>Included</strong>
                 </div>
 
                 <hr />
 
                 <div className="summary-row grand-total">
-                  <span>Grand Total</span>
-
+                  <span>Grand total</span>
                   <strong>₹{selectedOrder.total}</strong>
                 </div>
               </div>
+
+              {/* ---------------------------------------------------------
+                  ORDER ACTIONS ZONE (cancel order)
+                  Rendered as the LAST block inside the scrollable modal
+                  content, after the full order summary. Visually set
+                  apart with a "scroll to see more" style divider so it
+                  doesn't read as a primary action.
+              --------------------------------------------------------- */}
+              <div className="order-actions-zone">
+                <div className="order-actions-divider">
+                  <span>Order actions</span>
+                </div>
+
+                {canCancelOrder(selectedOrder.status) && (
+                  <div className="cancel-zone">
+                    <div className="cancel-zone-text">
+                      <h4>Need to cancel this order?</h4>
+                      <p>
+                        You can cancel until printing begins.
+                        This action can't be undone.
+                      </p>
+                    </div>
+
+                    <button
+                      className="btn btn-danger-outline"
+                      onClick={() => setShowCancelConfirm(true)}
+                    >
+                      <FaBan />
+                      Cancel order
+                    </button>
+                  </div>
+                )}
+
+                {!canCancelOrder(selectedOrder.status) &&
+                  isInProductionOrBeyond(selectedOrder.status) && (
+                    <div className="no-cancel-note">
+                      <FaInfoCircle />
+                      Printing has started — this order can no longer be
+                      cancelled.
+                    </div>
+                  )}
+              </div>
             </div>
 
+            {/* Footer only ever holds neutral navigation (Close) — no
+                destructive action lives here anymore. */}
             <div className="modal-footer">
-              {canCancelOrder(selectedOrder.status) && (
-                <button
-                  className="cancel-order-btn"
-                  onClick={() => setShowCancelConfirm(true)}
-                >
-                  <FaBan />
-                  Cancel Order
-                </button>
-              )}
+              <span className="modal-footer-hint">
+                <FaChevronDown />
+                Scroll down for order actions
+              </span>
 
               <button
-                className="close-modal-btn"
+                className="btn btn-primary"
                 onClick={() => setSelectedOrder(null)}
               >
                 Close
@@ -707,17 +812,18 @@ const MyOrders = () => {
           </div>
         </div>
       )}
+
       {showCancelConfirm && (
         <div className="modal-overlay">
           <div className="cancel-confirm-modal">
-            <FaBan size={35} />
+            <FaBan size={30} />
 
-            <h2>Cancel Order?</h2>
+            <h2>Cancel this order?</h2>
 
             <p>
-              Are you sure you want to cancel this order? This action cannot be
-              undone.
+              This action cannot be undone. Let us know why you're cancelling:
             </p>
+
             <div className="cancel-reasons">
               <label>
                 <input
@@ -759,19 +865,17 @@ const MyOrders = () => {
                 Ordered by mistake
               </label>
             </div>
+
             <div className="cancel-actions">
               <button
-                className="keep-order-btn"
+                className="btn btn-ghost"
                 onClick={() => setShowCancelConfirm(false)}
               >
-                Keep Order
+                Keep order
               </button>
 
-              <button
-                className="confirm-cancel-btn"
-                onClick={handleCancelOrder}
-              >
-                Yes, Cancel
+              <button className="btn btn-danger" onClick={handleCancelOrder}>
+                Yes, cancel
               </button>
             </div>
           </div>

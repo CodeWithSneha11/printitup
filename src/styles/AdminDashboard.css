@@ -1,47 +1,93 @@
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap");
 
-*{
-    margin:0;
-    padding:0;
-    box-sizing:border-box;
-    font-family:"Poppins",sans-serif;
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+  font-family: "Poppins", sans-serif;
 }
 
-body{
-    background:#f4f7fc;
+body {
+  background: #f4f7fc;
 }
 
 /* Dashboard Content */
 
-.admin-content{
-    width:100%;
-    padding:30px;
+.admin-content {
+  width: 100%;
+  padding: 30px;
 }
 
-.admin-title{
-    font-size:34px;
-    font-weight:700;
-    color:#111827;
-    margin-bottom:30px;
+.admin-header {
+  margin-bottom: 30px;
 }
 
-.dashboard-section{
-    margin-top:35px;
+.admin-title {
+  font-size: clamp(26px, 3.5vw, 34px);
+  font-weight: 700;
+  color: #111827;
 }
 
-.dashboard-section h2{
-    color:#111827;
-    margin-bottom:20px;
+.admin-subtitle {
+  margin-top: 6px;
+  color: #6b7280;
+  font-size: 15px;
 }
 
-@media(max-width:768px){
-
-.admin-content{
-    padding:20px;
+.dashboard-section {
+  margin-top: 35px;
 }
 
-.admin-title{
-    font-size:28px;
+.dashboard-section h2 {
+  color: #111827;
+  margin-bottom: 20px;
 }
 
+/* Error state */
+
+.dashboard-error {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  flex-wrap: wrap;
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  padding: 14px 18px;
+  border-radius: 12px;
+  margin-bottom: 25px;
+  font-size: 14px;
+}
+
+.dashboard-error button {
+  border: none;
+  background: #ef4444;
+  color: #fff;
+  padding: 8px 16px;
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.25s ease;
+}
+
+.dashboard-error button:hover {
+  background: #dc2626;
+}
+
+@media (max-width: 768px) {
+  .admin-content {
+    padding: 20px;
+  }
+}
+
+@media (max-width: 480px) {
+  .admin-header {
+    margin-bottom: 22px;
+  }
+
+  .admin-subtitle {
+    font-size: 14px;
+  }
 }

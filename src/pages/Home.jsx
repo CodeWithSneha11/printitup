@@ -1,11 +1,9 @@
-
 import { Link } from "react-router-dom";
 import React, { useState } from "react";
 import HomeShirt from "./HomeShirt";
 
 import {
   FaArrowRight,
-
   FaStar,
   FaPalette,
   FaMagic,
@@ -15,24 +13,25 @@ import {
 import "../styles/Home.css";
 import "../styles/HomeColorPicker.css";
 
-// Local category images 
+// Local category images
 import oversizedImg from "../assets/images/categories/oversized.svg";
 import poloImg from "../assets/images/categories/polo.svg";
 import roundNeckImg from "../assets/images/categories/round-neck.svg";
 
-
 function Home() {
   const colors = [
-    "#000000",
-    "#ffffff",
-    "#2563eb",
-    "#ef4444",
-    "#16a34a",
-    "#f59e0b",
-    "#7c3aed",
-    "#ec4899",
+    { hex: "#000000", name: "Black" },
+    { hex: "#ffffff", name: "White" },
+    { hex: "#2563eb", name: "Blue" },
+    { hex: "#ef4444", name: "Red" },
+    { hex: "#16a34a", name: "Green" },
+    { hex: "#f59e0b", name: "Amber" },
+    { hex: "#7c3aed", name: "Purple" },
+    { hex: "#ec4899", name: "Pink" },
   ];
-const [shirtColor, setShirtColor] = useState("#ffffff");
+
+  const [shirtColor, setShirtColor] = useState("#ffffff");
+
   const categories = [
     {
       title: "Oversized",
@@ -46,7 +45,6 @@ const [shirtColor, setShirtColor] = useState("#ffffff");
       title: "Round Neck",
       image: roundNeckImg,
     },
-    
   ];
 
   return (
@@ -68,11 +66,9 @@ const [shirtColor, setShirtColor] = useState("#ffffff");
       {/* ========================= HERO ======================== */}
 
       <section className="hero-section">
-
         {/* LEFT */}
 
         <div className="hero-left">
-
           <span className="hero-tag">
             <FaStar />
             India's Premium Custom Printing Platform
@@ -85,44 +81,28 @@ const [shirtColor, setShirtColor] = useState("#ffffff");
           </h1>
 
           <p>
-            Design premium quality custom t-shirts with your own
-            text, logos, artwork and images.
-            Preview your design instantly before ordering.
+            Design premium quality custom t-shirts with your own text, logos,
+            artwork and images. Preview your design instantly before
+            ordering.
           </p>
 
           <div className="hero-buttons">
-
             <Link to="/customize">
-
               <button className="primary-btn">
                 Start Designing
                 <FaArrowRight />
               </button>
-
             </Link>
-
           </div>
-
-          {/* Stats */}
-
-          <div className="hero-stats">
-
-          </div>
-
         </div>
 
         {/* RIGHT */}
 
         <div className="hero-right">
-
           <div className="shirt-card">
+            <div className="discount-badge">NEW</div>
 
-            <div className="discount-badge">
-              NEW
-            </div>
-
-     <HomeShirt color={shirtColor} />
-     
+            <HomeShirt color={shirtColor} />
 
             <div className="floating-mini-card top">
               <FaPalette />
@@ -133,163 +113,99 @@ const [shirtColor, setShirtColor] = useState("#ffffff");
               <FaMagic />
               HD Printing
             </div>
-
           </div>
-
         </div>
-
       </section>
 
       {/* ================= COLORS ================= */}
 
       <section className="colors-section">
+        <h2>Choose Your Favorite Color</h2>
 
-        <h2>
-          Choose Your Favorite Color
-        </h2>
+        <p>Available in multiple premium shades.</p>
 
-        <p>
-          Available in multiple premium shades.
-        </p>
-
-        <div className="color-list">
-
+        <div className="color-list" role="group" aria-label="Choose t-shirt color">
           {colors.map((color, index) => (
- <div
-  key={index}
-  className={`color-circle ${
-    shirtColor === color ? "active" : ""
-  }`}
-  style={{
-    background: color,
-  }}
-  onClick={() => setShirtColor(color)}
-></div>
+            <button
+              key={index}
+              type="button"
+              className={`color-circle ${
+                shirtColor === color.hex ? "active" : ""
+              }`}
+              style={{ background: color.hex }}
+              onClick={() => setShirtColor(color.hex)}
+              aria-label={color.name}
+              aria-pressed={shirtColor === color.hex}
+            ></button>
           ))}
-
         </div>
-
       </section>
 
       {/* ================= CATEGORIES ================= */}
 
       <section className="category-section">
-
         <div className="section-title">
+          <h2>Popular Collections</h2>
 
-          <h2>
-            Popular Collections
-          </h2>
-
-          <p>
-            Find your perfect style.
-          </p>
-
+          <p>Find your perfect style.</p>
         </div>
 
         <div className="category-grid">
-
           {categories.map((item, index) => (
-
             <div className="category-card" key={index}>
-
-              <img
-                src={item.image}
-                alt={item.title}
-              />
+              <img src={item.image} alt={item.title} loading="lazy" />
 
               <div className="category-overlay">
-
                 <h3>{item.title}</h3>
 
                 <Link to="/customize">
-
-                  <button>
-                    Customize
-                  </button>
-
+                  <button>Customize</button>
                 </Link>
-
               </div>
-
             </div>
-
           ))}
-
         </div>
-
       </section>
 
       <section className="design-process">
-
         <div className="section-title">
+          <h2>Design In 3 Easy Steps</h2>
 
-          <h2>
-            Design In 3 Easy Steps
-          </h2>
-
-          <p>
-            Your personalized t-shirt is just minutes away.
-          </p>
-
+          <p>Your personalized t-shirt is just minutes away.</p>
         </div>
 
         <div className="process-grid">
-
           <div className="process-card">
-
-            <div className="step-number">
-              1
-            </div>
+            <div className="step-number">1</div>
 
             <FaTshirt className="process-icon" />
 
             <h3>Select T-Shirt</h3>
 
-            <p>
-              Choose from premium cotton.
-            </p>
-
+            <p>Choose from premium cotton.</p>
           </div>
 
           <div className="process-card">
-
-            <div className="step-number">
-              2
-            </div>
+            <div className="step-number">2</div>
 
             <FaPalette className="process-icon" />
 
             <h3>Customize</h3>
 
-            <p>
-              Upload images, add text,
-              choose fonts and colors.
-            </p>
-
+            <p>Upload images, add text, choose fonts and colors.</p>
           </div>
 
           <div className="process-card">
-
-            <div className="step-number">
-              3
-            </div>
+            <div className="step-number">3</div>
 
             <FaMagic className="process-icon" />
 
             <h3>Preview & Order</h3>
 
-            <p>
-              See a live preview and
-              place your order instantly.
-            </p>
-
+            <p>See a live preview and place your order instantly.</p>
           </div>
-
         </div>
-
       </section>
-
     </div>
   );
 }

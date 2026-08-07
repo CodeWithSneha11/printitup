@@ -1,11 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { Navigate } from "react-router-dom";
-import {
-  collection,
-  query,
-  where,
-  getDocs,
-} from "firebase/firestore";
+import { doc, getDoc } from "firebase/firestore";
 import { db } from "../firebase";
 
 const AdminRoute = ({ children }) => {
@@ -13,35 +8,42 @@ const AdminRoute = ({ children }) => {
   const [isAdmin, setIsAdmin] = useState(false);
 
   const uid = localStorage.getItem("uid");
-  const email = localStorage.getItem("email");
 
   useEffect(() => {
-    checkAdmin();
-  }, []);
+    let isMounted = true;
 
-  const checkAdmin = async () => {
-    if (!uid || !email) {
-      setLoading(false);
-      return;
-    }
-
-    try {
-      const q = query(
-        collection(db, "admins"),
-        where("email", "==", email)
-      );
-
-      const snapshot = await getDocs(q);
-
-      if (!snapshot.empty) {
-        setIsAdmin(true);
+    const checkAdmin = async () => {
+      if (!uid) {
+        if (isMounted) setLoading(false);
+        return;
       }
-    } catch (error) {
-      console.log("Admin check error:", error);
-    } finally {
-      setLoading(false);
-    }
-  };
+
+      try {
+        const adminRef = doc(db, "admins", uid);
+        const adminSnap = await getDoc(adminRef);
+
+        if (
+          isMounted &&
+          adminSnap.exists() &&
+          adminSnap.data().role === "admin"
+        ) {
+          setIsAdmin(true);
+        }
+      } catch (error) {
+        console.error("Admin check error:", error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    };
+
+    checkAdmin();
+
+    return () => {
+      isMounted = false;
+    };
+  }, [uid]);
 
   if (loading) {
     return (
@@ -52,6 +54,7 @@ const AdminRoute = ({ children }) => {
           justifyContent: "center",
           alignItems: "center",
           fontSize: "22px",
+          fontWeight: "600",
         }}
       >
         Checking Admin Access...

@@ -11,7 +11,7 @@ import {
   setDoc,
 } from "firebase/firestore";
 
-import { useNavigate } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import { db, auth } from "../firebase";
 
@@ -21,8 +21,18 @@ import "../styles/Checkout.css";
 
 const Checkout = () => {
   const navigate = useNavigate();
+  const location = useLocation();
 
   const uid = localStorage.getItem("uid");
+
+  // Cart.jsx sends only the items the user checked via
+  // navigate("/checkout", { state: { items, total } }). If someone
+  // lands on /checkout without that state — direct URL, bookmark, or
+  // a page refresh (React Router state doesn't survive a reload) —
+  // there's nothing to fall back on except the full cart, so that's
+  // the only case where we still fetch everything.
+  const passedItems = location.state?.items || null;
+  const cameFromSelection = Boolean(passedItems && passedItems.length > 0);
 
   const [cartItems, setCartItems] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,13 +50,25 @@ const Checkout = () => {
   );
 
   useEffect(() => {
-    fetchCart();
+    if (cameFromSelection) {
+      // Use exactly what the user picked in the cart — no re-fetch,
+      // so items they left unchecked never show up here.
+      setCartItems(passedItems);
+      setLoading(false);
+    } else {
+      fetchCart();
+    }
+
     fetchSavedAddresses();
+    // Only ever want this to run once, on mount.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ==========================
   // FETCH CART
   // ==========================
+  // Fallback path only — used when the page wasn't reached via the
+  // cart's "Proceed to Checkout" (no selection state present).
 
   const fetchCart = async () => {
     try {
@@ -176,8 +198,9 @@ const Checkout = () => {
   // ==========================
   // TOTAL
   // ==========================
-  // Fixed: previously summed unit price only and ignored quantity,
-  // which would undercharge for any item with quantity > 1.
+  // Always recomputed from cartItems (whichever source populated it)
+  // rather than trusting the total Cart.jsx passed along, so it can
+  // never drift out of sync with what's actually listed below.
 
   const total = cartItems.reduce(
     (sum, item) => sum + getLineTotal(item),
@@ -187,79 +210,103 @@ const Checkout = () => {
   // ==========================
   // PLACE ORDER
   // ==========================
+// ==========================
+// GENERATE SIMPLE ORDER ID
+// ==========================
 
-  const placeOrder = async () => {
-    if (!selectedAddress) {
-      setMessage(
-        "Please select or add a delivery address."
-      );
-      return;
-    }
-
-    if (cartItems.length === 0) {
-      setMessage("Your cart is empty.");
-      return;
-    }
-
-    try {
-      setPlacingOrder(true);
-
-      setMessage("");
-
-  const orderRef = doc(collection(db, "orders"));
-
-await setDoc(orderRef, {
-
-  orderId: orderRef.id,
-
-  uid,
-
-  customer: {
-    name: selectedAddress.fullName,
-    phone: selectedAddress.phone,
-    email:
-      auth.currentUser?.email || "",
-  },
-
-  deliveryAddress: selectedAddress,
-
-  payment: paymentMethod,
-
-  items: cartItems,
-
-  total,
-
-  status: "Pending",
-
-  createdAt: serverTimestamp(),
-
-});
-
-      // Empty Cart
-
-      for (const item of cartItems) {
-        await deleteDoc(
-          doc(db, "cart", item.id)
-        );
-      }
-
-      setMessage(
-        "✅ Order placed successfully!"
-      );
-
-      setTimeout(() => {
-        navigate("/my-orders");
-      }, 1200);
-    } catch (error) {
-      console.log(error);
-
-      setMessage(
-        "❌ Failed to place order."
-      );
-    } finally {
-      setPlacingOrder(false);
-    }
+  // ==========================
+  // GENERATE SIMPLE ORDER ID
+  // ==========================
+  // Previously queried the entire "orders" collection filtered only by
+  // orderId (no uid filter). Firestore security rules can only permit
+  // a *query* when they can prove every possible result satisfies the
+  // rule from the query's own where-clauses — and our orders rule
+  // requires resource.data.uid == request.auth.uid, which an
+  // orderId-only query can never prove. That's what was throwing
+  // "Missing or insufficient permissions" here (not a rules bug —
+  // loosening the rule to allow this would let any signed-in user
+  // read every other user's order, including name/phone/address).
+  //
+  // Fix: stop needing a read at all. Combine the current timestamp
+  // (base36) with a short random suffix — the odds of two orders
+  // landing on the exact same millisecond AND the same random suffix
+  // are astronomically small, and Firestore's own auto-generated
+  // document ID (orderRef.id) is the real uniqueness guarantee this
+  // "ORD######" code was never actually providing anyway.
+  const generateOrderId = () => {
+    const timestampPart = Date.now().toString(36).toUpperCase();
+    const randomPart = Math.random().toString(36).slice(2, 6).toUpperCase();
+    return `ORD${timestampPart}${randomPart}`;
   };
+  // ==========================
+// PLACE ORDER
+// ==========================
+
+const placeOrder = async () => {
+  if (!selectedAddress) {
+    setMessage("Please select or add a delivery address.");
+    return;
+  }
+
+  if (cartItems.length === 0) {
+    setMessage("Your cart is empty.");
+    return;
+  }
+
+  try {
+    setPlacingOrder(true);
+    setMessage("");
+
+    // Generate a simple order number
+    const orderId = generateOrderId();
+
+    // Firestore document reference
+    const orderRef = doc(collection(db, "orders"));
+
+    await setDoc(orderRef, {
+      orderId,
+
+      uid,
+
+      customer: {
+        name: selectedAddress.fullName,
+        phone: selectedAddress.phone,
+        email: auth.currentUser?.email || "",
+      },
+
+      deliveryAddress: selectedAddress,
+
+      payment: paymentMethod,
+
+      items: cartItems,
+
+      total,
+
+      status: "Pending",
+
+      createdAt: serverTimestamp(),
+    });
+
+    // Empty Cart — only removes the items that were actually part of
+    // this order (cartItems is either the user's selection or, in the
+    // fallback path, the whole cart), so anything left unchecked in
+    // the cart stays there untouched.
+    for (const item of cartItems) {
+      await deleteDoc(doc(db, "cart", item.id));
+    }
+
+    setMessage("✅ Order placed successfully!");
+
+    setTimeout(() => {
+      navigate("/my-orders");
+    }, 1200);
+  } catch (error) {
+    console.error(error);
+    setMessage("❌ Failed to place order.");
+  } finally {
+    setPlacingOrder(false);
+  }
+};
 
   if (loading) {
     return (
@@ -280,6 +327,13 @@ await setDoc(orderRef, {
     <div className="checkout-container">
 
       <h1>Checkout</h1>
+
+      {!cameFromSelection && cartItems.length > 0 && (
+        <div className="checkout-message checkout-fallback-note">
+          Showing your entire cart — item selection from the cart page
+          wasn't available (this can happen after a page refresh).
+        </div>
+      )}
 
       {message && (
         <div className="checkout-message">

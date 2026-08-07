@@ -89,10 +89,6 @@ const CustomerCollectionProducts = () => {
   */
 
   const customizeProduct = (product) => {
-    if (product.stock === 0) {
-      return;
-    }
-
     navigate(
       "/customize",
 
@@ -188,9 +184,7 @@ const CustomerCollectionProducts = () => {
             {products.map((product) => (
               <div
                 key={product.id}
-                className={`product-card ${
-                  product.stock === 0 ? "out-of-stock" : ""
-                }`}
+                className="product-card"
                 onClick={() => customizeProduct(product)}
               >
                 <img src={product.image} alt={product.name} loading="lazy" />
@@ -201,10 +195,6 @@ const CustomerCollectionProducts = () => {
                   <p className="price">₹{product.price}</p>
 
                   <p className="description">{product.description}</p>
-
-                  {product.stock === 0 && (
-                    <span className="stock-label">Out of Stock</span>
-                  )}
                 </div>
               </div>
             ))}

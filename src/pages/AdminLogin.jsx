@@ -1,11 +1,12 @@
 import React, { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { signInWithEmailAndPassword } from "firebase/auth";
 import {
-  collection,
-  query,
-  where,
-  getDocs,
+  signInWithEmailAndPassword,
+  signOut,
+} from "firebase/auth";
+import {
+  doc,
+  getDoc,
 } from "firebase/firestore";
 
 import { auth, db } from "../firebase";
@@ -23,60 +24,66 @@ const AdminLogin = () => {
   const handleLogin = async (e) => {
     e.preventDefault();
 
-    try {
-      setLoading(true);
-      setMessage("");
+    if (loading) return;
 
-      // Firebase Authentication
-      const userCredential = await signInWithEmailAndPassword(
+    setLoading(true);
+    setMessage("");
+
+    try {
+      // Authenticate with Firebase
+      const { user } = await signInWithEmailAndPassword(
         auth,
-        email,
+        email.trim(),
         password
       );
 
-      const user = userCredential.user;
+      // Fetch admin document using UID
+      const adminRef = doc(db, "admins", user.uid);
+      const adminSnap = await getDoc(adminRef);
 
-      // Check Firestore admins collection using email
-      const q = query(
-        collection(db, "admins"),
-        where("email", "==", user.email)
-      );
-
-      const snapshot = await getDocs(q);
-
-      if (snapshot.empty) {
+      // Admin document doesn't exist
+      if (!adminSnap.exists()) {
+        await signOut(auth);
         setMessage("Access denied. You are not an admin.");
         return;
       }
 
-      // Read admin document
-      const adminData = snapshot.docs[0].data();
-localStorage.setItem("adminName", adminData.name || "Admin");
+      const adminData = adminSnap.data();
 
+      // Validate role
       if (adminData.role !== "admin") {
+        await signOut(auth);
         setMessage("Invalid admin account.");
         return;
       }
 
-      // Save session
+      // Clear any previous session values
+      localStorage.removeItem("adminUid");
+      localStorage.removeItem("adminEmail");
+      localStorage.removeItem("adminName");
+      localStorage.removeItem("uid");
+      localStorage.removeItem("email");
+
+      // Save admin session
       localStorage.setItem("adminUid", user.uid);
       localStorage.setItem("adminEmail", user.email);
+      localStorage.setItem("adminName", adminData.name || "Admin");
 
-      // Also save normal session (AdminRoute uses these)
+      // Save common session (used elsewhere in your app)
       localStorage.setItem("uid", user.uid);
       localStorage.setItem("email", user.email);
 
       setMessage("Login successful!");
 
       setTimeout(() => {
-        navigate("/admin-dashboard");
+        navigate("/admin-dashboard", { replace: true });
       }, 1000);
-
     } catch (error) {
-      console.log(error);
+      console.error("Admin login error:", error);
 
       switch (error.code) {
         case "auth/invalid-credential":
+        case "auth/wrong-password":
           setMessage("Invalid email or password.");
           break;
 
@@ -84,18 +91,17 @@ localStorage.setItem("adminName", adminData.name || "Admin");
           setMessage("Admin account not found.");
           break;
 
-        case "auth/wrong-password":
-          setMessage("Incorrect password.");
+        case "auth/too-many-requests":
+          setMessage("Too many login attempts. Please try again later.");
           break;
 
-        case "auth/too-many-requests":
-          setMessage("Too many attempts. Please try again later.");
+        case "auth/network-request-failed":
+          setMessage("Network error. Please check your internet connection.");
           break;
 
         default:
-          setMessage(error.message);
+          setMessage("Unable to sign in. Please try again.");
       }
-
     } finally {
       setLoading(false);
     }
@@ -104,19 +110,13 @@ localStorage.setItem("adminName", adminData.name || "Admin");
   return (
     <div className="admin-login-container">
       <div className="admin-login-card">
-
         <h1>PrintItUp Admin</h1>
 
         <p>Login to manage your store</p>
 
-        {message && (
-          <div className="admin-message">
-            {message}
-          </div>
-        )}
+        {message && <div className="admin-message">{message}</div>}
 
         <form onSubmit={handleLogin}>
-
           <label>Email</label>
 
           <input
@@ -125,6 +125,7 @@ localStorage.setItem("adminName", adminData.name || "Admin");
             value={email}
             onChange={(e) => setEmail(e.target.value)}
             required
+            autoComplete="email"
           />
 
           <label>Password</label>
@@ -135,17 +136,13 @@ localStorage.setItem("adminName", adminData.name || "Admin");
             value={password}
             onChange={(e) => setPassword(e.target.value)}
             required
+            autoComplete="current-password"
           />
 
-          <button
-            type="submit"
-            disabled={loading}
-          >
+          <button type="submit" disabled={loading}>
             {loading ? "Logging in..." : "Login"}
           </button>
-
         </form>
-
       </div>
     </div>
   );

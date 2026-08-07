@@ -1,6 +1,6 @@
 .cards-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
   gap: 25px;
   width: 100%;
 }
@@ -12,7 +12,7 @@
   border-radius: 18px;
   padding: 25px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
-  transition: 0.3s;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
   position: relative;
   overflow: hidden;
 }
@@ -31,12 +31,18 @@
 .card-icon {
   width: 60px;
   height: 60px;
+  min-width: 60px;
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   font-size: 24px;
   color: #fff;
+  transition: transform 0.3s ease;
+}
+
+.dashboard-card:hover .card-icon {
+  transform: scale(1.08) rotate(-4deg);
 }
 
 /* Card Colors */
@@ -59,15 +65,17 @@
 
 .dashboard-card h3 {
   color: #6b7280;
-  font-size: 16px;
+  font-size: 15px;
   font-weight: 500;
   margin-bottom: 10px;
+  letter-spacing: 0.2px;
 }
 
 .dashboard-card h2 {
   color: #111827;
-  font-size: 34px;
+  font-size: clamp(24px, 3vw, 34px);
   font-weight: 700;
+  word-break: break-word;
 }
 
 .dashboard-card::before {
@@ -75,7 +83,7 @@
   position: absolute;
   top: 0;
   left: 0;
-  width: 6px;
+  width: 5px;
   height: 100%;
 }
 
@@ -95,7 +103,93 @@
   background: #f59e0b;
 }
 
-@media (max-width: 768px) {
+.card-subtitle {
+  margin-top: 8px;
+  color: #6b7280;
+  font-size: 14px;
+  font-weight: 500;
+}
+
+/* ==========================
+   CANCELLED ORDERS CARD
+========================== */
+
+.cancelled-card::before {
+  background: #ef4444;
+}
+
+.cancelled-card .card-icon {
+  background: #fee2e2;
+  color: #ef4444;
+}
+
+/* ==========================
+   SKELETON LOADING STATE
+========================== */
+
+.dashboard-card.skeleton {
+  cursor: default;
+  pointer-events: none;
+}
+
+.dashboard-card.skeleton:hover {
+  transform: none;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.08);
+}
+
+.skeleton-block {
+  background: linear-gradient(
+    90deg,
+    #eef1f6 25%,
+    #f6f8fb 37%,
+    #eef1f6 63%
+  );
+  background-size: 400% 100%;
+  animation: skeletonShine 1.4s ease infinite;
+  border-radius: 8px;
+}
+
+.skeleton .card-icon {
+  background: #eef1f6;
+}
+
+.skeleton-title {
+  width: 60%;
+  height: 14px;
+  margin-bottom: 14px;
+}
+
+.skeleton-value {
+  width: 80%;
+  height: 28px;
+}
+
+@keyframes skeletonShine {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton-block {
+    animation: none;
+  }
+}
+
+/* ==========================
+   RESPONSIVE
+========================== */
+
+@media (max-width: 992px) {
+  .cards-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 640px) {
   .cards-grid {
     grid-template-columns: 1fr;
   }
@@ -104,25 +198,10 @@
     padding: 20px;
   }
 
-  .dashboard-card h2 {
-    font-size: 28px;
+  .card-icon {
+    width: 50px;
+    height: 50px;
+    min-width: 50px;
+    font-size: 20px;
   }
-}
-.card-subtitle {
-  margin-top: 8px;
-  color: #6b7280;
-  font-size: 14px;
-  font-weight: 500;
-}
-/* ==========================
-   CANCELLED ORDERS CARD
-========================== */
-
-.cancelled-card {
-  border-left: 4px solid #ef4444;
-}
-
-.cancelled-card .card-icon {
-  background: #fee2e2;
-  color: #ef4444;
 }

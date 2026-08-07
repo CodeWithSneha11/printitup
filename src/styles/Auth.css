@@ -28,19 +28,9 @@
 }
 
 @keyframes bgMove{
-
-    0%{
-        background-position:0% 50%;
-    }
-
-    50%{
-        background-position:100% 50%;
-    }
-
-    100%{
-        background-position:0% 50%;
-    }
-
+    0%{ background-position:0% 50%; }
+    50%{ background-position:100% 50%; }
+    100%{ background-position:0% 50%; }
 }
 
 /* ================================================= */
@@ -48,41 +38,23 @@
 /* ================================================= */
 
 .auth-card{
-
     width:100%;
     max-width:430px;
-
     padding:45px 38px;
-
     border-radius:24px;
-
     background:rgba(255,255,255,.08);
-
     backdrop-filter:blur(18px);
-
     border:1px solid rgba(255,255,255,.15);
-
     box-shadow:
-    0 15px 50px rgba(0,0,0,.35),
-    inset 0 1px rgba(255,255,255,.15);
-
+        0 15px 50px rgba(0,0,0,.35),
+        inset 0 1px rgba(255,255,255,.15);
     color:white;
-
     animation:fadeUp .6s ease;
 }
 
 @keyframes fadeUp{
-
-    from{
-        opacity:0;
-        transform:translateY(30px);
-    }
-
-    to{
-        opacity:1;
-        transform:translateY(0);
-    }
-
+    from{ opacity:0; transform:translateY(30px); }
+    to{ opacity:1; transform:translateY(0); }
 }
 
 /* ================================================= */
@@ -90,23 +62,18 @@
 /* ================================================= */
 
 .auth-card h2{
-
     font-size:34px;
-
     font-weight:700;
-
     margin-bottom:10px;
-
     color:#fff;
+    letter-spacing:-.5px;
 }
 
 .auth-subtitle{
-
     color:#cbd5e1;
-
     font-size:15px;
-
     margin-bottom:30px;
+    line-height:1.5;
 }
 
 /* ================================================= */
@@ -114,41 +81,30 @@
 /* ================================================= */
 
 .auth-card input{
-
     width:100%;
-
     padding:15px 18px;
-
-    margin-bottom:18px;
-
+    margin-bottom:16px;
     border-radius:14px;
-
     border:1px solid rgba(255,255,255,.12);
-
     outline:none;
-
-    background:rgba(255,255,255,.08);
-
+    background:rgba(255,255,255,.06);
     color:white;
-
     font-size:15px;
-
-    transition:.3s;
+    transition:border-color .25s ease, box-shadow .25s ease, background .25s ease;
 }
 
 .auth-card input::placeholder{
-
     color:#94a3b8;
 }
 
+.auth-card input:hover{
+    border-color:rgba(255,255,255,.22);
+}
+
 .auth-card input:focus{
-
     border-color:#ff4d6d;
-
-    box-shadow:
-    0 0 0 4px rgba(255,77,109,.15);
-
-    background:rgba(255,255,255,.12);
+    box-shadow:0 0 0 4px rgba(255,77,109,.15);
+    background:rgba(255,255,255,.1);
 }
 
 /* ================================================= */
@@ -156,76 +112,95 @@
 /* ================================================= */
 
 .password-wrapper{
-
     position:relative;
+    margin-bottom:8px;
 }
 
-.toggle-password{
+.password-wrapper input{
+    margin-bottom:0;
+    padding-right:48px;
+}
 
+/* Toggle-password sits inside .auth-card, so it inherits the
+   generic ".auth-card button" rules unless overridden below.
+   All positioning/hover states are re-declared explicitly so
+   they never inherit the primary button's lift/shadow. */
+.auth-card .toggle-password{
+    all:unset;
     position:absolute;
-
-    right:18px;
-
-    top:16px;
-
+    right:16px;
+    top:50%;
+    transform:translateY(-50%);
     cursor:pointer;
-
     color:#cbd5e1;
-
-    transition:.3s;
+    font-size:18px;
+    line-height:1;
+    padding:4px;
+    border-radius:8px;
+    transition:color .2s ease, background .2s ease;
 }
 
-.toggle-password:hover{
-
+.auth-card .toggle-password:hover,
+.auth-card .toggle-password:focus-visible{
     color:white;
+    background:rgba(255,255,255,.08);
+    transform:translateY(-50%);
+}
+
+.auth-card .toggle-password:active{
+    transform:translateY(-50%) scale(.92);
 }
 
 /* ================================================= */
-/* LOGIN BUTTON */
+/* FORGOT PASSWORD */
 /* ================================================= */
 
-.auth-card button{
+.forgot-row{
+    display:flex;
+    justify-content:flex-end;
+    margin-bottom:22px;
+}
 
+.forgot-row a{
+    color:#cbd5e1;
+    font-size:13.5px;
+    text-decoration:none;
+    transition:color .2s ease;
+}
+
+.forgot-row a:hover{
+    color:#ff4d6d;
+}
+
+/* ================================================= */
+/* PRIMARY BUTTON (Login) */
+/* ================================================= */
+
+.auth-card .primary-btn{
     width:100%;
-
     padding:15px;
-
     border:none;
-
     border-radius:50px;
-
     background:linear-gradient(135deg,#ff4d6d,#ff1e56);
-
     color:white;
-
     font-size:16px;
-
     font-weight:600;
-
     cursor:pointer;
-
-    transition:.35s;
-
-    margin-top:10px;
+    transition:transform .3s ease, box-shadow .3s ease, opacity .3s ease;
+    margin-top:4px;
 }
 
-.auth-card button:hover{
-
+.auth-card .primary-btn:hover:not(:disabled){
     transform:translateY(-3px);
-
-    box-shadow:
-    0 12px 30px rgba(255,77,109,.35);
+    box-shadow:0 12px 30px rgba(255,77,109,.35);
 }
 
-.auth-card button:active{
-
+.auth-card .primary-btn:active:not(:disabled){
     transform:scale(.98);
 }
 
-.auth-card button:disabled{
-
+.auth-card .primary-btn:disabled{
     opacity:.6;
-
     cursor:not-allowed;
 }
 
@@ -234,33 +209,24 @@
 /* ================================================= */
 
 .auth-divider{
-
     display:flex;
-
     align-items:center;
-
-    margin:28px 0;
+    margin:26px 0;
 }
 
 .auth-divider::before,
 .auth-divider::after{
-
     content:"";
-
     flex:1;
-
     height:1px;
-
     background:rgba(255,255,255,.18);
 }
 
 .auth-divider span{
-
     padding:0 15px;
-
     color:#cbd5e1;
-
-    font-size:14px;
+    font-size:13px;
+    letter-spacing:.5px;
 }
 
 /* ================================================= */
@@ -268,49 +234,39 @@
 /* ================================================= */
 
 .google-login-btn{
-
     width:100%;
-
     padding:15px;
-
     border-radius:50px;
-
     border:1px solid rgba(255,255,255,.15);
-
     background:white;
-
     color:#222;
-
     display:flex;
-
     justify-content:center;
-
     align-items:center;
-
     gap:12px;
-
     font-weight:600;
-
     font-size:15px;
-
     cursor:pointer;
-
-    transition:.3s;
+    transition:transform .3s ease, box-shadow .3s ease, background .3s ease, opacity .3s ease;
 }
 
-.google-login-btn:hover{
-
+.google-login-btn:hover:not(:disabled){
     transform:translateY(-3px);
-
     box-shadow:0 10px 30px rgba(255,255,255,.18);
-
     background:#fafafa;
 }
 
+.google-login-btn:active:not(:disabled){
+    transform:scale(.98);
+}
+
+.google-login-btn:disabled{
+    opacity:.6;
+    cursor:not-allowed;
+}
+
 .google-login-btn svg{
-
-    font-size:22px;
-
+    font-size:20px;
     color:#DB4437;
 }
 
@@ -319,29 +275,20 @@
 /* ================================================= */
 
 .auth-switch{
-
     margin-top:28px;
-
     text-align:center;
-
     color:#cbd5e1;
-
     font-size:15px;
 }
 
 .auth-switch a{
-
     color:#ff4d6d;
-
     text-decoration:none;
-
     font-weight:600;
-
-    transition:.3s;
+    transition:color .3s ease;
 }
 
 .auth-switch a:hover{
-
     color:#ff7d95;
 }
 
@@ -350,29 +297,14 @@
 /* ================================================= */
 
 .error-box{
-
     margin-bottom:18px;
-
     padding:14px;
-
     border-radius:12px;
-
     background:rgba(239,68,68,.15);
-
     border:1px solid rgba(239,68,68,.35);
-
     color:#fecaca;
-
     font-size:14px;
-}
-
-/* ================================================= */
-/* LOADER */
-/* ================================================= */
-
-.auth-card button:disabled::after{
-
-    margin-left:10px;
+    animation:fadeUp .3s ease;
 }
 
 /* ================================================= */
@@ -380,37 +312,12 @@
 /* ================================================= */
 
 @media(max-width:768px){
-
-.auth-container{
-
-    padding:20px;
-}
-
-.auth-card{
-
-    padding:35px 25px;
-}
-
-.auth-card h2{
-
-    font-size:28px;
-}
-
-.auth-subtitle{
-
-    font-size:14px;
-}
-
-.auth-card input{
-
-    padding:14px;
-}
-
-.google-login-btn{
-
-    padding:14px;
-}
-
+    .auth-container{ padding:20px; }
+    .auth-card{ padding:35px 25px; }
+    .auth-card h2{ font-size:28px; }
+    .auth-subtitle{ font-size:14px; }
+    .auth-card input{ padding:14px; }
+    .google-login-btn{ padding:14px; }
 }
 
 /* ================================================= */
@@ -418,20 +325,7 @@
 /* ================================================= */
 
 @media(max-width:420px){
-
-.auth-card{
-
-    padding:30px 20px;
-}
-
-.auth-card h2{
-
-    font-size:24px;
-}
-
-.auth-switch{
-
-    font-size:14px;
-}
-
+    .auth-card{ padding:30px 20px; }
+    .auth-card h2{ font-size:24px; }
+    .auth-switch{ font-size:14px; }
 }

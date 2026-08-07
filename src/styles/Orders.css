@@ -16,6 +16,10 @@
   --ink-teal-soft: #e4f3f0;
   --ink-blue: #2455d6;
   --ink-blue-soft: #e9eefc;
+  --ink-purple: #7c3aed;
+  --ink-purple-soft: #f1ecfd;
+  --ink-cyan: #0e8a9c;
+  --ink-cyan-soft: #e3f6f8;
 
   --radius-lg: 16px;
   --radius-md: 10px;
@@ -210,12 +214,14 @@
 }
 
 /* ===========================
-   STATUS — each status wears a
-   different ink color, the way
-   a screen printer color-codes
-   a run sheet. Delivered
-   resolves to solid ink: the
-   job is finished.
+   STATUS — each production stage
+   wears a different ink color, the
+   way a screen printer color-codes
+   a run sheet. Printing runs hot
+   red (ink on press), Quality Check
+   is a considered purple, Delivered
+   resolves to solid ink: the job is
+   finished.
 =========================== */
 
 .status-select {
@@ -248,6 +254,13 @@
   box-shadow: 0 0 0 3px rgba(20, 22, 27, 0.1);
 }
 
+.status-select:disabled {
+  opacity: 0.65;
+  cursor: not-allowed;
+  background-image: none;
+  padding-right: 12px;
+}
+
 .status-select[data-status="Pending"] {
   background-color: var(--ink-gold-soft);
   color: var(--ink-gold);
@@ -260,9 +273,21 @@
   border-color: transparent;
 }
 
+.status-select[data-status="Printing"] {
+  background-color: var(--ink-red-soft);
+  color: var(--ink-red);
+  border-color: transparent;
+}
+
 .status-select[data-status="Shipped"] {
   background-color: var(--ink-blue-soft);
   color: var(--ink-blue);
+  border-color: transparent;
+}
+
+.status-select[data-status="Out for Delivery"] {
+  background-color: var(--ink-cyan-soft);
+  color: var(--ink-cyan);
   border-color: transparent;
 }
 
@@ -270,6 +295,12 @@
   background-color: var(--ink-900);
   color: #fff;
   border-color: transparent;
+}
+
+.status-select[data-status="Cancelled"] {
+  background-color: var(--paper);
+  color: var(--ink-400);
+  border-color: var(--line);
 }
 
 /* ===========================
@@ -311,6 +342,7 @@
 
 .delete-btn:hover {
   background: var(--ink-red-soft);
+  color: var(--ink-red);
 }
 
 /* ===========================
@@ -403,6 +435,90 @@
 .close-btn:hover {
   background: var(--ink-red-soft);
   color: var(--ink-red);
+}
+
+/* ===========================
+   ADMIN PROGRESS TRACKER
+   (mirrors the customer-facing
+   tracker so admins see the same
+   production stages at a glance)
+=========================== */
+
+.admin-progress {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: 4px 0 26px;
+  padding: 20px 12px;
+  background: var(--paper);
+  border-radius: var(--radius-md);
+  border: 1px solid var(--line);
+}
+
+.admin-progress-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+  text-align: center;
+}
+
+.admin-progress-step-top {
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.admin-progress-icon {
+  width: 30px;
+  height: 30px;
+  min-width: 30px;
+  border-radius: 50%;
+  background: var(--paper-raised);
+  border: 1.5px solid var(--line);
+  color: var(--ink-400);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  z-index: 2;
+  margin: 0 auto;
+}
+
+.admin-progress-icon.done {
+  background: var(--ink-900);
+  border-color: var(--ink-900);
+  color: #fff;
+}
+
+.admin-progress-icon.current {
+  background: var(--ink-red);
+  border-color: var(--ink-red);
+  color: #fff;
+  box-shadow: 0 0 0 4px var(--ink-red-soft);
+}
+
+.admin-progress-connector {
+  flex: 1;
+  height: 2px;
+  background: var(--line);
+  margin-top: 15px;
+}
+
+.admin-progress-connector.done {
+  background: var(--ink-900);
+}
+
+.admin-progress-label {
+  margin-top: 8px;
+  font-size: 10.5px;
+  color: var(--ink-400);
+  max-width: 76px;
+}
+
+.admin-progress-label.active {
+  color: var(--ink-900);
+  font-weight: 600;
 }
 
 /* ===========================
@@ -626,6 +742,15 @@
 
   .customer-section p strong {
     width: 90px;
+  }
+
+  .admin-progress {
+    padding: 16px 8px;
+  }
+
+  .admin-progress-label {
+    font-size: 9px;
+    max-width: 56px;
   }
 }
 

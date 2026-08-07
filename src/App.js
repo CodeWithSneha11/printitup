@@ -35,6 +35,9 @@ import Collections from "./pages/Collections";
 import Analytics from "./pages/Analytics";
 import AdminSettings from "./pages/AdminSettings";
 import AdminSearch from "./pages/AdminSearch";
+import AdminPricingSettings from "./pages/AdminPricingSettings";
+
+
 
 function AppContent() {
   const location = useLocation();
@@ -166,6 +169,7 @@ element={<ManageAddress/>}
   <Route path="collections" element={<Collections />} />
   <Route path="users" element={<Users />} />
   <Route path="settings"element={<AdminSettings />}/>
+  <Route path="pricing" element={<AdminPricingSettings />} />
 <Route path="search" element={<AdminSearch />} />
 </Route>
 

@@ -9,20 +9,51 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import {
+  FaClipboardList,
+  FaCheckCircle,
+  FaPrint,
+  FaBoxOpen,
+  FaTruck,
+  FaHome,
+} from "react-icons/fa";
 import "../styles/Orders.css";
 
+// Ordered production pipeline for a custom-print T-shirt order.
+// Cancelled is intentionally NOT part of this list — it's a side
+// exit, not a forward stage — and is appended separately wherever
+// a full option list (dropdowns) is needed.
+const ORDER_STATUSES = [
+  { key: "Pending", label: "Pending", icon: <FaClipboardList /> },
+  { key: "Confirmed", label: "Confirmed", icon: <FaCheckCircle /> },
+  { key: "Printing", label: "Printing", icon: <FaPrint /> },
+  { key: "Shipped", label: "Shipped", icon: <FaBoxOpen /> },
+  { key: "Out for Delivery", label: "Out for Delivery", icon: <FaTruck /> },
+  { key: "Delivered", label: "Delivered", icon: <FaHome /> },
+];
+
 // Notification copy for each status. Add/edit statuses here if you
-// introduce new ones (e.g. "Out for Delivery", "Cancelled").
+// introduce new ones.
 const STATUS_NOTIFICATIONS = {
   Confirmed: {
     title: "Order Confirmed",
     message: (id) => `Your order #${id} has been confirmed by PrintItUp.`,
   },
 
+  Printing: {
+    title: "Printing Started",
+    message: (id) =>
+      `Great news! Your custom design for order #${id} is now on the press.`,
+  },
   Shipped: {
     title: "Order Shipped",
     message: (id) =>
       `Your order #${id} has been shipped and is on its way.`,
+  },
+
+  "Out for Delivery": {
+    title: "Out for Delivery",
+    message: (id) => `Your order #${id} is out for delivery. Almost there!`,
   },
 
   Delivered: {
@@ -35,6 +66,60 @@ const STATUS_NOTIFICATIONS = {
     message: (id) =>
       `Your order #${id} has been cancelled.`,
   },
+};
+
+// Once an order reaches one of these, the admin status control locks —
+// there's nothing further to progress or correct from the dropdown.
+const FINAL_STATUSES = ["Delivered", "Cancelled"];
+
+const getStatusIndex = (status) =>
+  ORDER_STATUSES.findIndex((s) => s.key === status);
+
+// Compact production-stage tracker shown inside the order modal so
+// admins get the same at-a-glance progress view customers see.
+const AdminProgress = ({ status }) => {
+  if (status === "Cancelled") return null;
+
+  const currentIndex = getStatusIndex(status);
+
+  return (
+    <div className="admin-progress">
+      {ORDER_STATUSES.map((step, index) => {
+        const isDone = index < currentIndex;
+        const isCurrent = index === currentIndex;
+
+        return (
+          <div className="admin-progress-step" key={step.key}>
+            <div className="admin-progress-step-top">
+              <div
+                className={`admin-progress-icon ${isDone ? "done" : ""} ${
+                  isCurrent ? "current" : ""
+                }`}
+              >
+                {step.icon}
+              </div>
+
+              {index < ORDER_STATUSES.length - 1 && (
+                <div
+                  className={`admin-progress-connector ${
+                    isDone ? "done" : ""
+                  }`}
+                />
+              )}
+            </div>
+
+            <span
+              className={`admin-progress-label ${
+                isDone || isCurrent ? "active" : ""
+              }`}
+            >
+              {step.label}
+            </span>
+          </div>
+        );
+      })}
+    </div>
+  );
 };
 
 const Orders = () => {
@@ -82,22 +167,17 @@ const Orders = () => {
     try {
       // Update order status
 
-     const updateData = {
-  status: newStatus,
-};
+      const updateData = {
+        status: newStatus,
+      };
 
+      if (newStatus === "Cancelled") {
+        updateData.cancelledAt = serverTimestamp();
+        updateData.cancelledBy = "admin";
+        updateData.cancellationReason = "Cancelled by admin";
+      }
 
-if (newStatus === "Cancelled") {
-  updateData.cancelledAt = serverTimestamp();
-  updateData.cancelledBy = "admin";
-  updateData.cancellationReason = "Cancelled by admin";
-}
-
-
-await updateDoc(
-  doc(db, "orders", order.id),
-  updateData
-);
+      await updateDoc(doc(db, "orders", order.id), updateData);
 
       // Send notification to customer for any status that has copy defined
 
@@ -194,13 +274,12 @@ await updateDoc(
               >
                 <option value="All">All Orders</option>
 
-                <option value="Pending">Pending</option>
+                {ORDER_STATUSES.map((s) => (
+                  <option key={s.key} value={s.key}>
+                    {s.label}
+                  </option>
+                ))}
 
-                <option value="Confirmed">Confirmed</option>
-
-                <option value="Shipped">Shipped</option>
-
-                <option value="Delivered">Delivered</option>
                 <option value="Cancelled">Cancelled</option>
               </select>
             </div>
@@ -253,16 +332,15 @@ await updateDoc(
                           className="status-select"
                           data-status={order.status}
                           value={order.status}
-                          disabled={order.status === "Cancelled"}
+                          disabled={FINAL_STATUSES.includes(order.status)}
                           onChange={(e) => updateStatus(order, e.target.value)}
                         >
-                          <option value="Pending">Pending</option>
+                          {ORDER_STATUSES.map((s) => (
+                            <option key={s.key} value={s.key}>
+                              {s.label}
+                            </option>
+                          ))}
 
-                          <option value="Confirmed">Confirmed</option>
-
-                          <option value="Shipped">Shipped</option>
-
-                          <option value="Delivered">Delivered</option>
                           <option value="Cancelled">Cancelled</option>
                         </select>
                       </td>
@@ -311,6 +389,8 @@ await updateDoc(
                       ✕
                     </button>
                   </div>
+
+                  <AdminProgress status={selectedOrder.status} />
 
                   <div className="customer-section">
                     <h3>Customer Information</h3>

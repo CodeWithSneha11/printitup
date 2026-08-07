@@ -16,6 +16,7 @@ function Signup() {
   const [name, setName] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   // Loading & Error
   const [loading, setLoading] = useState(false);
@@ -56,7 +57,28 @@ function Signup() {
       // Login page
       navigate("/login");
     } catch (err) {
-      setError(err.message);
+      console.log(err);
+
+      switch (err.code) {
+        case "auth/email-already-in-use":
+          setError("An account with this email already exists.");
+          break;
+
+        case "auth/invalid-email":
+          setError("Please enter a valid email address.");
+          break;
+
+        case "auth/weak-password":
+          setError("Password is too weak. Please choose a stronger one.");
+          break;
+
+        case "auth/network-request-failed":
+          setError("Network error. Please check your connection.");
+          break;
+
+        default:
+          setError("Something went wrong. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -100,18 +122,28 @@ function Signup() {
         />
 
         {/* Password */}
-        <input
-          type="password"
-          placeholder="Password"
-          required
-          value={password}
-          onChange={(e) =>
-            setPassword(e.target.value)
-          }
-        />
+        <div className="password-wrapper">
+          <input
+            type={showPassword ? "text" : "password"}
+            placeholder="Password"
+            required
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+          />
+
+          <button
+            type="button"
+            className="toggle-password"
+            onClick={() => setShowPassword(!showPassword)}
+            aria-label={showPassword ? "Hide password" : "Show password"}
+          >
+            {showPassword ? "🙈" : "👁"}
+          </button>
+        </div>
 
         <button
           type="submit"
+          className="primary-btn"
           disabled={loading}
         >
           {loading

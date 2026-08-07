@@ -351,7 +351,101 @@
   outline: 2px solid white;
   outline-offset: 3px;
 }
+/* ================================
+   BASE PRODUCT CARD
+   (was missing — hover/child rules existed with nothing to hover)
+================================ */
 
+.customer-product {
+  display: flex;
+  align-items: stretch;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  overflow: hidden;
+  cursor: pointer;
+  transition: transform 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+/* ================================
+   NO PREVIEW PRODUCTS
+================================ */
+
+.no-preview-products {
+  color: var(--slate);
+  font-size: 13.5px;
+  font-style: italic;
+  padding: 8px 0;
+}
+
+/* ================================
+   VIEW ALL BUTTON
+================================ */
+
+.view-products-btn {
+  margin-top: 16px;
+  width: 100%;
+  padding: 12px;
+  border: 1.5px solid var(--swatch, var(--ink));
+  background: transparent;
+  color: var(--swatch, var(--ink));
+  border-radius: 999px;
+  font-family: var(--font-body);
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background 0.2s ease, color 0.2s ease, transform 0.2s ease;
+}
+
+.view-products-btn:hover {
+  background: var(--swatch, var(--ink));
+  color: white;
+  transform: translateY(-2px);
+}
+
+.view-products-btn:focus-visible {
+  outline: 2px solid var(--ink-deep);
+  outline-offset: 2px;
+}
+
+/* ================================
+   EMPTY COLLECTIONS
+================================ */
+
+.empty-collections {
+  max-width: 480px;
+  margin: 60px auto;
+  text-align: center;
+  padding: 40px;
+  background: white;
+  border: 1px solid var(--line);
+  border-radius: 18px;
+}
+
+.empty-collections h3 {
+  font-family: var(--font-display);
+  color: var(--charcoal);
+  margin-bottom: 8px;
+}
+
+.empty-collections p {
+  color: var(--slate);
+  font-size: 14.5px;
+}
+
+/* ================================
+   LOADING
+================================ */
+
+.loading-container {
+  min-height: 60vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: var(--slate);
+  font-size: 17px;
+  font-weight: 600;
+}
 /* ================================
    RESPONSIVE
 ================================ */

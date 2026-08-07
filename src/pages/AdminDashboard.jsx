@@ -10,6 +10,8 @@ import RecentOrders from "../components/RecentOrders";
 
 import "../styles/AdminDashboard.css";
 
+const SKELETON_CARDS = 5;
+
 const AdminDashboard = () => {
   const navigate = useNavigate();
 
@@ -22,6 +24,7 @@ const AdminDashboard = () => {
   const [newUsersToday, setNewUsersToday] = useState(0);
 
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState("");
   const [recentOrders, setRecentOrders] = useState([]);
 
   useEffect(() => {
@@ -38,6 +41,7 @@ const AdminDashboard = () => {
   const fetchDashboard = async () => {
     try {
       setLoading(true);
+      setError("");
 
       // --------------------
       // Fetch Orders
@@ -85,7 +89,7 @@ const AdminDashboard = () => {
 
       setUsers(userList);
 
-          const today = new Date();
+      const today = new Date();
       today.setHours(0, 0, 0, 0);
 
       // -------------------------
@@ -132,8 +136,9 @@ const AdminDashboard = () => {
       });
 
       setNewUsersToday(todaysUsers.length);
-    } catch (error) {
-      console.log("Dashboard Error:", error);
+    } catch (err) {
+      console.log("Dashboard Error:", err);
+      setError("Couldn't load dashboard data. Please try again.");
     } finally {
       setLoading(false);
     }
@@ -144,9 +149,7 @@ const AdminDashboard = () => {
   // -----------------------
 
   // Active Orders (excluding cancelled)
-  const activeOrders = orders.filter(
-    (order) => order.status !== "Cancelled"
-  );
+  const activeOrders = orders.filter((order) => order.status !== "Cancelled");
 
   // Total Revenue (excluding cancelled)
   const totalRevenue = activeOrders.reduce(
@@ -164,11 +167,34 @@ const AdminDashboard = () => {
     (order) => order.status === "Cancelled"
   ).length;
 
-
-        return (
+  return (
     <div className="admin-content">
+      <div className="admin-header">
+        <h1 className="admin-title">Dashboard</h1>
+        <p className="admin-subtitle">
+          Here's what's happening with your store today.
+        </p>
+      </div>
+
+      {error && !loading && (
+        <div className="dashboard-error">
+          {error}
+          <button onClick={fetchDashboard}>Retry</button>
+        </div>
+      )}
+
       {loading ? (
-        <h2>Loading Dashboard...</h2>
+        <div className="cards-grid">
+          {Array.from({ length: SKELETON_CARDS }).map((_, i) => (
+            <div className="dashboard-card skeleton" key={i}>
+              <div className="card-top">
+                <div className="card-icon"></div>
+              </div>
+              <div className="skeleton-block skeleton-title"></div>
+              <div className="skeleton-block skeleton-value"></div>
+            </div>
+          ))}
+        </div>
       ) : (
         <>
           <DashboardCards
@@ -182,7 +208,6 @@ const AdminDashboard = () => {
           <TodaysSummary
             todayOrders={todayOrders}
             todayRevenue={todayRevenue}
-            
             newUsers={newUsersToday}
           />
 

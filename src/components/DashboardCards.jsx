@@ -9,74 +9,56 @@ import {
 
 import "../styles/DashboardCards.css";
 
-const DashboardCards = ({
-  orders,
-  revenue,
-  users,
-  pending,
-  cancelled,
-}) => {
+const formatINR = (num) =>
+  new Intl.NumberFormat("en-IN").format(Number(num) || 0);
 
+const DashboardCards = ({ orders, revenue, users, pending, cancelled }) => {
   const cards = [
     {
       title: "Total Orders",
-      value: orders,
+      value: formatINR(orders),
       icon: <FaShoppingCart />,
       className: "orders-card",
     },
     {
       title: "Revenue",
-      value: `₹${revenue}`,
+      value: `₹${formatINR(revenue)}`,
       icon: <FaRupeeSign />,
       className: "revenue-card",
     },
     {
-  title: "Total Users",
-  value: users,
-  icon: <FaUsers />,
-  className: "users-card",
-},
+      title: "Total Users",
+      value: formatINR(users),
+      icon: <FaUsers />,
+      className: "users-card",
+    },
     {
       title: "Pending Orders",
-      value: pending,
+      value: formatINR(pending),
       icon: <FaClock />,
       className: "pending-card",
     },
     {
-  title: "Cancelled Orders",
-  value: cancelled,
-  icon: <FaBan />,
-  className: "cancelled-card",
-},
+      title: "Cancelled Orders",
+      value: formatINR(cancelled),
+      icon: <FaBan />,
+      className: "cancelled-card",
+    },
   ];
 
   return (
     <div className="cards-grid">
-
       {cards.map((card, index) => (
-
-        <div
-          key={index}
-          className={`dashboard-card ${card.className}`}
-        >
-
+        <div key={index} className={`dashboard-card ${card.className}`}>
           <div className="card-top">
-
-            <div className="card-icon">
-              {card.icon}
-            </div>
-
+            <div className="card-icon">{card.icon}</div>
           </div>
 
           <h3>{card.title}</h3>
 
-          <h2>{card.value.toLocaleString()}</h2>
-          
-
+          <h2>{card.value}</h2>
         </div>
-
       ))}
-
     </div>
   );
 };

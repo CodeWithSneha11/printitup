@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 import { db } from "../firebase";
 import "../styles/Customize.css";
 import TShirt3DPreview, {
@@ -12,6 +12,7 @@ import {
   query,
   where,
   getDocs,
+  getDoc,
   updateDoc,
   doc,
 } from "firebase/firestore";
@@ -27,6 +28,10 @@ import {
   FaCrosshairs,
   FaMinus,
   FaPlus,
+  FaAlignLeft,
+  FaAlignCenter,
+  FaAlignRight,
+  FaBolt,
 } from "react-icons/fa";
 import { Rnd } from "react-rnd";
 
@@ -39,6 +44,24 @@ const ALLOWED_IMAGE_TYPES = [
   "image/webp",
 ];
 
+// Print-quality thresholds. Below LOW_QUALITY_DIMENSION we warn strongly;
+// between that and MIN_IMAGE_DIMENSION we give a softer heads-up.
+const MIN_IMAGE_DIMENSION = 1000; // px, recommended minimum for a sharp print
+const LOW_QUALITY_DIMENSION = 600; // px, below this the print will likely look blurry/pixelated
+
+// Safe margin (px) kept between an aligned element and the canvas edge,
+// so "left"/"right" alignment doesn't slam the design right up against
+// (or past) the shirt's boundary.
+const CANVAS_ALIGN_PADDING = 20;
+
+// Default layout for a fresh design — used both on initial mount and
+// whenever resetDesign() clears the canvas, so leftover drag/resize
+// coordinates from a previous design never leak into the next one.
+const DEFAULT_IMAGE_POSITION = { x: 100, y: 80 };
+const DEFAULT_IMAGE_SIZE = { width: 100, height: 100 };
+const DEFAULT_TEXT_POSITION = { x: 90, y: 220 };
+const DEFAULT_TEXT_SIZE = { width: 150, height: 50 };
+
 const tshirtColors = [
   { name: "White", code: "#ffffff" },
   { name: "Black", code: "#111111" },
@@ -50,8 +73,22 @@ const tshirtColors = [
 
 const sizes = ["XS", "S", "M", "L", "XL", "XXL"];
 
+// Fallback pricing used only until the live config loads from Firestore,
+// or if that document doesn't exist / fails to load. Keep these in sync
+// with the defaults you seed in Firestore so the price never jumps
+// visibly once the real config arrives.
+const DEFAULT_PRICING = {
+  basePrice: 499,
+  backPrintCharge: 50,
+  imageUploadCharge: 100,
+  sizeCharges: { XS: 0, S: 0, M: 0, L: 0, XL: 50, XXL: 80 },
+};
+
+const PRICING_DOC_PATH = ["settings", "pricing"]; // db collection, doc id
+
 const Customize = () => {
   const location = useLocation();
+  const navigate = useNavigate();
 
   // Product passed in from the Collections page, if the user arrived
   // via "Customize this product" rather than a direct visit.
@@ -82,31 +119,88 @@ const Customize = () => {
   const [uploadProgress, setUploadProgress] = useState("");
   const [message, setMessage] = useState("");
 
-  // Save and cart actions have independent loading states so one
-  // doesn't block the other's button from showing its own spinner.
+  // Save / cart / buy-now actions each have independent loading states
+  // so one doesn't block the others from showing their own spinner.
   const [savingDesign, setSavingDesign] = useState(false);
   const [addingCart, setAddingCart] = useState(false);
+  const [buyingNow, setBuyingNow] = useState(false);
+
+  // Low-quality image warning shown as a popup rather than the inline
+  // message strip. null = no popup. Shape: { severity: "low" | "soft", width, height }
+  const [qualityWarning, setQualityWarning] = useState(null);
 
   const [cloudinaryUrl, setCloudinaryUrl] = useState("");
 
   const [use3D, setUse3D] = useState(false);
   const [selectedElement, setSelectedElement] = useState(null);
 
-  const [imagePosition, setImagePosition] = useState({ x: 100, y: 80 });
-  const [imageSize, setImageSize] = useState({ width: 100, height: 100 });
-  const [textPosition, setTextPosition] = useState({ x: 90, y: 220 });
-  const [textSize, setTextSize] = useState({ width: 150, height: 50 });
+  const [imagePosition, setImagePosition] = useState(DEFAULT_IMAGE_POSITION);
+  const [imageSize, setImageSize] = useState(DEFAULT_IMAGE_SIZE);
+  const [textPosition, setTextPosition] = useState(DEFAULT_TEXT_POSITION);
+  const [textSize, setTextSize] = useState(DEFAULT_TEXT_SIZE);
+
+  // Admin-configurable pricing, loaded from Firestore (settings/pricing).
+  // Starts out as the local fallback so the UI never shows a blank price
+  // while the real config is in flight.
+  const [pricingConfig, setPricingConfig] = useState(DEFAULT_PRICING);
+  const [pricingLoaded, setPricingLoaded] = useState(false);
 
   // Reference to the rendered shirt canvas, used to measure available
-  // space when centering an element.
+  // space when aligning an element.
   const canvasRef = useRef(null);
 
+  // Tracks the image file currently "in flight" for dimension checking,
+  // so a stale async result can't pop the quality modal after the user
+  // has already removed that image (or replaced it with a new one).
+  const pendingQualityCheckRef = useRef(null);
+
   const hasDesignContent = Boolean(text.trim() || image);
+  const anyActionInProgress = savingDesign || addingCart || buyingNow;
 
   useEffect(() => {
     if (!isWebGLAvailable()) {
       setUse3D(false);
     }
+  }, []);
+
+  // Load admin-set pricing once on mount. If the document is missing or
+  // the read fails, we silently keep DEFAULT_PRICING rather than blocking
+  // the page — pricing should degrade gracefully, not break checkout.
+  useEffect(() => {
+    let cancelled = false;
+
+    const loadPricing = async () => {
+      try {
+        const snap = await getDoc(doc(db, ...PRICING_DOC_PATH));
+
+        if (!cancelled && snap.exists()) {
+          const data = snap.data();
+
+          setPricingConfig({
+            basePrice: Number(data.basePrice ?? DEFAULT_PRICING.basePrice),
+            backPrintCharge: Number(
+              data.backPrintCharge ?? DEFAULT_PRICING.backPrintCharge,
+            ),
+            imageUploadCharge: Number(
+              data.imageUploadCharge ?? DEFAULT_PRICING.imageUploadCharge,
+            ),
+            sizeCharges: {
+              ...DEFAULT_PRICING.sizeCharges,
+              ...(data.sizeCharges || {}),
+            },
+          });
+        }
+      } catch (err) {
+        console.warn("Could not load pricing config, using defaults:", err);
+      } finally {
+        if (!cancelled) setPricingLoaded(true);
+      }
+    };
+
+    loadPricing();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Pre-fill fields from the product passed via the Collections page.
@@ -153,11 +247,14 @@ const Customize = () => {
     if (incomingDesign.textSize) setTextSize(incomingDesign.textSize);
   }, [editMode, incomingDesign]);
 
-  let finalPrice = 499;
-  if (image) finalPrice += 100;
-  if (side === "back") finalPrice += 50;
-  if (selectedSize === "XL") finalPrice += 50;
-  if (selectedSize === "XXL") finalPrice += 80;
+  // Price is now fully driven by pricingConfig (admin-controlled via
+  // Firestore) instead of hardcoded numbers.
+  const backPrintCharge = side === "back" ? pricingConfig.backPrintCharge : 0;
+  const imageCharge = image ? pricingConfig.imageUploadCharge : 0;
+  const sizeCharge = pricingConfig.sizeCharges[selectedSize] || 0;
+
+  const finalPrice =
+    pricingConfig.basePrice + backPrintCharge + imageCharge + sizeCharge;
 
   const orderTotal = finalPrice * quantity;
 
@@ -227,6 +324,25 @@ const Customize = () => {
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedElement, image]);
 
+  // Reads an image file's real pixel dimensions (not its file size) so
+  // we can warn the user if it's too small to print sharply.
+  const getImageDimensions = (file) =>
+    new Promise((resolve, reject) => {
+      const img = new Image();
+      const objectUrl = URL.createObjectURL(file);
+
+      img.onload = () => {
+        resolve({ width: img.naturalWidth, height: img.naturalHeight });
+        URL.revokeObjectURL(objectUrl);
+      };
+      img.onerror = () => {
+        URL.revokeObjectURL(objectUrl);
+        reject(new Error("Could not read image dimensions."));
+      };
+
+      img.src = objectUrl;
+    });
+
   // Shared validation + upload path for a chosen image, used by both
   // the file input and the drag-and-drop dropzone.
   const processImageFile = async (file) => {
@@ -249,6 +365,34 @@ const Customize = () => {
     setImage(URL.createObjectURL(file));
     setSelectedElement("image");
 
+    // Mark this file as the one we're currently checking, so a stale
+    // async result (from a file the user has since removed/replaced)
+    // can't pop the quality modal after the fact.
+    pendingQualityCheckRef.current = file;
+
+    // Quality check — informational only, never blocks the upload.
+    // Low-resolution results surface as a popup (qualityWarning) rather
+    // than the inline message strip, so they're hard to miss.
+    try {
+      const { width, height } = await getImageDimensions(file);
+
+      if (pendingQualityCheckRef.current !== file) {
+        // A newer file has since been selected, or this one was removed —
+        // ignore this now-stale result.
+        return;
+      }
+
+      if (width < LOW_QUALITY_DIMENSION || height < LOW_QUALITY_DIMENSION) {
+        setQualityWarning({ severity: "low", width, height });
+      } else if (width < MIN_IMAGE_DIMENSION || height < MIN_IMAGE_DIMENSION) {
+        setQualityWarning({ severity: "soft", width, height });
+      } else {
+        setQualityWarning(null);
+      }
+    } catch (dimErr) {
+      console.warn("Could not verify image quality:", dimErr);
+    }
+
     try {
       await uploadImageToCloudinary(file);
     } catch (error) {
@@ -257,7 +401,13 @@ const Customize = () => {
     }
   };
 
-  const handleImageUpload = (e) => processImageFile(e.target.files[0]);
+  const handleImageUpload = (e) => {
+    const file = e.target.files[0];
+    processImageFile(file);
+    // Reset the input value so selecting the same file again (e.g. after
+    // removing it) still fires onChange.
+    e.target.value = "";
+  };
 
   const handleDropzoneDragOver = (e) => {
     e.preventDefault();
@@ -276,9 +426,24 @@ const Customize = () => {
     if (image && image.startsWith("blob:")) {
       URL.revokeObjectURL(image);
     }
+    // Invalidate any in-flight quality check for the file being removed.
+    pendingQualityCheckRef.current = null;
     setImage(null);
     setImageFile(null);
     setCloudinaryUrl("");
+    setQualityWarning(null);
+    // Keep selection state in sync — if the image was the selected
+    // element, there's nothing left to have selected.
+    setSelectedElement((prev) => (prev === "image" ? null : prev));
+  };
+
+  // Dismiss the quality popup and keep the image as-is.
+  const keepLowQualityImage = () => setQualityWarning(null);
+
+  // Dismiss the quality popup and remove the offending image so the
+  // user can pick a better one.
+  const discardLowQualityImage = () => {
+    removeImage();
   };
 
   const resetDesign = () => {
@@ -292,6 +457,8 @@ const Customize = () => {
     if (image && image.startsWith("blob:")) {
       URL.revokeObjectURL(image);
     }
+
+    pendingQualityCheckRef.current = null;
 
     setText("");
     setSide("front");
@@ -307,6 +474,14 @@ const Customize = () => {
     setCloudinaryUrl("");
     setMessage("");
     setSelectedElement(null);
+    setQualityWarning(null);
+
+    // Restore layout back to defaults so the next design doesn't inherit
+    // stale drag/resize coordinates from whatever was on the canvas before.
+    setImagePosition(DEFAULT_IMAGE_POSITION);
+    setImageSize(DEFAULT_IMAGE_SIZE);
+    setTextPosition(DEFAULT_TEXT_POSITION);
+    setTextSize(DEFAULT_TEXT_SIZE);
 
     // Clears the product association too, since the design no longer
     // reflects the product that was originally passed in.
@@ -442,6 +617,43 @@ const Customize = () => {
     }
   };
 
+  // Shared cart-write logic used by both "Add to Cart" and "Buy Now" —
+  // builds the design, then either bumps an existing matching cart row's
+  // quantity or inserts a new one. Returns "updated" or "added".
+  const addDesignToCart = async () => {
+    const uid = localStorage.getItem("uid");
+
+    if (!uid) {
+      throw new Error("Please login first.");
+    }
+
+    const designData = await buildDesignData();
+
+    const q = query(
+      collection(db, "cart"),
+      where("uid", "==", uid),
+      where("designId", "==", designData.designId),
+    );
+
+    const snapshot = await getDocs(q);
+    const existingDoc = snapshot.docs.find(
+      (docSnap) => docSnap.data().designId === designData.designId,
+    );
+
+    if (existingDoc) {
+      const existingData = existingDoc.data();
+
+      await updateDoc(doc(db, "cart", existingDoc.id), {
+        quantity: (existingData.quantity || 1) + quantity,
+      });
+
+      return "updated";
+    }
+
+    await addDoc(collection(db, "cart"), { ...designData, quantity });
+    return "added";
+  };
+
   const addToCart = async () => {
     if (!hasDesignContent) {
       setMessage("❌ Add some text or an image before adding to cart.");
@@ -452,42 +664,12 @@ const Customize = () => {
       setAddingCart(true);
       setMessage("");
 
-      const uid = localStorage.getItem("uid");
-
-      if (!uid) {
-        throw new Error("Please login first.");
-      }
-
-      const designData = await buildDesignData();
-
-      const q = query(
-        collection(db, "cart"),
-        where("uid", "==", uid),
-        where("designId", "==", designData.designId),
+      const result = await addDesignToCart();
+      setMessage(
+        result === "updated"
+          ? "🛒 Quantity updated in cart!"
+          : "✅ Added to cart!",
       );
-
-      const snapshot = await getDocs(q);
-      const existingDoc = snapshot.docs.find(
-        (docSnap) => docSnap.data().designId === designData.designId,
-      );
-
-      if (existingDoc) {
-        const existingData = existingDoc.data();
-
-        await updateDoc(doc(db, "cart", existingDoc.id), {
-          quantity: (existingData.quantity || 1) + quantity,
-        });
-
-        setMessage("🛒 Quantity updated in cart!");
-        return;
-      }
-
-      await addDoc(collection(db, "cart"), {
-        ...designData,
-        quantity,
-      });
-
-      setMessage("✅ Added to cart!");
     } catch (err) {
       console.error("Add to cart failed:", err);
       setMessage("❌ " + (err.message || "Failed to add to cart."));
@@ -496,30 +678,69 @@ const Customize = () => {
     }
   };
 
-  // Clicking empty shirt space deselects whatever's currently selected.
-  const handleCanvasBackgroundClick = () => setSelectedElement(null);
+  // "Buy Now" skips staying on this page — it writes the current design
+  // straight to the cart (same dedupe logic as Add to Cart) and takes
+  // the user directly to the cart/checkout page.
+  const buyNow = async () => {
+    if (!hasDesignContent) {
+      setMessage("❌ Add some text or an image before proceeding to checkout.");
+      return;
+    }
 
-  // Snaps an element to horizontal center — the practical replacement
-  // for the old center/left/right presets now that placement is freeform.
-  const centerElement = (type) => {
-    if (!canvasRef.current) return;
-    const { width } = canvasRef.current.getBoundingClientRect();
+    try {
+      setBuyingNow(true);
+      setMessage("");
 
-    if (type === "image") {
-      setImagePosition((prev) => ({
-        ...prev,
-        x: Math.max(0, (width - imageSize.width) / 2),
-      }));
-    } else {
-      setTextPosition((prev) => ({
-        ...prev,
-        x: Math.max(0, (width - textSize.width) / 2),
-      }));
+      await addDesignToCart();
+      navigate("/cart");
+    } catch (err) {
+      console.error("Buy now failed:", err);
+      setMessage("❌ " + (err.message || "Failed to proceed to checkout."));
+      setBuyingNow(false);
     }
   };
 
-  const isError = message.startsWith("❌");
+  // Clicking empty shirt space deselects whatever's currently selected.
+  const handleCanvasBackgroundClick = () => setSelectedElement(null);
 
+  // Aligns the given element (image or text) horizontally within the
+  // canvas — left edge, centered, or right edge. Keeps a small safe
+  // margin (CANVAS_ALIGN_PADDING) from the shirt's edges so "left"/
+  // "right" doesn't push the design flush against — or past — the
+  // canvas boundary, and uses clientWidth (content box) rather than
+  // getBoundingClientRect (which can include border) for accuracy.
+  const alignElement = (type, alignment) => {
+    if (!canvasRef.current) return;
+    const canvasWidth = canvasRef.current.clientWidth;
+    const size = type === "image" ? imageSize : textSize;
+    const setPosition = type === "image" ? setImagePosition : setTextPosition;
+
+    const maxX = Math.max(
+      CANVAS_ALIGN_PADDING,
+      canvasWidth - size.width - CANVAS_ALIGN_PADDING,
+    );
+
+    let x;
+    if (alignment === "left") {
+      x = CANVAS_ALIGN_PADDING;
+    } else if (alignment === "right") {
+      x = maxX;
+    } else {
+      x = Math.max(0, (canvasWidth - size.width) / 2);
+    }
+
+    setPosition((prev) => ({ ...prev, x }));
+  };
+
+  const isError = message.startsWith("❌");
+  const isOverlapping = (pos1, size1, pos2, size2, padding = 10) => {
+    return !(
+      pos1.x + size1.width + padding < pos2.x ||
+      pos2.x + size2.width + padding < pos1.x ||
+      pos1.y + size1.height + padding < pos2.y ||
+      pos2.y + size2.height + padding < pos1.y
+    );
+  };
   return (
     <div className="customize-container">
       {/* LEFT PANEL */}
@@ -724,9 +945,26 @@ const Customize = () => {
 
         <div className="button-group">
           <button
+            className="buy-now-btn"
+            onClick={buyNow}
+            disabled={anyActionInProgress}
+          >
+            {buyingNow ? (
+              <>
+                <span className="spinner"></span>
+                Processing...
+              </>
+            ) : (
+              <>
+                <FaBolt /> Buy Now
+              </>
+            )}
+          </button>
+
+          <button
             className="cart-btn"
             onClick={addToCart}
-            disabled={addingCart || savingDesign}
+            disabled={anyActionInProgress}
           >
             {addingCart ? (
               <>
@@ -743,7 +981,7 @@ const Customize = () => {
           <button
             className="save-btn"
             onClick={saveDesign}
-            disabled={savingDesign || addingCart}
+            disabled={anyActionInProgress}
           >
             {savingDesign ? (
               <>
@@ -765,6 +1003,78 @@ const Customize = () => {
           </p>
         )}
       </div>
+
+      {/* IMAGE QUALITY POPUP */}
+      {qualityWarning && (
+        <div
+          className="quality-modal-backdrop"
+          onClick={keepLowQualityImage}
+        >
+          <div
+            className="quality-modal"
+            role="alertdialog"
+            aria-modal="true"
+            aria-labelledby="quality-modal-title"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="quality-modal-icon">
+              <FaImage />
+            </div>
+
+            <h3 id="quality-modal-title">
+              {qualityWarning.severity === "low"
+                ? "This image is quite low resolution"
+                : "Image resolution is a little low"}
+            </h3>
+
+            <p>
+              {qualityWarning.severity === "low" ? (
+                <>
+                  Your upload is{" "}
+                  <strong>
+                    {qualityWarning.width}×{qualityWarning.height}px
+                  </strong>{" "}
+                  and will likely look blurry or pixelated when printed. For
+                  best results, use an image that's at least{" "}
+                  <strong>
+                    {MIN_IMAGE_DIMENSION}×{MIN_IMAGE_DIMENSION}px
+                  </strong>
+                  .
+                </>
+              ) : (
+                <>
+                  Your upload is{" "}
+                  <strong>
+                    {qualityWarning.width}×{qualityWarning.height}px
+                  </strong>
+                  . It should still print okay, but{" "}
+                  <strong>
+                    {MIN_IMAGE_DIMENSION}×{MIN_IMAGE_DIMENSION}px
+                  </strong>{" "}
+                  or larger will look sharper.
+                </>
+              )}
+            </p>
+
+            <div className="quality-modal-actions">
+              <button
+                type="button"
+                className="quality-modal-remove"
+                onClick={discardLowQualityImage}
+              >
+                Remove &amp; choose another
+              </button>
+              <button
+                type="button"
+                className="quality-modal-keep"
+                onClick={keepLowQualityImage}
+              >
+                Use this image anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* RIGHT PANEL */}
       <div className="preview">
@@ -830,13 +1140,38 @@ const Customize = () => {
                     }}
                     enableResizing={selectedElement === "image"}
                     disableDragging={selectedElement !== "image"}
-                    onDragStop={(e, d) => setImagePosition({ x: d.x, y: d.y })}
+                    onDragStop={(e, d) => {
+                      const newPos = { x: d.x, y: d.y };
+
+                      if (
+                        text &&
+                        isOverlapping(newPos, imageSize, textPosition, textSize)
+                      ) {
+                        return;
+                      }
+
+                      setImagePosition(newPos);
+                    }}
                     onResizeStop={(e, direction, ref, delta, position) => {
-                      setImageSize({
+                      const newSize = {
                         width: ref.offsetWidth,
                         height: ref.offsetHeight,
-                      });
-                      setImagePosition({ x: position.x, y: position.y });
+                      };
+
+                      const newPos = {
+                        x: position.x,
+                        y: position.y,
+                      };
+
+                      if (
+                        text &&
+                        isOverlapping(newPos, newSize, textPosition, textSize)
+                      ) {
+                        return;
+                      }
+
+                      setImageSize(newSize);
+                      setImagePosition(newPos);
                     }}
                   >
                     <img
@@ -861,13 +1196,43 @@ const Customize = () => {
                     }}
                     enableResizing={selectedElement === "text"}
                     disableDragging={selectedElement !== "text"}
-                    onDragStop={(e, d) => setTextPosition({ x: d.x, y: d.y })}
+                    onDragStop={(e, d) => {
+                      const newPos = { x: d.x, y: d.y };
+
+                      if (
+                        image &&
+                        isOverlapping(
+                          newPos,
+                          textSize,
+                          imagePosition,
+                          imageSize,
+                        )
+                      ) {
+                        return;
+                      }
+
+                      setTextPosition(newPos);
+                    }}
                     onResizeStop={(e, direction, ref, delta, position) => {
-                      setTextSize({
+                      const newSize = {
                         width: ref.offsetWidth,
                         height: ref.offsetHeight,
-                      });
-                      setTextPosition({ x: position.x, y: position.y });
+                      };
+
+                      const newPos = {
+                        x: position.x,
+                        y: position.y,
+                      };
+
+                      if (
+                        image &&
+                        isOverlapping(newPos, newSize, imagePosition, imageSize)
+                      ) {
+                        return;
+                      }
+
+                      setTextSize(newSize);
+                      setTextPosition(newPos);
                     }}
                   >
                     <div
@@ -897,12 +1262,26 @@ const Customize = () => {
                     ? "Image selected"
                     : "Text selected"}
                 </span>
+
                 <button
                   type="button"
-                  onClick={() => centerElement(selectedElement)}
+                  onClick={() => alignElement(selectedElement, "left")}
                 >
-                  <FaCrosshairs /> Center
+                  <FaAlignLeft /> Left
                 </button>
+                <button
+                  type="button"
+                  onClick={() => alignElement(selectedElement, "center")}
+                >
+                  <FaAlignCenter /> Center
+                </button>
+                <button
+                  type="button"
+                  onClick={() => alignElement(selectedElement, "right")}
+                >
+                  <FaAlignRight /> Right
+                </button>
+
                 <button
                   type="button"
                   className="element-toolbar-remove"
@@ -926,24 +1305,28 @@ const Customize = () => {
         <div className="price-box preview-price">
           <h3>Price Details</h3>
 
+          {!pricingLoaded && (
+            <small className="upload-status">Loading current pricing...</small>
+          )}
+
           <div className="price-row">
             <span>Base Price</span>
-            <span>₹499</span>
+            <span>₹{pricingConfig.basePrice}</span>
           </div>
 
           <div className="price-row">
             <span>Back Print</span>
-            <span>{side === "back" ? "₹50" : "₹0"}</span>
+            <span>₹{backPrintCharge}</span>
           </div>
 
           <div className="price-row">
             <span>Image Upload</span>
-            <span>{image ? "₹100" : "₹0"}</span>
+            <span>₹{imageCharge}</span>
           </div>
 
           <div className="price-row">
-            <span>Size</span>
-            <span>{selectedSize}</span>
+            <span>Size ({selectedSize})</span>
+            <span>{sizeCharge > 0 ? `₹${sizeCharge}` : "₹0"}</span>
           </div>
 
           <div className="price-row">
@@ -964,4 +1347,3 @@ const Customize = () => {
 };
 
 export default Customize;
-

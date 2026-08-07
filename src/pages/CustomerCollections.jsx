@@ -13,6 +13,12 @@ const CustomerCollections = () => {
   const [collections, setCollections] = useState([]);
   const [products, setProducts] = useState([]);
 
+  // Two separate snapshots are still loading until both resolve at
+  // least once — tracked independently since they're independent
+  // Firestore listeners.
+  const [collectionsLoading, setCollectionsLoading] = useState(true);
+  const [productsLoading, setProductsLoading] = useState(true);
+
   /*
   ==========================
       FETCH COLLECTIONS
@@ -29,6 +35,11 @@ const CustomerCollections = () => {
         }));
 
         setCollections(data);
+        setCollectionsLoading(false);
+      },
+      (error) => {
+        console.log("Collections Error:", error);
+        setCollectionsLoading(false);
       },
     );
 
@@ -42,21 +53,29 @@ const CustomerCollections = () => {
   */
 
   useEffect(() => {
-    const unsubscribe = onSnapshot(collection(db, "products"), (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({
-        id: doc.id,
-        ...doc.data(),
-      }));
+    const unsubscribe = onSnapshot(
+      collection(db, "products"),
+      (snapshot) => {
+        const data = snapshot.docs.map((doc) => ({
+          id: doc.id,
+          ...doc.data(),
+        }));
 
-      setProducts(data);
-    });
+        setProducts(data);
+        setProductsLoading(false);
+      },
+      (error) => {
+        console.log("Products Error:", error);
+        setProductsLoading(false);
+      },
+    );
 
     return () => unsubscribe();
   }, []);
 
   /*
   ==========================
-      ADD PRODUCT TO CART
+      OPEN CUSTOMIZE PAGE
   ==========================
   */
   const customizeProduct = (product) => {
@@ -71,78 +90,94 @@ const CustomerCollections = () => {
   const viewCollectionProducts = (collectionItem) => {
     navigate(`/collection/${collectionItem.id}`);
   };
+
+  const loading = collectionsLoading || productsLoading;
+
+  if (loading) {
+    return <div className="loading-container">Loading collections...</div>;
+  }
+
   return (
     <div className="customer-page">
       <h1>Explore Our Collections</h1>
 
       <p className="subtitle">Discover beautiful products curated for you</p>
 
-      <div className="customer-collection-grid">
-        {collections.map((collectionItem) => (
-          <div className="customer-card" key={collectionItem.id}>
-            <img
-              src={collectionItem.image}
-              alt={collectionItem.name}
-              className="collection-image"
-              loading="lazy"
-            />
+      {collections.length === 0 ? (
+        <div className="empty-collections">
+          <h3>No Collections Yet</h3>
+          <p>Check back soon — new collections are on the way.</p>
+        </div>
+      ) : (
+        <div className="customer-collection-grid">
+          {collections.map((collectionItem) => {
+            // Computed once per card instead of re-filtering the full
+            // products array three separate times in the JSX below.
+            const collectionProducts = products.filter(
+              (product) => product.collectionId === collectionItem.id,
+            );
+            const previewProducts = collectionProducts.slice(0, 3);
 
-            <div className="customer-content">
-              <h2>{collectionItem.name}</h2>
+            return (
+              <div className="customer-card" key={collectionItem.id}>
+                <img
+                  src={collectionItem.image}
+                  alt={collectionItem.name}
+                  className="collection-image"
+                  loading="lazy"
+                />
 
-              <p>{collectionItem.description}</p>
+                <div className="customer-content">
+                  <h2>{collectionItem.name}</h2>
 
-              <h3>Products</h3>
+                  <p>{collectionItem.description}</p>
 
-              <div className="customer-products">
-                {products
-                  .filter(
-                    (product) => product.collectionId === collectionItem.id,
-                  )
-                  .slice(0, 3)
-                  .map((product) => (
-                    <div
-                      className="customer-product"
-                      key={product.id}
-                      onClick={() => customizeProduct(product)}
+                  <h3>Products</h3>
+
+                  <div className="customer-products">
+                    {previewProducts.length === 0 ? (
+                      <p className="no-preview-products">
+                        No products in this collection yet.
+                      </p>
+                    ) : (
+                      previewProducts.map((product) => (
+                        <div
+                          className="customer-product"
+                          key={product.id}
+                          onClick={() => customizeProduct(product)}
+                        >
+                          <img
+                            src={product.image}
+                            alt={product.name}
+                            loading="lazy"
+                          />
+
+                          <div>
+                            <h4>{product.name}</h4>
+
+                            <p>₹{product.price}</p>
+
+                            <p className="desc">{product.description}</p>
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {collectionProducts.length > 3 && (
+                    <button
+                      className="view-products-btn"
+                      onClick={() => viewCollectionProducts(collectionItem)}
                     >
-                      <img
-                        src={product.image}
-                        alt={product.name}
-                        loading="lazy"
-                      />
-
-                      <div>
-                        <h4>{product.name}</h4>
-
-                        <p>₹{product.price}</p>
-
-                        <p className="desc">{product.description}</p>
-                      </div>
-                    </div>
-                  ))}
+                      View All Products ({collectionProducts.length})
+                    </button>
+                  )}
+                </div>
               </div>
-
-              {products.filter(
-                (product) => product.collectionId === collectionItem.id,
-              ).length > 3 && (
-                <button
-                  className="view-products-btn"
-                  onClick={() => viewCollectionProducts(collectionItem)}
-                >
-                  View All Products (
-                  {
-                    products.filter(
-                      (product) => product.collectionId === collectionItem.id,
-                    ).length
-                  }
-                  )
-                </button>
-              )}
-            </div>
-          </div>
-        ))}
-      </div>
+            );
+          })}
+        </div>
+      )}
     </div>
   );
 };
