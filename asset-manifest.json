@@ -1,7 +1,7 @@
 {
   "files": {
-    "main.css": "/printitup/static/css/main.1027bb4c.css",
-    "main.js": "/printitup/static/js/main.fca2fb6b.js",
+    "main.css": "/printitup/static/css/main.5af466bf.css",
+    "main.js": "/printitup/static/js/main.b2a03168.js",
     "static/js/206.d14c4fc7.chunk.js": "/printitup/static/js/206.d14c4fc7.chunk.js",
     "static/media/tshirt.glb": "/printitup/static/media/tshirt.7a4f8d53404922a133ec.glb",
     "static/media/polo.svg": "/printitup/static/media/polo.039311dc588be88d4e6a2efbeb3b0283.svg",
@@ -10,7 +10,7 @@
     "index.html": "/printitup/index.html"
   },
   "entrypoints": [
-    "static/css/main.1027bb4c.css",
-    "static/js/main.fca2fb6b.js"
+    "static/css/main.5af466bf.css",
+    "static/js/main.b2a03168.js"
   ]
 }
