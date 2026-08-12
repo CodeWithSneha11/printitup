@@ -257,3 +257,132 @@
     width: 100%;
   }
 }
+
+/* ---------- Neck shape swatches / picker ---------- */
+
+.admin-neck-shape-swatch {
+  width: 36px;
+  height: 42px;
+  background: #94a3b8;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.admin-neck-shape-swatch-new {
+  width: 44px;
+  height: 52px;
+}
+
+.admin-neck-shape-select {
+  padding: 8px 10px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 13px;
+}
+
+/* ---------- Custom neck-shape editor integration ---------- */
+
+/* Wraps a single neck's option-row together with its (optional)
+   inline NeckShapeEditor beneath it, so the editor reads as attached
+   to that row rather than floating as a separate list item. */
+.admin-neck-row-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+/* "Edit points" / "Close editor" toggle — sits alongside Deactivate/
+   Delete in the row, so it borrows their sizing but gets its own
+   color to read as a distinct, non-destructive action. */
+.admin-neck-edit-toggle {
+  font-size: 13px;
+  font-weight: 500;
+  padding: 6px 12px;
+  border-radius: 6px;
+  border: 1px solid #c7d2fe;
+  background: #eef2ff;
+  color: #4338ca;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.admin-neck-edit-toggle:hover:not(:disabled) {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+}
+
+.admin-neck-edit-toggle:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
+}
+
+/* The "add new neck style" block now stacks vertically when its shape
+   is "custom" (input row, then the editor below it), instead of the
+   plain single-row layout the other add-forms use. */
+.admin-option-add-neck {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 12px;
+}
+
+.admin-option-add-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.admin-option-add-row input[type="text"] {
+  flex: 1;
+  min-width: 180px;
+  padding: 9px 12px;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  font-size: 14px;
+  color: #111827;
+}
+
+.admin-option-add-row input[type="text"]:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+}
+
+.admin-option-add-row select {
+  padding: 9px 12px;
+  border-radius: 8px;
+  border: 1px solid #d1d5db;
+  font-size: 14px;
+  color: #111827;
+  background: #ffffff;
+}
+
+.admin-option-add-row button {
+  padding: 9px 16px;
+  border-radius: 8px;
+  border: none;
+  background: #111827;
+  color: #ffffff;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background 0.15s ease;
+}
+
+.admin-option-add-row button:hover:not(:disabled) {
+  background: #1f2937;
+}
+
+.admin-option-add-row button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+@media (max-width: 640px) {
+  .admin-option-add-row {
+    flex-direction: column;
+    align-items: stretch;
+  }
+}

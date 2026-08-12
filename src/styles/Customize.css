@@ -504,6 +504,13 @@ body {
   font-weight: 700;
 }
 
+/* Groups a set of related price-rows (per-item lines, or checkout-level
+   charges) so the <hr> dividers between groups read cleanly. */
+.price-box .price-section {
+  display: flex;
+  flex-direction: column;
+}
+
 .price-row {
   display: flex;
   justify-content: space-between;
@@ -511,6 +518,38 @@ body {
   margin: 12px 0;
   font-size: 14.5px;
   color: rgba(255, 255, 255, 0.9);
+}
+
+/* Secondary rows within a section (e.g. "Price per item" / "Quantity"
+   under the per-item breakdown) — visually subordinate to the charge
+   lines above them, separated by a faint dashed rule. */
+.price-row-muted {
+  opacity: 0.75;
+  font-size: 12.5px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.22);
+  padding-top: 8px;
+  margin-top: 2px;
+}
+
+/* "FREE" delivery label — a brighter accent so the win is visible at
+   a glance rather than just another muted white row. */
+.price-free {
+  color: #bbf7d0;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+}
+
+/* Nudge shown when the order is close to (but hasn't hit) the free
+   delivery threshold. */
+.free-delivery-hint {
+  margin-top: 12px;
+  padding: 10px 12px;
+  background: rgba(255, 255, 255, 0.14);
+  border: 1px dashed rgba(255, 255, 255, 0.4);
+  border-radius: 10px;
+  font-size: 12.5px;
+  text-align: center;
+  color: white;
 }
 
 .price-box hr {
@@ -524,6 +563,15 @@ body {
   justify-content: space-between;
   align-items: center;
   font-size: 26px;
+}
+
+/* Small "inclusive of all taxes" note under the grand total. */
+.gst-note {
+  display: block;
+  margin-top: 8px;
+  text-align: right;
+  font-size: 11px;
+  color: rgba(255, 255, 255, 0.75);
 }
 
 /* ===================================================
@@ -1025,19 +1073,16 @@ body {
   z-index: 2;
 }
 
-/* Neck style shapes */
-
-.round {
-  clip-path: polygon(0 18%, 15% 0, 38% 0, 45% 9%, 55% 9%, 62% 0, 85% 0, 100% 18%, 100% 100%, 0 100%);
-}
-
-.vneck {
-  clip-path: polygon(0 18%, 15% 0, 45% 0, 50% 16%, 55% 0, 85% 0, 100% 18%, 100% 100%, 0 100%);
-}
-
-.collar {
-  clip-path: polygon(0 18%, 15% 0, 85% 0, 100% 18%, 100% 100%, 0 100%);
-}
+/* NOTE: the old fixed .round / .vneck / .collar clip-path rules that
+   used to live here have been removed. The neck cutout is now applied
+   as an inline `clipPath` style on .tshirt-preview, computed at
+   runtime from the selected neck style's `shape` field (see
+   src/constants/neckShapes.js + Customize.jsx). This is what lets an
+   admin-added neck style render its cutout without a CSS/deploy
+   change. If you want to hardcode a shape as a plain CSS class for
+   some other reason, you can still add one here — it just won't be
+   picked up automatically by the dynamic .tshirt-preview render path
+   above. */
 
 /* ===================================================
    ALIGNMENT GUIDES (shown while an element is selected)

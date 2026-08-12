@@ -1,0 +1,51 @@
+.neck-shape-editor {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+  border: 1px solid var(--admin-border, #e2e2e2);
+  border-radius: 8px;
+  background: var(--admin-panel-bg, #fafafa);
+  width: fit-content;
+}
+
+.neck-shape-editor-svg {
+  touch-action: none; /* required so pointer drags aren't hijacked by scroll on touch devices */
+  cursor: crosshair;
+  background: #f3f4f6;
+  border-radius: 4px;
+}
+
+.neck-shape-editor-bg {
+  fill: #f3f4f6;
+}
+
+.neck-shape-editor-shape {
+  fill: #d1d5db;
+  stroke: #374151;
+  stroke-width: 0.6;
+  fill-opacity: 0.85;
+}
+
+.neck-shape-editor-handle {
+  fill: #2563eb;
+  stroke: #ffffff;
+  stroke-width: 0.6;
+  cursor: grab;
+}
+
+.neck-shape-editor-handle:active {
+  cursor: grabbing;
+  fill: #1d4ed8;
+}
+
+.neck-shape-editor-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 12px;
+}
+
+.neck-shape-editor-hint {
+  color: #6b7280;
+}

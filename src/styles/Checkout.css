@@ -433,3 +433,53 @@
     transform: none;
   }
 }
+/* ===========================
+   PRICE BREAKDOWN (subtotal / GST / delivery)
+=========================== */
+
+.checkout-price-breakdown {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin: 4px 0 6px;
+}
+
+.checkout-price-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14.5px;
+  color: var(--slate);
+}
+
+.checkout-price-free {
+  color: var(--emerald);
+  font-weight: 700;
+}
+
+.checkout-free-delivery-hint {
+  margin: 4px 0 10px;
+  padding: 10px 12px;
+  background: var(--canvas-alt);
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  font-size: 12.5px;
+  text-align: center;
+  color: var(--ink-deep);
+}
+
+.checkout-pricing-loading {
+  display: block;
+  margin-bottom: 10px;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 12.5px;
+}
+
+.checkout-gst-note {
+  display: block;
+  margin-top: 10px;
+  text-align: right;
+  font-size: 11px;
+  color: var(--slate);
+}

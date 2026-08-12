@@ -4,8 +4,15 @@ import {
   saveProductOptions,
   DEFAULT_OPTIONS,
 } from "../../hooks/useProductOptions";
+import {
+  NECK_SHAPES,
+  NECK_SHAPE_KEYS,
+  DEFAULT_CUSTOM_POINTS,
+  parseClipPathToPoints,
+  resolveNeckClipPath,
+} from "../../constants/neckShapes";
+import NeckShapeEditor from "../../components/NeckShapeEditor";
 import "../../styles/AdminProductOptions.css";
-
 const slugify = (s) =>
   s.trim().toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "");
 
@@ -17,8 +24,16 @@ const AdminProductOptions = () => {
   const [messageType, setMessageType] = useState("success"); // "success" | "error"
 
   const [newColor, setNewColor] = useState({ name: "", code: "#ffffff" });
-  const [newNeck, setNewNeck] = useState("");
+  const [newNeck, setNewNeck] = useState({
+    label: "",
+    shape: NECK_SHAPE_KEYS[0],
+    points: DEFAULT_CUSTOM_POINTS,
+  });
   const [newSize, setNewSize] = useState("");
+
+  // Which existing neck row currently has its point-editor open. Only
+  // one at a time — keeps the list from turning into a wall of SVGs.
+  const [editingNeckId, setEditingNeckId] = useState(null);
 
   useEffect(() => {
     if (loaded) setDraft(options);
@@ -94,7 +109,7 @@ const AdminProductOptions = () => {
 
   // ---------- Neck styles ----------
   const addNeck = () => {
-    const label = newNeck.trim();
+    const label = newNeck.label.trim();
     if (!label) return;
     const id = slugify(label);
     if (!id) {
@@ -105,8 +120,10 @@ const AdminProductOptions = () => {
       flash("That neck style already exists.", "error");
       return;
     }
-    persist({ ...draft, necks: [...draft.necks, { id, label, active: true }] });
-    setNewNeck("");
+    const entry = { id, label, shape: newNeck.shape, active: true };
+    if (newNeck.shape === "custom") entry.points = newNeck.points;
+    persist({ ...draft, necks: [...draft.necks, entry] });
+    setNewNeck({ label: "", shape: NECK_SHAPE_KEYS[0], points: DEFAULT_CUSTOM_POINTS });
   };
 
   const toggleNeckActive = (id) =>
@@ -117,9 +134,57 @@ const AdminProductOptions = () => {
       ),
     });
 
+  // Switches an existing neck to a different shape. Moving TO
+  // "custom" seeds the point set from whatever shape it currently
+  // resolves to (so the admin edits a familiar starting outline
+  // instead of a blank slate). Moving AWAY from "custom" drops the
+  // now-irrelevant `points` field.
+  const updateNeckShape = (id, shape) => {
+    const necks = draft.necks.map((n) => {
+      if (n.id !== id) return n;
+      if (shape === "custom") {
+        const seed =
+          Array.isArray(n.points) && n.points.length >= 3
+            ? n.points
+            : parseClipPathToPoints(resolveNeckClipPath(n)) || DEFAULT_CUSTOM_POINTS;
+        return { ...n, shape: "custom", points: seed };
+      }
+      const { points, ...rest } = n;
+      return { ...rest, shape };
+    });
+    persist({ ...draft, necks });
+    if (shape === "custom") setEditingNeckId(id);
+  };
+
+  // Live point updates while dragging — local only, no Firestore
+  // write per pixel. commitNeckPoints() below saves once the drag
+  // ends, mirroring the color-swatch edit/commit pattern.
+  const updateNeckPointsLive = (id, points) =>
+    setDraft((d) => ({
+      ...d,
+      necks: d.necks.map((n) => (n.id === id ? { ...n, points } : n)),
+    }));
+
+  const commitNeckPoints = () => persist(draft);
+
   const deleteNeck = (id) => {
     if (!window.confirm("Delete this neck style permanently?")) return;
+    if (editingNeckId === id) setEditingNeckId(null);
     persist({ ...draft, necks: draft.necks.filter((n) => n.id !== id) });
+  };
+
+  // ---------- New-neck draft shape handling ----------
+  const handleNewNeckShapeChange = (shape) => {
+    setNewNeck((p) => {
+      if (shape === "custom") {
+        const seed =
+          p.points && p.points.length >= 3
+            ? p.points
+            : parseClipPathToPoints(NECK_SHAPES[p.shape]?.clipPath) || DEFAULT_CUSTOM_POINTS;
+        return { ...p, shape: "custom", points: seed };
+      }
+      return { ...p, shape };
+    });
   };
 
   // ---------- Sizes ----------
@@ -257,42 +322,117 @@ const AdminProductOptions = () => {
         ) : (
           <div className="admin-options-list">
             {draft.necks.map((n) => (
-              <div
-                key={n.id}
-                className={`admin-option-row ${n.active ? "" : "inactive"}`}
-              >
-                <span className="admin-option-name">{n.label}</span>
-                <span className={`admin-status-pill ${n.active ? "active" : "inactive"}`}>
-                  {n.active ? "Active" : "Inactive"}
-                </span>
-                <button type="button" disabled={saving} onClick={() => toggleNeckActive(n.id)}>
-                  {n.active ? "Deactivate" : "Activate"}
-                </button>
-                <button
-                  type="button"
-                  className="danger"
-                  disabled={saving}
-                  onClick={() => deleteNeck(n.id)}
-                >
-                  Delete
-                </button>
+              <div key={n.id} className="admin-neck-row-wrap">
+                <div className={`admin-option-row ${n.active ? "" : "inactive"}`}>
+                  {/* Live shape swatch — resolveNeckClipPath() means this
+                      renders custom polygons exactly the same way the
+                      Customize page will. */}
+                  <div
+                    className="admin-neck-shape-swatch"
+                    style={{ clipPath: resolveNeckClipPath(n) }}
+                    title={n.shape === "custom" ? "Custom shape" : NECK_SHAPES[n.shape]?.label || "Unknown shape"}
+                  />
+                  <span className="admin-option-name">{n.label}</span>
+
+                  <select
+                    className="admin-neck-shape-select"
+                    value={n.shape || "round"}
+                    disabled={saving}
+                    onChange={(e) => updateNeckShape(n.id, e.target.value)}
+                    aria-label={`Cutout shape for ${n.label}`}
+                  >
+                    {NECK_SHAPE_KEYS.map((key) => (
+                      <option key={key} value={key}>
+                        {NECK_SHAPES[key].label}
+                      </option>
+                    ))}
+                    <option value="custom">Custom shape…</option>
+                  </select>
+
+                  {n.shape === "custom" && (
+                    <button
+                      type="button"
+                      className="admin-neck-edit-toggle"
+                      onClick={() =>
+                        setEditingNeckId((cur) => (cur === n.id ? null : n.id))
+                      }
+                    >
+                      {editingNeckId === n.id ? "Close editor" : "Edit points"}
+                    </button>
+                  )}
+
+                  <span className={`admin-status-pill ${n.active ? "active" : "inactive"}`}>
+                    {n.active ? "Active" : "Inactive"}
+                  </span>
+                  <button type="button" disabled={saving} onClick={() => toggleNeckActive(n.id)}>
+                    {n.active ? "Deactivate" : "Activate"}
+                  </button>
+                  <button
+                    type="button"
+                    className="danger"
+                    disabled={saving}
+                    onClick={() => deleteNeck(n.id)}
+                  >
+                    Delete
+                  </button>
+                </div>
+
+                {n.shape === "custom" && editingNeckId === n.id && (
+                  <NeckShapeEditor
+                    points={n.points && n.points.length >= 3 ? n.points : DEFAULT_CUSTOM_POINTS}
+                    onChange={(points) => updateNeckPointsLive(n.id, points)}
+                    onCommit={commitNeckPoints}
+                  />
+                )}
               </div>
             ))}
           </div>
         )}
 
-        <div className="admin-option-add">
-          <input
-            type="text"
-            placeholder="Neck style (e.g. Polo)"
-            aria-label="New neck style"
-            value={newNeck}
-            onChange={(e) => setNewNeck(e.target.value)}
-            onKeyDown={onEnter(addNeck)}
-          />
-          <button type="button" disabled={saving || !newNeck.trim()} onClick={addNeck}>
-            + Add Neck Style
-          </button>
+        <div className="admin-option-add admin-option-add-neck">
+          <div className="admin-option-add-row">
+            <input
+              type="text"
+              placeholder="Neck style (e.g. Henley)"
+              aria-label="New neck style"
+              value={newNeck.label}
+              onChange={(e) => setNewNeck((p) => ({ ...p, label: e.target.value }))}
+              onKeyDown={onEnter(addNeck)}
+            />
+
+            <select
+              aria-label="New neck style cutout shape"
+              value={newNeck.shape}
+              onChange={(e) => handleNewNeckShapeChange(e.target.value)}
+            >
+              {NECK_SHAPE_KEYS.map((key) => (
+                <option key={key} value={key}>
+                  {NECK_SHAPES[key].label}
+                </option>
+              ))}
+              <option value="custom">Custom shape…</option>
+            </select>
+
+            {/* Live preview of the shape about to be added */}
+            <div
+              className="admin-neck-shape-swatch admin-neck-shape-swatch-new"
+              style={{ clipPath: resolveNeckClipPath(newNeck) }}
+              title={newNeck.shape === "custom" ? "Custom shape" : NECK_SHAPES[newNeck.shape].label}
+            />
+
+            <button type="button" disabled={saving || !newNeck.label.trim()} onClick={addNeck}>
+              + Add Neck Style
+            </button>
+          </div>
+
+          {newNeck.shape === "custom" && (
+            <NeckShapeEditor
+              points={newNeck.points}
+              onChange={(points) => setNewNeck((p) => ({ ...p, points }))}
+              // Nothing's saved yet for a not-yet-added style, so no
+              // onCommit needed — "+ Add Neck Style" is the save.
+            />
+          )}
         </div>
       </section>
 

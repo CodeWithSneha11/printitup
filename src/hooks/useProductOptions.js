@@ -13,10 +13,15 @@ export const DEFAULT_OPTIONS = {
     { id: "green", name: "Green", code: "#16a34a", active: true },
     { id: "grey", name: "Grey", code: "#9ca3af", active: true },
   ],
+  // `shape` is either a key into NECK_SHAPES, or "custom" — in which
+  // case `points` (an array of {x,y} percentages) holds the actual
+  // polygon and NECK_SHAPES is ignored. `id` stays the stable
+  // identifier used everywhere else (stock keys, saved designs) so it
+  // must never change once designs/stock reference it.
   necks: [
-    { id: "round", label: "Round", active: true },
-    { id: "vneck", label: "V-Neck", active: true },
-    { id: "collar", label: "Collar", active: true },
+    { id: "round", label: "Round", shape: "round", active: true },
+    { id: "vneck", label: "V-Neck", shape: "vneck", active: true },
+    { id: "collar", label: "Collar", shape: "collar", active: true },
   ],
   sizes: [
     { id: "XS", label: "XS", active: true },
@@ -44,7 +49,19 @@ export function useProductOptions() {
           const data = snap.data();
           setOptions({
             colors: data.colors?.length ? data.colors : DEFAULT_OPTIONS.colors,
-            necks: data.necks?.length ? data.necks : DEFAULT_OPTIONS.necks,
+            // Normalize: a neck doc written before `shape` existed
+            // falls back to using its own `id` as the shape key,
+            // unless it already carries custom `points` (in which
+            // case it's obviously meant to be "custom"). resolveNeckClipPath()
+            // has its own final fallback to "round" on top of this.
+            necks: data.necks?.length
+              ? data.necks.map((n) => ({
+                  ...n,
+                  shape:
+                    n.shape ||
+                    (Array.isArray(n.points) && n.points.length >= 3 ? "custom" : n.id),
+                }))
+              : DEFAULT_OPTIONS.necks,
             sizes: data.sizes?.length ? data.sizes : DEFAULT_OPTIONS.sizes,
           });
         }

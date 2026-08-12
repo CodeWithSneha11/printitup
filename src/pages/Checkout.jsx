@@ -7,6 +7,7 @@ import {
   addDoc,
   deleteDoc,
   doc,
+  getDoc,
   serverTimestamp,
   setDoc,
 } from "firebase/firestore";
@@ -27,6 +28,20 @@ import "../styles/Checkout.css";
 // floating-point drift from summing prices (e.g. 199.98999999999998)
 // never reaches the screen.
 const formatCurrency = (value) => (Number(value) || 0).toFixed(2);
+
+// Fallback pricing used only until the live config loads from Firestore,
+// or if that document doesn't exist / fails to load. Kept in sync with
+// Customize.jsx's DEFAULT_PRICING so numbers never jump between screens.
+// Checkout only needs the checkout-level fields (GST/delivery) — the
+// per-item price (base/back-print/image/size) is already baked into
+// each cart item's stored `price`.
+const DEFAULT_PRICING = {
+  gstPercent: 18,
+  deliveryCharge: 60,
+  freeDeliveryThreshold: 999,
+};
+
+const PRICING_DOC_PATH = ["settings", "pricing"]; // db collection, doc id
 
 const Checkout = () => {
   const navigate = useNavigate();
@@ -58,6 +73,15 @@ const Checkout = () => {
     "Cash on Delivery"
   );
 
+  // Admin-configurable GST / delivery, loaded live from Firestore
+  // (settings/pricing) — the same document Customize.jsx reads. This is
+  // the AUTHORITATIVE calculation: checkout is the last screen before
+  // payment, so it recomputes from current settings rather than trusting
+  // whatever GST/delivery rate was in effect when each item was added to
+  // the cart (which could be stale by the time the user checks out).
+  const [pricingConfig, setPricingConfig] = useState(DEFAULT_PRICING);
+  const [pricingLoaded, setPricingLoaded] = useState(false);
+
   useEffect(() => {
     if (cameFromSelection) {
       // Use exactly what the user picked in the cart — no re-fetch,
@@ -69,9 +93,42 @@ const Checkout = () => {
     }
 
     fetchSavedAddresses();
+    loadPricing();
     // Only ever want this to run once, on mount.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // ==========================
+  // FETCH PRICING (GST / delivery)
+  // ==========================
+  // If the document is missing or the read fails, we silently keep
+  // DEFAULT_PRICING rather than blocking checkout — pricing should
+  // degrade gracefully, not break the order flow.
+
+  const loadPricing = async () => {
+    try {
+      const snap = await getDoc(doc(db, ...PRICING_DOC_PATH));
+
+      if (snap.exists()) {
+        const data = snap.data();
+
+        setPricingConfig({
+          gstPercent: Number(data.gstPercent ?? DEFAULT_PRICING.gstPercent),
+          deliveryCharge: Number(
+            data.deliveryCharge ?? DEFAULT_PRICING.deliveryCharge,
+          ),
+          freeDeliveryThreshold: Number(
+            data.freeDeliveryThreshold ??
+              DEFAULT_PRICING.freeDeliveryThreshold,
+          ),
+        });
+      }
+    } catch (err) {
+      console.warn("Could not load pricing config, using defaults:", err);
+    } finally {
+      setPricingLoaded(true);
+    }
+  };
 
   // ==========================
   // FETCH CART
@@ -234,16 +291,33 @@ const Checkout = () => {
       }));
 
   // ==========================
-  // TOTAL
+  // PRICING (Subtotal → GST → Delivery → Grand Total)
   // ==========================
   // Always recomputed from cartItems (whichever source populated it)
-  // rather than trusting the total Cart.jsx passed along, so it can
-  // never drift out of sync with what's actually listed below.
+  // rather than trusting any total passed along, so it can never drift
+  // out of sync with what's actually listed below. This is now the
+  // single authoritative pricing calculation for the order — Customize.jsx
+  // only shows an item subtotal; GST and delivery are decided here.
 
-  const total = cartItems.reduce(
+  const subtotal = cartItems.reduce(
     (sum, item) => sum + getLineTotal(item),
     0
   );
+
+  const gstAmount = Math.round((subtotal * pricingConfig.gstPercent) / 100);
+
+  const deliveryFee =
+    pricingConfig.deliveryCharge > 0 &&
+    subtotal < pricingConfig.freeDeliveryThreshold
+      ? pricingConfig.deliveryCharge
+      : 0;
+
+  const amountToFreeDelivery =
+    deliveryFee > 0
+      ? Math.max(0, pricingConfig.freeDeliveryThreshold - subtotal)
+      : 0;
+
+  const grandTotal = subtotal + gstAmount + deliveryFee;
 
   // ==========================
   // GENERATE SIMPLE ORDER ID
@@ -291,6 +365,11 @@ const Checkout = () => {
   // showed the customer "Failed to place order" for an order that had
   // actually gone through. Now a cart-clear failure just logs quietly;
   // the order stands and the success message is shown.
+  //
+  // The order doc now stores the full breakdown (subtotal/gst/delivery)
+  // alongside `total`, and `total` is the GRAND total (subtotal + GST +
+  // delivery) — previously this only stored the item subtotal, which
+  // under-recorded every order by its GST + delivery amount.
 
   const placeOrder = async () => {
     if (!selectedAddress) {
@@ -333,7 +412,11 @@ const Checkout = () => {
         deliveryAddress: selectedAddress,
         payment: paymentMethod,
         items: cartItems,
-        total,
+        subtotal,
+        gst: gstAmount,
+        gstPercent: pricingConfig.gstPercent,
+        deliveryFee,
+        total: grandTotal,
         status: "Pending",
         createdAt: serverTimestamp(),
       });
@@ -605,15 +688,58 @@ const Checkout = () => {
           ))
         )}
 
+        {cartItems.length > 0 && (
+          <>
+            <hr />
+
+            {!pricingLoaded && (
+              <small className="checkout-pricing-loading">
+                Loading current pricing...
+              </small>
+            )}
+
+            {/* Full, authoritative breakdown — this is the final,
+                confirmed pricing before payment. Subtotal carries over
+                from the items above; GST and delivery are calculated
+                fresh from the current admin-set rates. */}
+            <div className="checkout-price-breakdown">
+              <div className="checkout-price-row">
+                <span>Subtotal</span>
+                <span>₹{formatCurrency(subtotal)}</span>
+              </div>
+
+              <div className="checkout-price-row">
+                <span>GST ({pricingConfig.gstPercent}%)</span>
+                <span>₹{formatCurrency(gstAmount)}</span>
+              </div>
+
+              <div className="checkout-price-row">
+                <span>Delivery</span>
+                <span className={deliveryFee === 0 ? "checkout-price-free" : ""}>
+                  {deliveryFee === 0 ? "FREE" : `₹${formatCurrency(deliveryFee)}`}
+                </span>
+              </div>
+            </div>
+
+            {deliveryFee > 0 && amountToFreeDelivery > 0 && (
+              <p className="checkout-free-delivery-hint">
+                Add ₹{formatCurrency(amountToFreeDelivery)} more to get FREE delivery 🚚
+              </p>
+            )}
+          </>
+        )}
+
         <hr />
 
         <div className="checkout-total">
 
           <h3>Total</h3>
 
-          <h2>₹{formatCurrency(total)}</h2>
+          <h2>₹{formatCurrency(grandTotal)}</h2>
 
         </div>
+
+        <small className="checkout-gst-note">Inclusive of all taxes</small>
 
       </div>
 

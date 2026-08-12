@@ -36,6 +36,7 @@ import {
 import { Rnd } from "react-rnd";
 import { useProductOptions } from "../hooks/useProductOptions";
 import { useStock, stockDocId } from "../hooks/useStock";
+import { resolveNeckClipPath } from "../constants/neckShapes";
 
 // Raised from the old 5MB cap now that we compress client-side before
 // upload (see compressImageFile below) — this is the ceiling on what a
@@ -102,11 +103,24 @@ const DEFAULT_TEXT_SIZE = { width: 150, height: 50 };
 // or if that document doesn't exist / fails to load. Keep these in sync
 // with the defaults you seed in Firestore so the price never jumps
 // visibly once the real config arrives.
+//
+// gstPercent            — GST rate applied to the subtotal (item price ×
+//                          quantity). Indian tax display convention:
+//                          shown inclusive-of-tax on the total, but
+//                          broken out as its own line above it.
+// deliveryCharge        — flat delivery fee added at checkout. Set to 0
+//                          to make delivery always free regardless of
+//                          freeDeliveryThreshold.
+// freeDeliveryThreshold — subtotal (before GST) at/above which delivery
+//                          is waived.
 const DEFAULT_PRICING = {
   basePrice: 499,
   backPrintCharge: 50,
   imageUploadCharge: 100,
   sizeCharges: { XS: 0, S: 0, M: 0, L: 0, XL: 50, XXL: 80 },
+  gstPercent: 18,
+  deliveryCharge: 60,
+  freeDeliveryThreshold: 999,
 };
 
 const PRICING_DOC_PATH = ["settings", "pricing"]; // db collection, doc id
@@ -186,6 +200,7 @@ const Customize = () => {
   const [pricingConfig, setPricingConfig] = useState(DEFAULT_PRICING);
   const [pricingLoaded, setPricingLoaded] = useState(false);
 
+  const [isProductImage, setIsProductImage] = useState(false);
   // Which element (if any) just had a drag/resize rejected for
   // overlapping the other element. Drives a brief visual "blocked"
   // flash so the snap-back isn't silent. null = no flash active.
@@ -232,14 +247,16 @@ const Customize = () => {
   const stockStatus = !hasStockEntry
     ? "available"
     : isOutOfStock
-    ? "out"
-    : availableQty <= 3
-    ? "critical"
-    : availableQty <= 10
-    ? "low"
-    : "good";
+      ? "out"
+      : availableQty <= 3
+        ? "critical"
+        : availableQty <= 10
+          ? "low"
+          : "good";
 
   const anyActionInProgress = savingDesign || addingCart || buyingNow;
+  const selectedNeck = activeNecks.find((n) => n.id === neck) || null;
+  const neckClipPath = resolveNeckClipPath(selectedNeck);
 
   // Effective print DPI for the currently uploaded image, given how large
   // it's ACTUALLY placed on the canvas right now (imageSize) — not just
@@ -333,6 +350,14 @@ const Customize = () => {
               ...DEFAULT_PRICING.sizeCharges,
               ...(data.sizeCharges || {}),
             },
+            gstPercent: Number(data.gstPercent ?? DEFAULT_PRICING.gstPercent),
+            deliveryCharge: Number(
+              data.deliveryCharge ?? DEFAULT_PRICING.deliveryCharge,
+            ),
+            freeDeliveryThreshold: Number(
+              data.freeDeliveryThreshold ??
+                DEFAULT_PRICING.freeDeliveryThreshold,
+            ),
           });
         }
       } catch (err) {
@@ -367,6 +392,9 @@ const Customize = () => {
     if (incomingProduct.image) {
       setImage(incomingProduct.image);
       setCloudinaryUrl(incomingProduct.image);
+      setIsProductImage(true);
+    } else {
+      setIsProductImage(false);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [incomingProduct?.id]);
@@ -375,6 +403,17 @@ const Customize = () => {
   // Keyed on the design's id for the same reason as above — so opening
   // "Edit design" for a second, different design re-syncs the form
   // instead of leaving the first design's fields in place.
+  //
+  // FIX: this used to leave `selectedProduct` untouched (still whatever
+  // it was initialized to, usually null), even when the saved design
+  // was originally built from a collection product. Since finalPrice is
+  // now derived from selectedProduct.price when present (see
+  // baseUnitPrice below), that silently reverted the price back to the
+  // admin's generic base price every time a collection-sourced design
+  // was reopened for editing. We now reconstruct a minimal product
+  // object from what buildDesignData() saved (productId/productName +
+  // the pricingSnapshot's baseValue/baseSource), so the original
+  // per-product price is respected again.
   useEffect(() => {
     if (!editMode || !incomingDesign) return;
 
@@ -389,15 +428,30 @@ const Customize = () => {
     if (incomingDesign.imageUrl) {
       setImage(incomingDesign.imageUrl);
       setCloudinaryUrl(incomingDesign.imageUrl);
+      setIsProductImage(incomingDesign.isProductImage === true);
     } else {
       setImage(null);
       setCloudinaryUrl("");
+      setIsProductImage(false);
     }
 
     setImagePosition(incomingDesign.imagePosition || DEFAULT_IMAGE_POSITION);
     setImageSize(incomingDesign.imageSize || DEFAULT_IMAGE_SIZE);
     setTextPosition(incomingDesign.textPosition || DEFAULT_TEXT_POSITION);
     setTextSize(incomingDesign.textSize || DEFAULT_TEXT_SIZE);
+
+    if (
+      incomingDesign.productId &&
+      incomingDesign.pricingSnapshot?.baseSource === "product"
+    ) {
+      setSelectedProduct({
+        id: incomingDesign.productId,
+        name: incomingDesign.productName || "",
+        price: incomingDesign.pricingSnapshot.baseValue,
+      });
+    } else {
+      setSelectedProduct(null);
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editMode, incomingDesign?.id]);
 
@@ -414,10 +468,7 @@ const Customize = () => {
     ) {
       setSelectedColor(activeColors[0].code);
     }
-    if (
-      activeSizes.length &&
-      !activeSizes.some((s) => s.id === selectedSize)
-    ) {
+    if (activeSizes.length && !activeSizes.some((s) => s.id === selectedSize)) {
       setSelectedSize(activeSizes[0].id);
     }
     if (activeNecks.length && !activeNecks.some((n) => n.id === neck)) {
@@ -443,14 +494,20 @@ const Customize = () => {
   // Price is now fully driven by pricingConfig (admin-controlled via
   // Firestore) instead of hardcoded numbers.
   const backPrintCharge = side === "back" ? pricingConfig.backPrintCharge : 0;
-  const imageCharge = image ? pricingConfig.imageUploadCharge : 0;
+
+  const imageCharge =
+    image && !isProductImage ? pricingConfig.imageUploadCharge : 0;
+
   const sizeCharge = pricingConfig.sizeCharges[selectedSize] || 0;
 
-  const finalPrice =
-    pricingConfig.basePrice + backPrintCharge + imageCharge + sizeCharge;
+  const baseUnitPrice =
+    selectedProduct && selectedProduct.price != null
+      ? Number(selectedProduct.price)
+      : pricingConfig.basePrice;
 
-  const orderTotal = finalPrice * quantity;
+  const finalPrice = baseUnitPrice + backPrintCharge + imageCharge + sizeCharge;
 
+  const subtotal = finalPrice * quantity;
   // Brief flip animation whenever the print side is toggled.
   useEffect(() => {
     setRotate(true);
@@ -489,9 +546,19 @@ const Customize = () => {
       if (!selectedElement) return;
 
       if (e.key === "Delete" || e.key === "Backspace") {
-        if (selectedElement === "image") removeImage();
-        if (selectedElement === "text") setText("");
-        setSelectedElement(null);
+        if (selectedElement === "image") {
+          if (!isProductImage) {
+            removeImage();
+            setSelectedElement(null);
+          }
+          return;
+        }
+
+        if (selectedElement === "text") {
+          setText("");
+          setSelectedElement(null);
+        }
+
         return;
       }
 
@@ -524,7 +591,7 @@ const Customize = () => {
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [selectedElement, image]);
+  }, [selectedElement, image, isProductImage]);
 
   // Reads an image's real pixel dimensions and, if needed, shrinks +
   // re-encodes it before it ever reaches Cloudinary — in one decode pass,
@@ -630,6 +697,7 @@ const Customize = () => {
 
     setMessage("");
     setSelectedElement("image");
+    setIsProductImage(false);
 
     // Mark this file as the one currently in flight, so any stale async
     // result below (dimension read, compression, or upload) from a file
@@ -705,19 +773,23 @@ const Customize = () => {
   };
 
   const removeImage = () => {
+    if (isProductImage) {
+      return;
+    }
+
     if (image && image.startsWith("blob:")) {
       URL.revokeObjectURL(image);
     }
-    // Invalidate any in-flight quality check / compression / upload for
-    // the file being removed.
+
     pendingQualityCheckRef.current = null;
+
     setImage(null);
     setImageFile(null);
     setCloudinaryUrl("");
+    setIsProductImage(false);
     setQualityWarning(null);
     setImageNaturalSize(null);
-    // Keep selection state in sync — if the image was the selected
-    // element, there's nothing left to have selected.
+
     setSelectedElement((prev) => (prev === "image" ? null : prev));
   };
 
@@ -756,6 +828,7 @@ const Customize = () => {
     setImage(null);
     setImageFile(null);
     setCloudinaryUrl("");
+    setIsProductImage(false);
     setMessage("");
     setSelectedElement(null);
     setQualityWarning(null);
@@ -868,17 +941,34 @@ const Customize = () => {
       text,
       side,
       tshirtColor: selectedColor,
-      colorId: selectedColorId, // lets stock decrement match this line item
+      colorId: selectedColorId,
       size: selectedSize,
       textColor,
       fontSize: Number(fontSize),
       neck,
       imageUrl,
+      isProductImage,
       imagePosition,
       imageSize,
       textPosition,
       textSize,
       price: finalPrice,
+
+      pricingSnapshot: {
+        // FIX: record where baseUnitPrice actually came from and what
+        // it was, so re-opening this design later (edit mode) — or
+        // auditing a past order — can tell a product-specific price
+        // apart from the admin's generic default, instead of losing
+        // that distinction the moment it's saved.
+        baseSource:
+          selectedProduct && selectedProduct.price != null
+            ? "product"
+            : "admin",
+        baseValue: baseUnitPrice,
+        gstPercent: pricingConfig.gstPercent,
+        deliveryCharge: pricingConfig.deliveryCharge,
+        freeDeliveryThreshold: pricingConfig.freeDeliveryThreshold,
+      },
       createdAt: serverTimestamp(),
     };
   };
@@ -1118,8 +1208,8 @@ const Customize = () => {
             />
           </div>
           <small className="character-count">
-            Max 8MB. We check print sharpness based on the actual size
-            you place it at — bigger placement needs a higher-res image.
+            Max 8MB. We check print sharpness based on the actual size you place
+            it at — bigger placement needs a higher-res image.
           </small>
 
           {image && (
@@ -1131,9 +1221,15 @@ const Customize = () => {
               />
               <div className="uploaded-thumb-info">
                 <span>Image added</span>
-                <button className="remove-image-btn" onClick={removeImage}>
-                  <FaTimes /> Remove
-                </button>
+                {isProductImage ? (
+                  <small className="product-image-locked">
+                    🔒 Product image
+                  </small>
+                ) : (
+                  <button className="remove-image-btn" onClick={removeImage}>
+                    <FaTimes /> Remove
+                  </button>
+                )}
               </div>
             </div>
           )}
@@ -1228,10 +1324,10 @@ const Customize = () => {
                 stockStatus === "out"
                   ? "out"
                   : stockStatus === "critical"
-                  ? "critical"
-                  : stockStatus === "low"
-                  ? "low"
-                  : "in"
+                    ? "critical"
+                    : stockStatus === "low"
+                      ? "low"
+                      : "in"
               }`}
             >
               {stockStatus === "available" && (
@@ -1401,10 +1497,7 @@ const Customize = () => {
 
       {/* IMAGE QUALITY POPUP */}
       {qualityWarning && (
-        <div
-          className="quality-modal-backdrop"
-          onClick={keepLowQualityImage}
-        >
+        <div className="quality-modal-backdrop" onClick={keepLowQualityImage}>
           <div
             className="quality-modal"
             role="alertdialog"
@@ -1428,16 +1521,16 @@ const Customize = () => {
                   At its current size on the shirt, this image works out to
                   about <strong>{qualityWarning.dpi} DPI</strong> — below{" "}
                   <strong>{DPI_ACCEPTABLE} DPI</strong>, so it'll likely look
-                  soft or pixelated when printed. Try a higher-resolution
-                  image, or make the design smaller on the canvas.
+                  soft or pixelated when printed. Try a higher-resolution image,
+                  or make the design smaller on the canvas.
                 </>
               ) : (
                 <>
                   At its current size on the shirt, this image works out to
-                  about <strong>{qualityWarning.dpi} DPI</strong> —
-                  printable, but below the <strong>{DPI_GOOD} DPI</strong> we'd
-                  call sharp. Shrinking it on the canvas or using a
-                  higher-res image will look crisper.
+                  about <strong>{qualityWarning.dpi} DPI</strong> — printable,
+                  but below the <strong>{DPI_GOOD} DPI</strong> we'd call sharp.
+                  Shrinking it on the canvas or using a higher-res image will
+                  look crisper.
                 </>
               )}
             </p>
@@ -1498,11 +1591,14 @@ const Customize = () => {
           <>
             <div className={`preview-card ${rotate ? "rotate" : ""}`}>
               <div
-                className={`tshirt-preview ${neck}`}
-                style={{ background: selectedColor }}
+                className="tshirt-preview"
+                style={{ background: selectedColor, clipPath: neckClipPath }}
                 ref={canvasRef}
                 onClick={handleCanvasBackgroundClick}
               >
+                {/* clipPath is computed from the admin's chosen `shape`
+                    via neckShapes.js, so any number of custom neck
+                    styles work. */}
                 <div className="fabric-shade"></div>
                 <div className="neck"></div>
                 <div className="stitch"></div>
@@ -1521,7 +1617,9 @@ const Customize = () => {
                     bounds="parent"
                     style={{
                       zIndex: selectedElement === "image" ? 25 : 20,
-                      ...(blockedElement === "image" ? blockedOutlineStyle : {}),
+                      ...(blockedElement === "image"
+                        ? blockedOutlineStyle
+                        : {}),
                     }}
                     onClick={(e) => {
                       e.stopPropagation();
@@ -1685,20 +1783,22 @@ const Customize = () => {
                   <FaAlignRight /> Right
                 </button>
 
-                <button
-                  type="button"
-                  className="element-toolbar-remove"
-                  onClick={() => {
-                    if (selectedElement === "image") {
-                      removeImage();
-                    } else {
-                      setText("");
-                    }
-                    setSelectedElement(null);
-                  }}
-                >
-                  <FaTimes /> Remove
-                </button>
+                {!(selectedElement === "image" && isProductImage) && (
+                  <button
+                    type="button"
+                    className="element-toolbar-remove"
+                    onClick={() => {
+                      if (selectedElement === "image") {
+                        removeImage();
+                      } else {
+                        setText("");
+                      }
+                      setSelectedElement(null);
+                    }}
+                  >
+                    <FaTimes /> Remove
+                  </button>
+                )}
               </div>
             )}
           </>
@@ -1712,37 +1812,59 @@ const Customize = () => {
             <small className="upload-status">Loading current pricing...</small>
           )}
 
-          <div className="price-row">
-            <span>Base Price</span>
-            <span>₹{pricingConfig.basePrice}</span>
-          </div>
+          {/* Per-item breakdown — only lines that actually apply are shown,
+              so a plain t-shirt with no add-ons doesn't show a wall of
+              "₹0" rows. Base price now reflects the selected product's
+              own price when one was chosen from a Collection, falling
+              back to the admin's generic base price otherwise. */}
+          <div className="price-section">
+            <div className="price-row">
+              <span>Base Price</span>
+              <span>₹{baseUnitPrice}</span>
+            </div>
 
-          <div className="price-row">
-            <span>Back Print</span>
-            <span>₹{backPrintCharge}</span>
-          </div>
+            {backPrintCharge > 0 && (
+              <div className="price-row">
+                <span>Back Print</span>
+                <span>₹{backPrintCharge}</span>
+              </div>
+            )}
 
-          <div className="price-row">
-            <span>Image Upload</span>
-            <span>₹{imageCharge}</span>
-          </div>
+            {imageCharge > 0 && (
+              <div className="price-row">
+                <span>Image Upload</span>
+                <span>₹{imageCharge}</span>
+              </div>
+            )}
 
-          <div className="price-row">
-            <span>Size ({selectedSize})</span>
-            <span>{sizeCharge > 0 ? `₹${sizeCharge}` : "₹0"}</span>
-          </div>
+            {sizeCharge > 0 && (
+              <div className="price-row">
+                <span>Size ({selectedSize})</span>
+                <span>₹{sizeCharge}</span>
+              </div>
+            )}
 
-          <div className="price-row">
-            <span>Quantity</span>
-            <span>× {quantity}</span>
+            <div className="price-row price-row-muted">
+              <span>Price per item</span>
+              <span>₹{finalPrice}</span>
+            </div>
+
+            <div className="price-row price-row-muted">
+              <span>Quantity</span>
+              <span>× {quantity}</span>
+            </div>
           </div>
 
           <hr />
 
           <h2>
-            Total
-            <span>₹{orderTotal}</span>
+            Subtotal
+            <span>₹{subtotal}</span>
           </h2>
+
+          <small className="gst-note">
+            + GST &amp; delivery, calculated at checkout
+          </small>
         </div>
       </div>
     </div>
