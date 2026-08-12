@@ -23,6 +23,11 @@ import {
 
 import "../styles/Checkout.css";
 
+// Formats a number as a rupee amount with two decimal places, so
+// floating-point drift from summing prices (e.g. 199.98999999999998)
+// never reaches the screen.
+const formatCurrency = (value) => (Number(value) || 0).toFixed(2);
+
 const Checkout = () => {
   const navigate = useNavigate();
   const location = useLocation();
@@ -94,7 +99,10 @@ const Checkout = () => {
 
       setCartItems(items);
     } catch (error) {
-      console.log(error);
+      console.error(error);
+      setMessage(
+        "❌ Couldn't load your cart. Please refresh and try again.",
+      );
     } finally {
       setLoading(false);
     }
@@ -134,7 +142,10 @@ const Checkout = () => {
         setSelectedAddress(data[0]);
       }
     } catch (error) {
-      console.log(error);
+      console.error(error);
+      setMessage(
+        "❌ Couldn't load your saved addresses. Please refresh and try again.",
+      );
     }
   };
 
@@ -160,7 +171,10 @@ const Checkout = () => {
 
       setMessage("Address added successfully.");
     } catch (error) {
-      console.log(error);
+      console.error(error);
+      setMessage(
+        "❌ " + (error.message || "Failed to save address. Please try again."),
+      );
     }
   };
 
@@ -250,6 +264,11 @@ const Checkout = () => {
   // are astronomically small, and Firestore's own auto-generated
   // document ID (orderRef.id) is the real uniqueness guarantee this
   // "ORD######" code was never actually providing anyway.
+  //
+  // Note: this "ORD######" code is a display-only field stored inside
+  // the order doc — it is NOT the document's id. Anything that needs
+  // to look an order back up (e.g. cancelOrder) must use orderRef.id,
+  // never this field.
   const generateOrderId = () => {
     const timestampPart = Date.now().toString(36).toUpperCase();
     const randomPart = Math.random().toString(36).slice(2, 6).toUpperCase();
@@ -261,10 +280,17 @@ const Checkout = () => {
   // ==========================
   // Order: decrement stock FIRST (inside its own transaction, so
   // concurrent checkouts can't oversell), then create the order doc,
-  // then clear the cart. If stock decrement fails (not enough left),
-  // nothing else happens and the customer sees why. If the order or
-  // cart-clear step fails AFTER stock was already decremented, we
-  // restock what we took so the failure doesn't silently eat inventory.
+  // then clear the cart.
+  //
+  // Restock-on-failure only applies if the ORDER ITSELF never got
+  // created — tracked separately via orderCreated. Previously this
+  // whole flow shared one try/catch, so a failure in the cart-clearing
+  // step (after the order had already been successfully written) was
+  // treated the same as a fully failed order: it triggered a restock
+  // (even though the order was real and still held those units) and
+  // showed the customer "Failed to place order" for an order that had
+  // actually gone through. Now a cart-clear failure just logs quietly;
+  // the order stands and the success message is shown.
 
   const placeOrder = async () => {
     if (!selectedAddress) {
@@ -279,6 +305,7 @@ const Checkout = () => {
 
     const stockItems = getStockItems(cartItems);
     let stockDecremented = false;
+    let orderCreated = false;
 
     try {
       setPlacingOrder(true);
@@ -310,11 +337,21 @@ const Checkout = () => {
         status: "Pending",
         createdAt: serverTimestamp(),
       });
+      orderCreated = true;
 
       // Step 3 — empty cart (only the items actually part of this
-      // order; anything left unchecked in the cart stays there).
-      for (const item of cartItems) {
-        await deleteDoc(doc(db, "cart", item.id));
+      // order; anything left unchecked in the cart stays there). The
+      // order already exists at this point, so a failure here must
+      // NOT be treated as a failed order — just log it and move on.
+      const deletions = await Promise.allSettled(
+        cartItems.map((item) => deleteDoc(doc(db, "cart", item.id))),
+      );
+      const failedDeletions = deletions.filter((r) => r.status === "rejected");
+      if (failedDeletions.length > 0) {
+        console.error(
+          "Order placed, but some cart items couldn't be cleared:",
+          failedDeletions,
+        );
       }
 
       setMessage("✅ Order placed successfully!");
@@ -325,9 +362,10 @@ const Checkout = () => {
     } catch (error) {
       console.error(error);
 
-      // Order/cart step failed after stock was already taken — give
-      // it back rather than leaving inventory silently short.
-      if (stockDecremented) {
+      // Only restock if the ORDER ITSELF failed to be created — if the
+      // order exists, those units are legitimately spoken for, however
+      // step 3 (cart clearing) went.
+      if (stockDecremented && !orderCreated) {
         try {
           await restockForCancelledOrder(stockItems);
         } catch (restockError) {
@@ -340,6 +378,13 @@ const Checkout = () => {
       );
     } finally {
       setPlacingOrder(false);
+    }
+  };
+
+  const handleAddressKeyDown = (e, address) => {
+    if (e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      setSelectedAddress(address);
     }
   };
 
@@ -410,12 +455,16 @@ const Checkout = () => {
 
               <div
                 key={address.id}
+                role="button"
+                tabIndex={0}
+                aria-pressed={selectedAddress?.id === address.id}
                 className={
                   selectedAddress?.id === address.id
                     ? "saved-address-card active"
                     : "saved-address-card"
                 }
                 onClick={() => setSelectedAddress(address)}
+                onKeyDown={(e) => handleAddressKeyDown(e, address)}
               >
 
                 <div className="address-top">
@@ -547,7 +596,7 @@ const Checkout = () => {
 
               <strong>
 
-                ₹{getLineTotal(item)}
+                ₹{formatCurrency(getLineTotal(item))}
 
               </strong>
 
@@ -562,7 +611,7 @@ const Checkout = () => {
 
           <h3>Total</h3>
 
-          <h2>₹{total}</h2>
+          <h2>₹{formatCurrency(total)}</h2>
 
         </div>
 

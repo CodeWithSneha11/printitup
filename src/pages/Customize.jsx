@@ -37,7 +37,13 @@ import { Rnd } from "react-rnd";
 import { useProductOptions } from "../hooks/useProductOptions";
 import { useStock, stockDocId } from "../hooks/useStock";
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
+// Raised from the old 5MB cap now that we compress client-side before
+// upload (see compressImageFile below) — this is the ceiling on what a
+// user can *select*, not what actually reaches Cloudinary. Modern phone
+// photos routinely land in the 6-10MB range straight out of the camera,
+// so a hard 5MB wall was rejecting perfectly good source images that
+// would have compressed down fine.
+const MAX_FILE_SIZE = 8 * 1024 * 1024; // 8MB
 const MAX_QUANTITY = 10;
 const ALLOWED_IMAGE_TYPES = [
   "image/png",
@@ -46,15 +52,43 @@ const ALLOWED_IMAGE_TYPES = [
   "image/webp",
 ];
 
-// Print-quality thresholds. Below LOW_QUALITY_DIMENSION we warn strongly;
-// between that and MIN_IMAGE_DIMENSION we give a softer heads-up.
-const MIN_IMAGE_DIMENSION = 1000; // px, recommended minimum for a sharp print
-const LOW_QUALITY_DIMENSION = 600; // px, below this the print will likely look blurry/pixelated
+// Physical width (inches) the print canvas represents edge-to-edge — i.e.
+// your actual production print area (e.g. DTG print width). Tune this to
+// match reality; every DPI figure below is derived from it, so if it's
+// off, the quality grading will be too.
+const PRINT_AREA_WIDTH_INCHES = 12;
+
+// Effective-DPI tiers, computed from an image's real pixel dimensions
+// relative to how large it's actually PLACED on the shirt (imageSize),
+// not just the raw file's resolution. A 4000px image stretched to cover
+// the whole front reads very differently than the same file kept small —
+// fixed pixel thresholds miss that entirely.
+const DPI_EXCELLENT = 300;
+const DPI_GOOD = 200;
+const DPI_ACCEPTABLE = 150;
+// Below DPI_ACCEPTABLE is the "Warning" tier.
+
+// Client-side compression settings, applied before the file ever reaches
+// Cloudinary. This is what actually resolves the "blurry vs. free-tier
+// bandwidth" tension: the dimension ceiling is set high enough to still
+// hit DPI_EXCELLENT at full print width, while file size (the thing that
+// actually drives Cloudinary bandwidth/storage credits) is brought down
+// independently via re-encoding quality.
+const COMPRESS_MAX_DIMENSION = PRINT_AREA_WIDTH_INCHES * DPI_EXCELLENT; // 3600px
+const COMPRESS_JPEG_QUALITY = 0.85;
+// Files already at/under this size skip compression entirely — no point
+// spending CPU re-encoding something that's already small and won't
+// meaningfully shrink further.
+const COMPRESS_SKIP_BELOW = 800 * 1024; // 800KB
 
 // Safe margin (px) kept between an aligned element and the canvas edge,
 // so "left"/"right" alignment doesn't slam the design right up against
 // (or past) the shirt's boundary.
 const CANVAS_ALIGN_PADDING = 20;
+
+// How long the "blocked" flash stays on an element when a drag/resize
+// is rejected for overlapping the other element.
+const OVERLAP_FLASH_MS = 350;
 
 // Default layout for a fresh design — used both on initial mount and
 // whenever resetDesign() clears the canvas, so leftover drag/resize
@@ -128,8 +162,13 @@ const Customize = () => {
   const [buyingNow, setBuyingNow] = useState(false);
 
   // Low-quality image warning shown as a popup rather than the inline
-  // message strip. null = no popup. Shape: { severity: "low" | "soft", width, height }
+  // message strip. null = no popup. Shape: { tier: "acceptable" | "low", dpi }
   const [qualityWarning, setQualityWarning] = useState(null);
+
+  // Pixel dimensions of the uploaded image AFTER any compression — this
+  // is what actually gets printed, so it's what effectiveDPI (below) is
+  // computed from. null while nothing's uploaded or a check is in flight.
+  const [imageNaturalSize, setImageNaturalSize] = useState(null);
 
   const [cloudinaryUrl, setCloudinaryUrl] = useState("");
 
@@ -147,13 +186,20 @@ const Customize = () => {
   const [pricingConfig, setPricingConfig] = useState(DEFAULT_PRICING);
   const [pricingLoaded, setPricingLoaded] = useState(false);
 
+  // Which element (if any) just had a drag/resize rejected for
+  // overlapping the other element. Drives a brief visual "blocked"
+  // flash so the snap-back isn't silent. null = no flash active.
+  const [blockedElement, setBlockedElement] = useState(null);
+  const blockedFlashTimerRef = useRef(null);
+
   // Reference to the rendered shirt canvas, used to measure available
   // space when aligning an element.
   const canvasRef = useRef(null);
 
-  // Tracks the image file currently "in flight" for dimension checking,
-  // so a stale async result can't pop the quality modal after the user
-  // has already removed that image (or replaced it with a new one).
+  // Tracks the image file currently "in flight" (quality check +
+  // compression + upload), so a stale async result can't apply itself
+  // after the user has already removed that image (or replaced it with
+  // a new one). Keyed on the ORIGINAL File object the user selected.
   const pendingQualityCheckRef = useRef(null);
 
   const hasDesignContent = Boolean(text.trim() || image);
@@ -171,29 +217,90 @@ const Customize = () => {
       : null;
 
   const isOutOfStock =
-  !!currentStockEntry &&
-  (!currentStockEntry.inStock || currentStockEntry.quantity <= 0);
+    !!currentStockEntry &&
+    (!currentStockEntry.inStock || currentStockEntry.quantity <= 0);
 
-const stockLimit =
-  currentStockEntry && currentStockEntry.inStock
-    ? currentStockEntry.quantity
-    : MAX_QUANTITY;
+  const stockLimit =
+    currentStockEntry && currentStockEntry.inStock
+      ? currentStockEntry.quantity
+      : MAX_QUANTITY;
 
-// Different stock states
-const hasStockEntry = !!currentStockEntry;
-const availableQty = currentStockEntry?.quantity || 0;
+  // Different stock states
+  const hasStockEntry = !!currentStockEntry;
+  const availableQty = currentStockEntry?.quantity || 0;
 
-const stockStatus = !hasStockEntry
-  ? "available"
-  : isOutOfStock
-  ? "out"
-  : availableQty <= 3
-  ? "critical"
-  : availableQty <= 10
-  ? "low"
-  : "good";
+  const stockStatus = !hasStockEntry
+    ? "available"
+    : isOutOfStock
+    ? "out"
+    : availableQty <= 3
+    ? "critical"
+    : availableQty <= 10
+    ? "low"
+    : "good";
 
   const anyActionInProgress = savingDesign || addingCart || buyingNow;
+
+  // Effective print DPI for the currently uploaded image, given how large
+  // it's ACTUALLY placed on the canvas right now (imageSize) — not just
+  // its raw resolution. Recomputes on every render, so it updates live
+  // as the user drags/resizes the image on the shirt. Only meaningful in
+  // 2D view, since that's the canvas the print area maps onto.
+  const effectiveDPI = (() => {
+    if (use3D || !imageNaturalSize || !canvasRef.current) return null;
+    const canvasWidth = canvasRef.current.clientWidth;
+    if (!canvasWidth) return null;
+
+    const inchesPerCanvasPx = PRINT_AREA_WIDTH_INCHES / canvasWidth;
+    const printWidthInches = imageSize.width * inchesPerCanvasPx;
+    if (printWidthInches <= 0) return null;
+
+    return Math.round(imageNaturalSize.width / printWidthInches);
+  })();
+
+  const dpiTier = (dpi) => {
+    if (dpi == null) return null;
+    if (dpi >= DPI_EXCELLENT) return "excellent";
+    if (dpi >= DPI_GOOD) return "good";
+    if (dpi >= DPI_ACCEPTABLE) return "acceptable";
+    return "low";
+  };
+
+  const currentDpiTier = dpiTier(effectiveDPI);
+
+  const dpiTierLabel = {
+    excellent: "Excellent",
+    good: "Good",
+    acceptable: "Acceptable",
+    low: "Low quality",
+  };
+
+  const dpiTierColor = {
+    excellent: "#16a34a",
+    good: "#0891b2",
+    acceptable: "#d97706",
+    low: "#ef4444",
+  };
+
+  // Pops the quality warning modal right after a new image loads (and its
+  // real dimensions are known), graded against its DPI at the size it's
+  // placed at that moment. Deliberately fires only when imageNaturalSize
+  // changes (a genuinely new/replaced image) — not on every resize, or
+  // the popup would reappear every time the user drags a resize handle.
+  // Live feedback while resizing comes from the DPI badge in the element
+  // toolbar instead, which does update continuously.
+  useEffect(() => {
+    if (!imageNaturalSize || use3D) return;
+
+    const tier = dpiTier(effectiveDPI);
+
+    if (tier === "acceptable" || tier === "low") {
+      setQualityWarning({ tier, dpi: effectiveDPI });
+    } else {
+      setQualityWarning(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [imageNaturalSize]);
 
   useEffect(() => {
     if (!isWebGLAvailable()) {
@@ -242,10 +349,14 @@ const stockStatus = !hasStockEntry
   }, []);
 
   // Pre-fill fields from the product passed via the Collections page.
-  // Runs once on mount and only overrides fields the product actually
-  // specifies, so a direct visit to /customize is unaffected.
+  // Keyed on the incoming product's id (rather than running once on an
+  // empty dep array) so that navigating here again with a *different*
+  // product — without this component unmounting in between — still
+  // picks up the new product instead of leaving stale fields behind.
   useEffect(() => {
     if (!incomingProduct) return;
+
+    setSelectedProduct(incomingProduct);
 
     if (incomingProduct.color) setSelectedColor(incomingProduct.color);
     if (incomingProduct.size) setSelectedSize(incomingProduct.size);
@@ -258,9 +369,12 @@ const stockStatus = !hasStockEntry
       setCloudinaryUrl(incomingProduct.image);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [incomingProduct?.id]);
 
   // Restore a previously saved design when arriving in edit mode.
+  // Keyed on the design's id for the same reason as above — so opening
+  // "Edit design" for a second, different design re-syncs the form
+  // instead of leaving the first design's fields in place.
   useEffect(() => {
     if (!editMode || !incomingDesign) return;
 
@@ -275,15 +389,17 @@ const stockStatus = !hasStockEntry
     if (incomingDesign.imageUrl) {
       setImage(incomingDesign.imageUrl);
       setCloudinaryUrl(incomingDesign.imageUrl);
+    } else {
+      setImage(null);
+      setCloudinaryUrl("");
     }
 
-    if (incomingDesign.imagePosition)
-      setImagePosition(incomingDesign.imagePosition);
-    if (incomingDesign.imageSize) setImageSize(incomingDesign.imageSize);
-    if (incomingDesign.textPosition)
-      setTextPosition(incomingDesign.textPosition);
-    if (incomingDesign.textSize) setTextSize(incomingDesign.textSize);
-  }, [editMode, incomingDesign]);
+    setImagePosition(incomingDesign.imagePosition || DEFAULT_IMAGE_POSITION);
+    setImageSize(incomingDesign.imageSize || DEFAULT_IMAGE_SIZE);
+    setTextPosition(incomingDesign.textPosition || DEFAULT_TEXT_POSITION);
+    setTextSize(incomingDesign.textSize || DEFAULT_TEXT_SIZE);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editMode, incomingDesign?.id]);
 
   // If the currently-selected color/size/neck was deactivated or removed
   // by the admin, fall back to the first still-active option once the
@@ -312,9 +428,14 @@ const stockStatus = !hasStockEntry
 
   // Clamp quantity down if the selected combo's stock is lower than
   // what the user had picked for a previous (now-changed) combo.
+  // When stockLimit is 0 (in-stock flag true but zero quantity), the
+  // buy/cart buttons are already disabled via isOutOfStock — but we
+  // still clamp the displayed quantity to 1 rather than leaving a
+  // stale higher number shown next to an "Out of Stock" badge.
   useEffect(() => {
-    if (stockLimit > 0 && quantity > stockLimit) {
-      setQuantity(Math.max(1, stockLimit));
+    const effectiveLimit = stockLimit > 0 ? stockLimit : 1;
+    if (quantity > effectiveLimit) {
+      setQuantity(effectiveLimit);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [stockLimit]);
@@ -345,6 +466,15 @@ const stockStatus = !hasStockEntry
       if (image && image.startsWith("blob:")) URL.revokeObjectURL(image);
     };
   }, [image]);
+
+  // Clear any pending "blocked" flash timer on unmount.
+  useEffect(() => {
+    return () => {
+      if (blockedFlashTimerRef.current) {
+        clearTimeout(blockedFlashTimerRef.current);
+      }
+    };
+  }, []);
 
   // Keyboard shortcuts for the selected canvas element:
   // Delete/Backspace removes it, Escape deselects it, and the arrow
@@ -396,20 +526,86 @@ const stockStatus = !hasStockEntry
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [selectedElement, image]);
 
-  // Reads an image file's real pixel dimensions (not its file size) so
-  // we can warn the user if it's too small to print sharply.
-  const getImageDimensions = (file) =>
+  // Reads an image's real pixel dimensions and, if needed, shrinks +
+  // re-encodes it before it ever reaches Cloudinary — in one decode pass,
+  // returning the FINAL dimensions (post-compression) since those are
+  // what actually determines print DPI, not the original file's.
+  //
+  //  - Dimensions are only capped at COMPRESS_MAX_DIMENSION, which is
+  //    deliberately set to PRINT_AREA_WIDTH_INCHES × DPI_EXCELLENT so a
+  //    full-width print can still hit the top DPI tier.
+  //  - File size is brought down independently via COMPRESS_JPEG_QUALITY
+  //    re-encoding — this is where the real bandwidth savings come from
+  //    (a 10MB phone photo routinely lands well under 2MB with no
+  //    visible loss), without touching dimensions/DPI.
+  //  - PNGs stay PNG (not flattened to JPEG) so a transparent logo
+  //    doesn't gain a baked-in white background — only resized if
+  //    larger than the dimension cap.
+  //  - Small/already-efficient files pass through untouched.
+  //  - Any failure rejects, and the caller falls back to treating the
+  //    upload as best-effort rather than blocking on it.
+  const prepareImageForUpload = (file) =>
     new Promise((resolve, reject) => {
       const img = new Image();
       const objectUrl = URL.createObjectURL(file);
 
       img.onload = () => {
-        resolve({ width: img.naturalWidth, height: img.naturalHeight });
-        URL.revokeObjectURL(objectUrl);
+        const originalWidth = img.naturalWidth;
+        const originalHeight = img.naturalHeight;
+        const longEdge = Math.max(originalWidth, originalHeight);
+
+        const needsCompression =
+          file.size > COMPRESS_SKIP_BELOW || longEdge > COMPRESS_MAX_DIMENSION;
+
+        if (!needsCompression) {
+          URL.revokeObjectURL(objectUrl);
+          resolve({ file, width: originalWidth, height: originalHeight });
+          return;
+        }
+
+        const scale =
+          longEdge > COMPRESS_MAX_DIMENSION
+            ? COMPRESS_MAX_DIMENSION / longEdge
+            : 1;
+        const targetW = Math.round(originalWidth * scale);
+        const targetH = Math.round(originalHeight * scale);
+
+        const canvas = document.createElement("canvas");
+        canvas.width = targetW;
+        canvas.height = targetH;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, targetW, targetH);
+
+        const outputType =
+          file.type === "image/png" ? "image/png" : "image/jpeg";
+        const quality =
+          outputType === "image/jpeg" ? COMPRESS_JPEG_QUALITY : undefined;
+
+        canvas.toBlob(
+          (blob) => {
+            URL.revokeObjectURL(objectUrl);
+
+            if (!blob || blob.size >= file.size) {
+              // Compression didn't help (or failed) — keep the original.
+              resolve({ file, width: originalWidth, height: originalHeight });
+              return;
+            }
+
+            const ext = outputType === "image/png" ? "png" : "jpg";
+            const newName = file.name.replace(/\.[^.]+$/, "") + `.${ext}`;
+            const compressedFile = new File([blob], newName, {
+              type: outputType,
+            });
+            resolve({ file: compressedFile, width: targetW, height: targetH });
+          },
+          outputType,
+          quality,
+        );
       };
+
       img.onerror = () => {
         URL.revokeObjectURL(objectUrl);
-        reject(new Error("Could not read image dimensions."));
+        reject(new Error("Could not read image."));
       };
 
       img.src = objectUrl;
@@ -428,45 +624,59 @@ const stockStatus = !hasStockEntry
     }
 
     if (file.size > MAX_FILE_SIZE) {
-      setMessage("❌ Maximum image size is 5MB.");
+      setMessage("❌ Maximum image size is 8MB.");
       return;
     }
 
     setMessage("");
-    setImageFile(file);
-    setImage(URL.createObjectURL(file));
     setSelectedElement("image");
 
-    // Mark this file as the one we're currently checking, so a stale
-    // async result (from a file the user has since removed/replaced)
-    // can't pop the quality modal after the fact.
+    // Mark this file as the one currently in flight, so any stale async
+    // result below (dimension read, compression, or upload) from a file
+    // the user has since removed or replaced gets silently ignored.
     pendingQualityCheckRef.current = file;
 
-    // Quality check — informational only, never blocks the upload.
-    // Low-resolution results surface as a popup (qualityWarning) rather
-    // than the inline message strip, so they're hard to miss.
+    // Show an instant preview from the original file — don't make the
+    // user wait on compression just to see their pick on the shirt.
+    const previewUrl = URL.createObjectURL(file);
+    setImage(previewUrl);
+    setImageFile(file);
+    // Cleared until the real (possibly compressed) dimensions are known,
+    // so the DPI badge doesn't briefly show a stale value from the
+    // previous image.
+    setImageNaturalSize(null);
+
+    let prepared = null;
     try {
-      const { width, height } = await getImageDimensions(file);
+      prepared = await prepareImageForUpload(file);
+    } catch (err) {
+      console.warn("Could not read/compress image:", err);
+    }
 
-      if (pendingQualityCheckRef.current !== file) {
-        // A newer file has since been selected, or this one was removed —
-        // ignore this now-stale result.
-        return;
-      }
+    if (pendingQualityCheckRef.current !== file) {
+      // A newer file was selected (or this one removed) while we were
+      // processing — drop the now-abandoned preview and bail.
+      URL.revokeObjectURL(previewUrl);
+      return;
+    }
 
-      if (width < LOW_QUALITY_DIMENSION || height < LOW_QUALITY_DIMENSION) {
-        setQualityWarning({ severity: "low", width, height });
-      } else if (width < MIN_IMAGE_DIMENSION || height < MIN_IMAGE_DIMENSION) {
-        setQualityWarning({ severity: "soft", width, height });
-      } else {
-        setQualityWarning(null);
+    const uploadFile = prepared ? prepared.file : file;
+
+    if (prepared) {
+      // Drives both the DPI badge and the quality-warning effect above.
+      setImageNaturalSize({ width: prepared.width, height: prepared.height });
+
+      // Swap in the compressed file/preview only if compression actually
+      // produced a different file.
+      if (prepared.file !== file) {
+        URL.revokeObjectURL(previewUrl);
+        setImageFile(prepared.file);
+        setImage(URL.createObjectURL(prepared.file));
       }
-    } catch (dimErr) {
-      console.warn("Could not verify image quality:", dimErr);
     }
 
     try {
-      await uploadImageToCloudinary(file);
+      await uploadImageToCloudinary(uploadFile);
     } catch (error) {
       console.error("Image upload failed:", error);
       setMessage("❌ Image upload failed.");
@@ -498,12 +708,14 @@ const stockStatus = !hasStockEntry
     if (image && image.startsWith("blob:")) {
       URL.revokeObjectURL(image);
     }
-    // Invalidate any in-flight quality check for the file being removed.
+    // Invalidate any in-flight quality check / compression / upload for
+    // the file being removed.
     pendingQualityCheckRef.current = null;
     setImage(null);
     setImageFile(null);
     setCloudinaryUrl("");
     setQualityWarning(null);
+    setImageNaturalSize(null);
     // Keep selection state in sync — if the image was the selected
     // element, there's nothing left to have selected.
     setSelectedElement((prev) => (prev === "image" ? null : prev));
@@ -547,6 +759,7 @@ const stockStatus = !hasStockEntry
     setMessage("");
     setSelectedElement(null);
     setQualityWarning(null);
+    setImageNaturalSize(null);
 
     // Restore layout back to defaults so the next design doesn't inherit
     // stale drag/resize coordinates from whatever was on the canvas before.
@@ -622,6 +835,15 @@ const stockStatus = !hasStockEntry
       setCloudinaryUrl(imageUrl);
     }
 
+    // FIX: hash the *resolved* image URL rather than transient File
+    // metadata (name/size/lastModified). File metadata is only present
+    // right after a fresh upload — for edit-mode designs or designs
+    // carried over from a product, imageFile is null and those fields
+    // used to silently collapse to "", 0, 0, which could make two
+    // different pre-existing images hash identically (wrongly merged
+    // in the cart) or make re-adding an edited design hash differently
+    // from the original add (breaking the intended dedupe/quantity-bump
+    // behavior). The resolved URL is stable across all of these paths.
     const designId = await generateDesignId({
       text,
       side,
@@ -630,15 +852,14 @@ const stockStatus = !hasStockEntry
       textColor,
       fontSize: Number(fontSize),
       neck,
-      imageName: imageFile?.name || "",
-      imageFileSize: imageFile?.size || 0,
-      imageModified: imageFile?.lastModified || 0,
+      imageUrl: imageUrl || "",
       imagePosition,
       imageSize,
       textPosition,
       textSize,
       productId: selectedProduct?.id || "",
     });
+
     return {
       uid,
       designId,
@@ -647,7 +868,7 @@ const stockStatus = !hasStockEntry
       text,
       side,
       tshirtColor: selectedColor,
-      colorId: selectedColorId, // NEW — lets stock decrement match this line item
+      colorId: selectedColorId, // lets stock decrement match this line item
       size: selectedSize,
       textColor,
       fontSize: Number(fontSize),
@@ -818,6 +1039,22 @@ const stockStatus = !hasStockEntry
     setPosition((prev) => ({ ...prev, x }));
   };
 
+  // FIX: drag/resize used to reject silently on overlap — Rnd (being
+  // controlled) would snap back to the last committed position/size
+  // with no feedback at all. This triggers a brief visual flash on the
+  // rejected element instead, via the `blockedElement` state consumed
+  // by inline styles below.
+  const flashBlocked = (type) => {
+    if (blockedFlashTimerRef.current) {
+      clearTimeout(blockedFlashTimerRef.current);
+    }
+    setBlockedElement(type);
+    blockedFlashTimerRef.current = setTimeout(() => {
+      setBlockedElement(null);
+      blockedFlashTimerRef.current = null;
+    }, OVERLAP_FLASH_MS);
+  };
+
   const isError = message.startsWith("❌");
   const isOverlapping = (pos1, size1, pos2, size2, padding = 10) => {
     return !(
@@ -827,6 +1064,13 @@ const stockStatus = !hasStockEntry
       pos2.y + size2.height + padding < pos1.y
     );
   };
+
+  const blockedOutlineStyle = {
+    outline: "2px solid #ef4444",
+    outlineOffset: "2px",
+    transition: "outline-color 0.15s ease",
+  };
+
   return (
     <div className="customize-container">
       {/* LEFT PANEL */}
@@ -873,6 +1117,10 @@ const stockStatus = !hasStockEntry
               onChange={handleImageUpload}
             />
           </div>
+          <small className="character-count">
+            Max 8MB. We check print sharpness based on the actual size
+            you place it at — bigger placement needs a higher-res image.
+          </small>
 
           {image && (
             <div className="uploaded-thumb-row">
@@ -974,59 +1222,59 @@ const stockStatus = !hasStockEntry
             ))}
           </select>
 
-        {stockLoaded && (
-  <div
-    className={`stock-badge ${
-      stockStatus === "out"
-        ? "out"
-        : stockStatus === "critical"
-        ? "critical"
-        : stockStatus === "low"
-        ? "low"
-        : "in"
-    }`}
-  >
-    {stockStatus === "available" && (
-      <>
-        ✅ Available
-        <small>
-          This combination is currently available for ordering.
-        </small>
-      </>
-    )}
+          {stockLoaded && (
+            <div
+              className={`stock-badge ${
+                stockStatus === "out"
+                  ? "out"
+                  : stockStatus === "critical"
+                  ? "critical"
+                  : stockStatus === "low"
+                  ? "low"
+                  : "in"
+              }`}
+            >
+              {stockStatus === "available" && (
+                <>
+                  ✅ Available
+                  <small>
+                    This combination is currently available for ordering.
+                  </small>
+                </>
+              )}
 
-    {stockStatus === "good" && (
-      <>
-        ✅ In Stock
-        <small>{availableQty} pieces available.</small>
-      </>
-    )}
+              {stockStatus === "good" && (
+                <>
+                  ✅ In Stock
+                  <small>{availableQty} pieces available.</small>
+                </>
+              )}
 
-    {stockStatus === "low" && (
-      <>
-        ⚠️ Low Stock
-        <small>Only {availableQty} pieces remaining.</small>
-      </>
-    )}
+              {stockStatus === "low" && (
+                <>
+                  ⚠️ Low Stock
+                  <small>Only {availableQty} pieces remaining.</small>
+                </>
+              )}
 
-    {stockStatus === "critical" && (
-      <>
-        🔥 Almost Sold Out
-        <small>Hurry! Only {availableQty} left.</small>
-      </>
-    )}
+              {stockStatus === "critical" && (
+                <>
+                  🔥 Almost Sold Out
+                  <small>Hurry! Only {availableQty} left.</small>
+                </>
+              )}
 
-    {stockStatus === "out" && (
-      <>
-        ❌ Out of Stock
-        <small>
-          This Color + Size + Neck combination is currently unavailable.
-          Please choose another option.
-        </small>
-      </>
-    )}
-  </div>
-)}
+              {stockStatus === "out" && (
+                <>
+                  ❌ Out of Stock
+                  <small>
+                    This Color + Size + Neck combination is currently
+                    unavailable. Please choose another option.
+                  </small>
+                </>
+              )}
+            </div>
+          )}
           <label>Quantity</label>
           <div className="quantity-stepper">
             <button
@@ -1169,36 +1417,27 @@ const stockStatus = !hasStockEntry
             </div>
 
             <h3 id="quality-modal-title">
-              {qualityWarning.severity === "low"
-                ? "This image is quite low resolution"
-                : "Image resolution is a little low"}
+              {qualityWarning.tier === "low"
+                ? "This will likely print blurry"
+                : "Print quality is just okay at this size"}
             </h3>
 
             <p>
-              {qualityWarning.severity === "low" ? (
+              {qualityWarning.tier === "low" ? (
                 <>
-                  Your upload is{" "}
-                  <strong>
-                    {qualityWarning.width}×{qualityWarning.height}px
-                  </strong>{" "}
-                  and will likely look blurry or pixelated when printed. For
-                  best results, use an image that's at least{" "}
-                  <strong>
-                    {MIN_IMAGE_DIMENSION}×{MIN_IMAGE_DIMENSION}px
-                  </strong>
-                  .
+                  At its current size on the shirt, this image works out to
+                  about <strong>{qualityWarning.dpi} DPI</strong> — below{" "}
+                  <strong>{DPI_ACCEPTABLE} DPI</strong>, so it'll likely look
+                  soft or pixelated when printed. Try a higher-resolution
+                  image, or make the design smaller on the canvas.
                 </>
               ) : (
                 <>
-                  Your upload is{" "}
-                  <strong>
-                    {qualityWarning.width}×{qualityWarning.height}px
-                  </strong>
-                  . It should still print okay, but{" "}
-                  <strong>
-                    {MIN_IMAGE_DIMENSION}×{MIN_IMAGE_DIMENSION}px
-                  </strong>{" "}
-                  or larger will look sharper.
+                  At its current size on the shirt, this image works out to
+                  about <strong>{qualityWarning.dpi} DPI</strong> —
+                  printable, but below the <strong>{DPI_GOOD} DPI</strong> we'd
+                  call sharp. Shrinking it on the canvas or using a
+                  higher-res image will look crisper.
                 </>
               )}
             </p>
@@ -1280,7 +1519,10 @@ const stockStatus = !hasStockEntry
                     size={{ width: imageSize.width, height: imageSize.height }}
                     position={{ x: imagePosition.x, y: imagePosition.y }}
                     bounds="parent"
-                    style={{ zIndex: selectedElement === "image" ? 25 : 20 }}
+                    style={{
+                      zIndex: selectedElement === "image" ? 25 : 20,
+                      ...(blockedElement === "image" ? blockedOutlineStyle : {}),
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedElement("image");
@@ -1294,6 +1536,7 @@ const stockStatus = !hasStockEntry
                         text &&
                         isOverlapping(newPos, imageSize, textPosition, textSize)
                       ) {
+                        flashBlocked("image");
                         return;
                       }
 
@@ -1314,6 +1557,7 @@ const stockStatus = !hasStockEntry
                         text &&
                         isOverlapping(newPos, newSize, textPosition, textSize)
                       ) {
+                        flashBlocked("image");
                         return;
                       }
 
@@ -1336,7 +1580,10 @@ const stockStatus = !hasStockEntry
                     size={{ width: textSize.width, height: textSize.height }}
                     position={{ x: textPosition.x, y: textPosition.y }}
                     bounds="parent"
-                    style={{ zIndex: selectedElement === "text" ? 25 : 20 }}
+                    style={{
+                      zIndex: selectedElement === "text" ? 25 : 20,
+                      ...(blockedElement === "text" ? blockedOutlineStyle : {}),
+                    }}
                     onClick={(e) => {
                       e.stopPropagation();
                       setSelectedElement("text");
@@ -1355,6 +1602,7 @@ const stockStatus = !hasStockEntry
                           imageSize,
                         )
                       ) {
+                        flashBlocked("text");
                         return;
                       }
 
@@ -1375,6 +1623,7 @@ const stockStatus = !hasStockEntry
                         image &&
                         isOverlapping(newPos, newSize, imagePosition, imageSize)
                       ) {
+                        flashBlocked("text");
                         return;
                       }
 
@@ -1392,8 +1641,6 @@ const stockStatus = !hasStockEntry
                     </div>
                   </Rnd>
                 )}
-
-                
               </div>
             </div>
 
@@ -1404,6 +1651,20 @@ const stockStatus = !hasStockEntry
                     ? "Image selected"
                     : "Text selected"}
                 </span>
+
+                {selectedElement === "image" && currentDpiTier && (
+                  <span
+                    className="dpi-badge"
+                    style={{
+                      color: dpiTierColor[currentDpiTier],
+                      fontWeight: 600,
+                      fontSize: "0.85em",
+                    }}
+                    title={`Estimated print quality at the current placed size (assumes a ${PRINT_AREA_WIDTH_INCHES}" wide print area)`}
+                  >
+                    {dpiTierLabel[currentDpiTier]} · {effectiveDPI} DPI
+                  </span>
+                )}
 
                 <button
                   type="button"

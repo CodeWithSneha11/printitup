@@ -13,6 +13,16 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 import { db } from "../firebase";
+import { useStock, stockDocId } from "../hooks/useStock";
+
+// Same ceiling Customize.jsx enforces when a design is first added —
+// kept here too so the cart's +/- stepper can't exceed it either.
+const MAX_QUANTITY = 10;
+
+// Formats a number as a rupee amount with two decimal places, so
+// floating-point drift from summing prices never reaches the screen.
+// Mirrors the identical helper in Checkout.jsx / MyOrders.jsx.
+const formatCurrency = (value) => (Number(value) || 0).toFixed(2);
 
 const Cart = () => {
   const [cartItems, setCartItems] = useState([]);
@@ -30,6 +40,33 @@ const Cart = () => {
 
   const uid = localStorage.getItem("uid");
   const navigate = useNavigate();
+
+  // Live stock, so the quantity stepper can be capped the same way
+  // Customize.jsx caps it — previously this stepper had NO upper
+  // bound at all (not even MAX_QUANTITY), so a user could click +
+  // past both real stock and the app's own quantity cap; it only got
+  // caught later, server-side, when checkout's transaction rejected
+  // the order. Capping it here instead just prevents that dead end.
+  const { stockMap } = useStock();
+
+  // Items that predate colorId (or came from a source that doesn't
+  // track it, e.g. collection items) aren't stock-tracked — treated
+  // as unlimited (up to MAX_QUANTITY), same convention Checkout.jsx
+  // and useStock.js use elsewhere.
+  const getStockLimit = (item) => {
+    if (!item.colorId) return MAX_QUANTITY;
+
+    const id = stockDocId(
+      item.colorId,
+      item.sizeId || item.size,
+      item.neckId || item.neck,
+    );
+    const entry = stockMap[id];
+
+    if (!entry) return MAX_QUANTITY;
+    if (!entry.inStock) return 0;
+    return Math.min(entry.quantity, MAX_QUANTITY);
+  };
 
   // Total across the ENTIRE cart (shown as secondary context).
   const total = cartItems.reduce(
@@ -104,27 +141,44 @@ const Cart = () => {
   };
 
   //  SAVE TO MY DESIGNS
+  // FIX: this used to drop `colorId` and the layout fields
+  // (imagePosition/imageSize/textPosition/textSize) when writing the
+  // "designs" doc. `colorId` is what ties a line item back to a real
+  // stock combo (colorId + size + neck) in useStock.js — losing it
+  // here meant that if the design was later moved back to the cart
+  // (MyDesigns.jsx's "Move to Cart"), it would silently stop being
+  // stock-tracked: no decrement at checkout, no restock on
+  // cancellation, no error anywhere to signal it. The layout fields
+  // being dropped meant re-editing the design reset the canvas to
+  // default positions instead of the user's actual layout. Now this
+  // mirrors buildDesignData()'s schema in Customize.jsx.
   const moveToMyDesigns = async (item) => {
-    console.log("Cart Item:", item);
     try {
       const designData = {
         uid: item.uid,
+        designId: item.designId || null,
+
         text: item.text,
         side: item.side,
+
         tshirtColor: item.tshirtColor,
+        colorId: item.colorId || null,
         size: item.size,
         textColor: item.textColor || "#000000",
         fontSize: item.fontSize || 18,
         neck: item.neck || "round",
+
         imageUrl: item.imageUrl || "",
+        imagePosition: item.imagePosition || null,
+        imageSize: item.imageSize || null,
+        textPosition: item.textPosition || null,
+        textSize: item.textSize || null,
+
         price: item.price,
         quantity: item.quantity || 1,
+
         createdAt: serverTimestamp(),
       };
-
-      if (item.designId) {
-        designData.designId = item.designId;
-      }
 
       await addDoc(collection(db, "designs"), designData);
 
@@ -161,8 +215,13 @@ const Cart = () => {
   };
 
   const increaseQuantity = async (item) => {
+    const limit = getStockLimit(item);
+    const current = item.quantity || 1;
+
+    if (current >= limit) return;
+
     try {
-      const newQty = (item.quantity || 1) + 1;
+      const newQty = current + 1;
 
       await updateDoc(doc(db, "cart", item.id), {
         quantity: newQty,
@@ -258,6 +317,8 @@ const Cart = () => {
           <div className="cart-grid">
             {cartItems.map((item) => {
               const isSelected = selectedItems.has(item.id);
+              const limit = getStockLimit(item);
+              const atLimit = (item.quantity || 1) >= limit;
 
               return (
                 <div
@@ -298,21 +359,26 @@ const Cart = () => {
                       Print Side: <b>{item.side}</b>
                     </p>
 
-                    <p>
-                      Side: <b>{item.side}</b>
-                    </p>
-
-                    <h3 className="cart-price">₹{item.price}</h3>
+                    <h3 className="cart-price">₹{formatCurrency(item.price)}</h3>
                     <div className="quantity-box">
                       <button onClick={() => decreaseQuantity(item)}>−</button>
 
                       <span>{item.quantity || 1}</span>
 
-                      <button onClick={() => increaseQuantity(item)}>+</button>
+                      <button
+                        onClick={() => increaseQuantity(item)}
+                        disabled={atLimit}
+                        title={atLimit ? "No more stock available" : undefined}
+                      >
+                        +
+                      </button>
                     </div>
 
                     <h4 className="item-total">
-                      Total : ₹{(item.price || 0) * (item.quantity || 1)}
+                      Total : ₹
+                      {formatCurrency(
+                        (item.price || 0) * (item.quantity || 1),
+                      )}
                     </h4>
 
                     <button
@@ -339,11 +405,11 @@ const Cart = () => {
 
           {/* Checkout */}
           <div className="checkout-box">
-            <h2>Cart Total: ₹{total}</h2>
+            <h2>Cart Total: ₹{formatCurrency(total)}</h2>
             <p className="checkout-selected-line">
               {selectedCount === 0
                 ? "Select at least one item to checkout"
-                : `Checking out ${selectedCount} item${selectedCount > 1 ? "s" : ""} • ₹${selectedTotal}`}
+                : `Checking out ${selectedCount} item${selectedCount > 1 ? "s" : ""} • ₹${formatCurrency(selectedTotal)}`}
             </p>
 
             <button

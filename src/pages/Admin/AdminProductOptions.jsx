@@ -14,6 +14,7 @@ const AdminProductOptions = () => {
   const [draft, setDraft] = useState(DEFAULT_OPTIONS);
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState("");
+  const [messageType, setMessageType] = useState("success"); // "success" | "error"
 
   const [newColor, setNewColor] = useState({ name: "", code: "#ffffff" });
   const [newNeck, setNewNeck] = useState("");
@@ -24,36 +25,43 @@ const AdminProductOptions = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [loaded]);
 
+  const flash = (text, type = "success", timeout = 2500) => {
+    setMessage(text);
+    setMessageType(type);
+    if (timeout) setTimeout(() => setMessage(""), timeout);
+  };
+
   const persist = async (next) => {
     setDraft(next);
     setSaving(true);
     setMessage("");
     try {
       await saveProductOptions(next);
-      setMessage("✅ Saved");
+      flash("Saved", "success");
     } catch (err) {
       console.error(err);
-      setMessage("❌ Failed to save: " + (err.message || "unknown error"));
+      flash("Failed to save: " + (err.message || "unknown error"), "error", 4000);
     } finally {
       setSaving(false);
-      setTimeout(() => setMessage(""), 2500);
     }
   };
 
   // ---------- Colors ----------
   const addColor = () => {
-    if (!newColor.name.trim()) return;
-    const id = slugify(newColor.name);
+    const name = newColor.name.trim();
+    if (!name) return;
+    const id = slugify(name);
+    if (!id) {
+      flash("That name doesn't contain any letters or numbers — try a different name.", "error", 4000);
+      return;
+    }
     if (draft.colors.some((c) => c.id === id)) {
-      setMessage("❌ A color with that name already exists.");
+      flash("A color with that name already exists.", "error");
       return;
     }
     persist({
       ...draft,
-      colors: [
-        ...draft.colors,
-        { id, name: newColor.name.trim(), code: newColor.code, active: true },
-      ],
+      colors: [...draft.colors, { id, name, code: newColor.code, active: true }],
     });
     setNewColor({ name: "", code: "#ffffff" });
   };
@@ -86,16 +94,18 @@ const AdminProductOptions = () => {
 
   // ---------- Neck styles ----------
   const addNeck = () => {
-    if (!newNeck.trim()) return;
-    const id = slugify(newNeck);
-    if (draft.necks.some((n) => n.id === id)) {
-      setMessage("❌ That neck style already exists.");
+    const label = newNeck.trim();
+    if (!label) return;
+    const id = slugify(label);
+    if (!id) {
+      flash("That name doesn't contain any letters or numbers — try a different name.", "error", 4000);
       return;
     }
-    persist({
-      ...draft,
-      necks: [...draft.necks, { id, label: newNeck.trim(), active: true }],
-    });
+    if (draft.necks.some((n) => n.id === id)) {
+      flash("That neck style already exists.", "error");
+      return;
+    }
+    persist({ ...draft, necks: [...draft.necks, { id, label, active: true }] });
     setNewNeck("");
   };
 
@@ -117,13 +127,10 @@ const AdminProductOptions = () => {
     const label = newSize.trim().toUpperCase();
     if (!label) return;
     if (draft.sizes.some((s) => s.id === label)) {
-      setMessage("❌ That size already exists.");
+      flash("That size already exists.", "error");
       return;
     }
-    persist({
-      ...draft,
-      sizes: [...draft.sizes, { id: label, label, active: true }],
-    });
+    persist({ ...draft, sizes: [...draft.sizes, { id: label, label, active: true }] });
     setNewSize("");
   };
 
@@ -140,7 +147,20 @@ const AdminProductOptions = () => {
     persist({ ...draft, sizes: draft.sizes.filter((s) => s.id !== id) });
   };
 
-  if (!loaded) return <div className="admin-options-page">Loading...</div>;
+  const onEnter = (fn) => (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      fn();
+    }
+  };
+
+  if (!loaded) {
+    return (
+      <div className="admin-options-page">
+        <div className="admin-options-loading">Loading product options…</div>
+      </div>
+    );
+  }
 
   return (
     <div className="admin-options-page">
@@ -150,111 +170,180 @@ const AdminProductOptions = () => {
         Customize page. Deactivating hides an option from customers without
         deleting it.
       </p>
-      {message && <p className="admin-options-message">{message}</p>}
-      {saving && <p className="admin-options-saving">Saving…</p>}
+
+      {message && (
+        <p className={`admin-options-message ${messageType === "error" ? "is-error" : ""}`}>
+          {message}
+        </p>
+      )}
 
       {/* COLORS */}
       <section className="admin-options-section">
-        <h3>T-Shirt Colors</h3>
-        <div className="admin-options-list">
-          {draft.colors.map((c) => (
-            <div
-              key={c.id}
-              className={`admin-option-row ${c.active ? "" : "inactive"}`}
-            >
-              <input
-                type="color"
-                value={c.code}
-                onChange={(e) => updateColorCode(c.id, e.target.value)}
-                onBlur={commitColorCode}
-              />
-              <span className="admin-option-name">{c.name}</span>
-              <button onClick={() => toggleColorActive(c.id)}>
-                {c.active ? "Deactivate" : "Activate"}
-              </button>
-              <button className="danger" onClick={() => deleteColor(c.id)}>
-                Delete
-              </button>
-            </div>
-          ))}
+        <div className="admin-options-section-head">
+          <h3>T-Shirt Colors</h3>
+          <span className="admin-options-count">{draft.colors.length}</span>
         </div>
+
+        {draft.colors.length === 0 ? (
+          <p className="admin-options-empty">No colors yet — add one below.</p>
+        ) : (
+          <div className="admin-options-list">
+            {draft.colors.map((c) => (
+              <div
+                key={c.id}
+                className={`admin-option-row ${c.active ? "" : "inactive"}`}
+              >
+                <input
+                  type="color"
+                  value={c.code}
+                  aria-label={`Color swatch for ${c.name}`}
+                  onChange={(e) => updateColorCode(c.id, e.target.value)}
+                  onBlur={commitColorCode}
+                />
+                <span className="admin-option-name">{c.name}</span>
+                <span className={`admin-status-pill ${c.active ? "active" : "inactive"}`}>
+                  {c.active ? "Active" : "Inactive"}
+                </span>
+                <button
+                  type="button"
+                  disabled={saving}
+                  onClick={() => toggleColorActive(c.id)}
+                >
+                  {c.active ? "Deactivate" : "Activate"}
+                </button>
+                <button
+                  type="button"
+                  className="danger"
+                  disabled={saving}
+                  onClick={() => deleteColor(c.id)}
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="admin-option-add">
           <input
             type="text"
             placeholder="Color name (e.g. Maroon)"
+            aria-label="New color name"
             value={newColor.name}
-            onChange={(e) =>
-              setNewColor((p) => ({ ...p, name: e.target.value }))
-            }
+            onChange={(e) => setNewColor((p) => ({ ...p, name: e.target.value }))}
+            onKeyDown={onEnter(addColor)}
           />
           <input
             type="color"
+            aria-label="New color swatch"
             value={newColor.code}
-            onChange={(e) =>
-              setNewColor((p) => ({ ...p, code: e.target.value }))
-            }
+            onChange={(e) => setNewColor((p) => ({ ...p, code: e.target.value }))}
           />
-          <button onClick={addColor}>+ Add Color</button>
+          <button type="button" disabled={saving || !newColor.name.trim()} onClick={addColor}>
+            + Add Color
+          </button>
         </div>
       </section>
 
       {/* NECK STYLES */}
       <section className="admin-options-section">
-        <h3>Neck Styles</h3>
-        <div className="admin-options-list">
-          {draft.necks.map((n) => (
-            <div
-              key={n.id}
-              className={`admin-option-row ${n.active ? "" : "inactive"}`}
-            >
-              <span className="admin-option-name">{n.label}</span>
-              <button onClick={() => toggleNeckActive(n.id)}>
-                {n.active ? "Deactivate" : "Activate"}
-              </button>
-              <button className="danger" onClick={() => deleteNeck(n.id)}>
-                Delete
-              </button>
-            </div>
-          ))}
+        <div className="admin-options-section-head">
+          <h3>Neck Styles</h3>
+          <span className="admin-options-count">{draft.necks.length}</span>
         </div>
+
+        {draft.necks.length === 0 ? (
+          <p className="admin-options-empty">No neck styles yet — add one below.</p>
+        ) : (
+          <div className="admin-options-list">
+            {draft.necks.map((n) => (
+              <div
+                key={n.id}
+                className={`admin-option-row ${n.active ? "" : "inactive"}`}
+              >
+                <span className="admin-option-name">{n.label}</span>
+                <span className={`admin-status-pill ${n.active ? "active" : "inactive"}`}>
+                  {n.active ? "Active" : "Inactive"}
+                </span>
+                <button type="button" disabled={saving} onClick={() => toggleNeckActive(n.id)}>
+                  {n.active ? "Deactivate" : "Activate"}
+                </button>
+                <button
+                  type="button"
+                  className="danger"
+                  disabled={saving}
+                  onClick={() => deleteNeck(n.id)}
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="admin-option-add">
           <input
             type="text"
             placeholder="Neck style (e.g. Polo)"
+            aria-label="New neck style"
             value={newNeck}
             onChange={(e) => setNewNeck(e.target.value)}
+            onKeyDown={onEnter(addNeck)}
           />
-          <button onClick={addNeck}>+ Add Neck Style</button>
+          <button type="button" disabled={saving || !newNeck.trim()} onClick={addNeck}>
+            + Add Neck Style
+          </button>
         </div>
       </section>
 
       {/* SIZES */}
       <section className="admin-options-section">
-        <h3>Sizes</h3>
-        <div className="admin-options-list">
-          {draft.sizes.map((s) => (
-            <div
-              key={s.id}
-              className={`admin-option-row ${s.active ? "" : "inactive"}`}
-            >
-              <span className="admin-option-name">{s.label}</span>
-              <button onClick={() => toggleSizeActive(s.id)}>
-                {s.active ? "Deactivate" : "Activate"}
-              </button>
-              <button className="danger" onClick={() => deleteSize(s.id)}>
-                Delete
-              </button>
-            </div>
-          ))}
+        <div className="admin-options-section-head">
+          <h3>Sizes</h3>
+          <span className="admin-options-count">{draft.sizes.length}</span>
         </div>
+
+        {draft.sizes.length === 0 ? (
+          <p className="admin-options-empty">No sizes yet — add one below.</p>
+        ) : (
+          <div className="admin-options-list">
+            {draft.sizes.map((s) => (
+              <div
+                key={s.id}
+                className={`admin-option-row ${s.active ? "" : "inactive"}`}
+              >
+                <span className="admin-option-name">{s.label}</span>
+                <span className={`admin-status-pill ${s.active ? "active" : "inactive"}`}>
+                  {s.active ? "Active" : "Inactive"}
+                </span>
+                <button type="button" disabled={saving} onClick={() => toggleSizeActive(s.id)}>
+                  {s.active ? "Deactivate" : "Activate"}
+                </button>
+                <button
+                  type="button"
+                  className="danger"
+                  disabled={saving}
+                  onClick={() => deleteSize(s.id)}
+                >
+                  Delete
+                </button>
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="admin-option-add">
           <input
             type="text"
             placeholder="Size (e.g. 3XL)"
+            aria-label="New size"
             value={newSize}
             onChange={(e) => setNewSize(e.target.value)}
+            onKeyDown={onEnter(addSize)}
           />
-          <button onClick={addSize}>+ Add Size</button>
+          <button type="button" disabled={saving || !newSize.trim()} onClick={addSize}>
+            + Add Size
+          </button>
         </div>
       </section>
     </div>

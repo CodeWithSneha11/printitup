@@ -19,6 +19,13 @@
   line-height: 1.5;
 }
 
+.admin-options-loading {
+  color: #6b7280;
+  font-size: 14px;
+  padding: 40px 0;
+  text-align: center;
+}
+
 .admin-options-message {
   padding: 10px 14px;
   border-radius: 8px;
@@ -30,10 +37,9 @@
   display: inline-block;
 }
 
-.admin-options-saving {
-  color: #6b7280;
-  font-size: 13px;
-  margin-bottom: 12px;
+.admin-options-message.is-error {
+  background: #fef2f2;
+  color: #dc2626;
 }
 
 .admin-options-section {
@@ -45,10 +51,35 @@
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
 }
 
-.admin-options-section h3 {
+.admin-options-section-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 16px;
+}
+
+.admin-options-section-head h3 {
   font-size: 16px;
   font-weight: 600;
   color: #111827;
+  margin: 0;
+}
+
+.admin-options-count {
+  font-size: 12px;
+  font-weight: 600;
+  color: #4f46e5;
+  background: #eef2ff;
+  border-radius: 999px;
+  padding: 2px 9px;
+  line-height: 1.5;
+}
+
+.admin-options-empty {
+  font-size: 13px;
+  color: #9ca3af;
+  font-style: italic;
+  padding: 14px 4px;
   margin-bottom: 16px;
 }
 
@@ -71,7 +102,7 @@
 }
 
 .admin-option-row.inactive {
-  opacity: 0.5;
+  opacity: 0.55;
 }
 
 .admin-option-row input[type="color"] {
@@ -82,6 +113,7 @@
   border-radius: 6px;
   cursor: pointer;
   background: none;
+  flex-shrink: 0;
 }
 
 .admin-option-name {
@@ -89,6 +121,26 @@
   font-size: 14px;
   font-weight: 500;
   color: #1f2937;
+}
+
+.admin-status-pill {
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  padding: 3px 9px;
+  border-radius: 999px;
+  white-space: nowrap;
+}
+
+.admin-status-pill.active {
+  color: #047857;
+  background: #ecfdf5;
+}
+
+.admin-status-pill.inactive {
+  color: #6b7280;
+  background: #f3f4f6;
 }
 
 .admin-option-row button {
@@ -104,9 +156,14 @@
   white-space: nowrap;
 }
 
-.admin-option-row button:hover {
+.admin-option-row button:hover:not(:disabled) {
   background: #f3f4f6;
   border-color: #9ca3af;
+}
+
+.admin-option-row button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .admin-option-row button.danger {
@@ -114,7 +171,7 @@
   border-color: #fecaca;
 }
 
-.admin-option-row button.danger:hover {
+.admin-option-row button.danger:hover:not(:disabled) {
   background: #fef2f2;
   border-color: #dc2626;
 }
@@ -165,8 +222,21 @@
   transition: background 0.15s ease;
 }
 
-.admin-option-add button:hover {
+.admin-option-add button:hover:not(:disabled) {
   background: #1f2937;
+}
+
+.admin-option-add button:disabled {
+  background: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Keyboard accessibility */
+.admin-option-row button:focus-visible,
+.admin-option-add button:focus-visible,
+.admin-option-add input:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 2px;
 }
 
 @media (max-width: 640px) {

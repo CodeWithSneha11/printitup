@@ -35,7 +35,24 @@ import {
 } from "react-icons/fa";
 
 import "../styles/MyOrders.css";
-import { restockForCancelledOrder } from "../hooks/useStock";
+import { cancelOrder } from "../hooks/useStock";
+
+// Formats a number as a rupee amount with two decimal places, so
+// floating-point drift from summing prices never reaches the screen.
+// Mirrors the identical helper in Checkout.jsx.
+const formatCurrency = (value) => (Number(value) || 0).toFixed(2);
+
+// Safely formats a Firestore Timestamp. Right after a serverTimestamp()
+// write, the local cache can briefly hold null/undefined for that field
+// until the server ack arrives — calling .toDate() on that would throw,
+// so every render site funnels through here instead of chaining
+// `?.toDate().toLocaleString()` directly (which only guards the first call).
+const formatTimestamp = (timestamp, style = "date") => {
+  if (!timestamp?.toDate) return "-";
+  const d = timestamp.toDate();
+  return style === "datetime" ? d.toLocaleString() : d.toLocaleDateString();
+};
+
 // ---------------------------------------------------------------------------
 // Order tracking config
 // ---------------------------------------------------------------------------
@@ -126,12 +143,7 @@ const OrderTracker = ({ order }) => {
             <p>Reason: {order.cancellationReason}</p>
           )}
           {order.cancelledAt && (
-            <p>
-              Cancelled on{" "}
-              {order.cancelledAt?.toDate
-                ? order.cancelledAt.toDate().toLocaleString()
-                : "-"}
-            </p>
+            <p>Cancelled on {formatTimestamp(order.cancelledAt, "datetime")}</p>
           )}
         </div>
       </div>
@@ -355,31 +367,12 @@ const MyOrders = () => {
   const [selectedOrder, setSelectedOrder] = useState(null);
   const [showCancelConfirm, setShowCancelConfirm] = useState(false);
   const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
 
   // { [itemIndex]: { rating, comment } } for the currently open order
   const [reviews, setReviews] = useState({});
   // { item, index } of the product currently being reviewed, or null
   const [reviewTarget, setReviewTarget] = useState(null);
-
-  // Pulls the fields decrementStockForOrder/restockForCancelledOrder need
-  // out of an order's stored items. Only items carrying colorId are
-  // included — collection-sourced items don't store one yet, so they're
-  // skipped rather than throwing. Kept identical to the same helper in
-  // Checkout.jsx so both stay in sync.
-  const getStockItemsFromOrder = (items) =>
-    (items || [])
-      .filter(
-        (item) =>
-          item.colorId &&
-          (item.size || item.sizeId) &&
-          (item.neck || item.neckId),
-      )
-      .map((item) => ({
-        colorId: item.colorId,
-        sizeId: item.sizeId || item.size,
-        neckId: item.neckId || item.neck,
-        quantity: Number(item.quantity) || 1,
-      }));
 
   /**
    * Cancels the currently selected order.
@@ -389,13 +382,15 @@ const MyOrders = () => {
    *     scrolled to the bottom of the order details modal (see
    *     `.order-actions-zone` in JSX below), so it's never the first
    *     thing a user sees or taps by accident.
-   *  2. Data-level — `canCancelOrder` is re-checked here in case the
-   *     order moved into production (e.g. from another tab/device)
-   *     between opening the modal and confirming cancellation.
-   *
-   * Stock is restocked BEFORE the order is marked Cancelled — if the
-   * restock write fails, the order stays in its current status rather
-   * than silently showing "Cancelled" while stock is still short.
+   *  2. Data-level — delegated entirely to the transactional
+   *     `cancelOrder` in useStock.js, which re-reads the order's status
+   *     from the live server document (not this component's possibly
+   *     stale `selectedOrder`) and restocks + marks it Cancelled as a
+   *     single atomic transaction. That guarantees the order can never
+   *     end up restocked-but-not-cancelled (or cancelled twice) if this
+   *     fires from two tabs/devices around the same time, or if a
+   *     partial failure happens midway — which a manual
+   *     restock-then-updateDoc sequence here could not guarantee.
    */
   const handleCancelOrder = async () => {
     if (!canCancelOrder(selectedOrder?.status)) {
@@ -403,19 +398,9 @@ const MyOrders = () => {
       return;
     }
 
+    setCancelling(true);
     try {
-      const stockItems = getStockItemsFromOrder(selectedOrder.items);
-      if (stockItems.length > 0) {
-        await restockForCancelledOrder(stockItems);
-      }
-
-      const orderRef = doc(db, "orders", selectedOrder.id);
-      await updateDoc(orderRef, {
-        status: "Cancelled",
-        cancelledAt: serverTimestamp(),
-        cancelledBy: "user",
-        cancellationReason: cancelReason || "No reason provided",
-      });
+      await cancelOrder(selectedOrder.id, selectedOrder.items, cancelReason);
 
       setShowCancelConfirm(false);
       setSelectedOrder(null);
@@ -423,7 +408,9 @@ const MyOrders = () => {
       // TODO: replace alert() with the shared toast/notification component
       // once one exists in this codebase.
       console.error("Error cancelling order:", error);
-      alert("Unable to cancel order. Please try again.");
+      alert(error.message || "Unable to cancel order. Please try again.");
+    } finally {
+      setCancelling(false);
     }
   };
 
@@ -455,6 +442,13 @@ const MyOrders = () => {
 
       setOrders(data);
       setLoading(false);
+
+      // Keep the open modal's data (and its cached status/items) in sync
+      // with the live snapshot, e.g. right after cancelOrder resolves or
+      // if admin staff change the status while it's open.
+      setSelectedOrder((prev) =>
+        prev ? data.find((o) => o.id === prev.id) || null : prev,
+      );
     });
 
     return () => unsubscribe();
@@ -502,7 +496,7 @@ const MyOrders = () => {
     return () => {
       cancelled = true;
     };
-  }, [selectedOrder]);
+  }, [selectedOrder?.id, selectedOrder?.status]);
 
   if (loading) {
     return (
@@ -544,10 +538,10 @@ const MyOrders = () => {
               </div>
 
               <div className="order-card-main">
-                <span className="order-total">₹{order.total}</span>
+                <span className="order-total">₹{formatCurrency(order.total)}</span>
                 <span className="order-card-date">
                   <FaCalendarAlt />
-                  {order.createdAt?.toDate().toLocaleDateString()}
+                  {formatTimestamp(order.createdAt)}
                 </span>
               </div>
 
@@ -586,7 +580,7 @@ const MyOrders = () => {
                   {getOrderRef(selectedOrder)}
                 </span>
                 <span className="modal-order-date">
-                  Placed on {selectedOrder.createdAt?.toDate().toLocaleString()}
+                  Placed on {formatTimestamp(selectedOrder.createdAt, "datetime")}
                 </span>
               </div>
 
@@ -751,7 +745,7 @@ const MyOrders = () => {
                       )}
                     </div>
 
-                    <div className="product-price">₹{item.price}</div>
+                    <div className="product-price">₹{formatCurrency(item.price)}</div>
                   </div>
                 ))}
               </div>
@@ -759,7 +753,7 @@ const MyOrders = () => {
               <div className="summary-card">
                 <div className="summary-row">
                   <span>Subtotal</span>
-                  <strong>₹{selectedOrder.total}</strong>
+                  <strong>₹{formatCurrency(selectedOrder.total)}</strong>
                 </div>
 
                 <div className="summary-row">
@@ -776,7 +770,7 @@ const MyOrders = () => {
 
                 <div className="summary-row grand-total">
                   <span>Grand total</span>
-                  <strong>₹{selectedOrder.total}</strong>
+                  <strong>₹{formatCurrency(selectedOrder.total)}</strong>
                 </div>
               </div>
 
@@ -899,12 +893,17 @@ const MyOrders = () => {
               <button
                 className="btn btn-ghost"
                 onClick={() => setShowCancelConfirm(false)}
+                disabled={cancelling}
               >
                 Keep order
               </button>
 
-              <button className="btn btn-danger" onClick={handleCancelOrder}>
-                Yes, cancel
+              <button
+                className="btn btn-danger"
+                onClick={handleCancelOrder}
+                disabled={cancelling}
+              >
+                {cancelling ? "Cancelling..." : "Yes, cancel"}
               </button>
             </div>
           </div>
