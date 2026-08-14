@@ -25,13 +25,14 @@ import {
   FaCube,
   FaSquare,
   FaTimes,
-  FaCrosshairs,
   FaMinus,
   FaPlus,
   FaAlignLeft,
   FaAlignCenter,
   FaAlignRight,
   FaBolt,
+  FaCheckCircle,
+  FaExclamationCircle,
 } from "react-icons/fa";
 import { Rnd } from "react-rnd";
 import { useProductOptions } from "../hooks/useProductOptions";
@@ -90,6 +91,12 @@ const CANVAS_ALIGN_PADDING = 20;
 // How long the "blocked" flash stays on an element when a drag/resize
 // is rejected for overlapping the other element.
 const OVERLAP_FLASH_MS = 350;
+
+// How long a toast notification (success/error message) stays on screen
+// before auto-dismissing. Shown as a fixed-position popup rather than
+// inline in the options panel, since the panel can be scrolled and the
+// user may never see an inline message buried below the fold.
+const TOAST_DURATION_MS = 4000;
 
 // Default layout for a fresh design — used both on initial mount and
 // whenever resetDesign() clears the canvas, so leftover drag/resize
@@ -167,7 +174,14 @@ const Customize = () => {
   const [isDraggingFile, setIsDraggingFile] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
   const [uploadProgress, setUploadProgress] = useState("");
+
+  // Success/error notifications are now shown as a pop-up toast (fixed
+  // position, always visible) instead of being printed inline in the
+  // options panel below the buttons — a user who hasn't scrolled that
+  // far would otherwise never see it. See the toast render block near
+  // the end of the JSX, and the auto-dismiss effect below.
   const [message, setMessage] = useState("");
+  const toastTimerRef = useRef(null);
 
   // Save / cart / buy-now actions each have independent loading states
   // so one doesn't block the others from showing their own spinner.
@@ -532,6 +546,30 @@ const Customize = () => {
       }
     };
   }, []);
+
+  // Auto-dismiss the toast notification after TOAST_DURATION_MS, and make
+  // sure a fresh message restarts the timer instead of stacking with a
+  // previous one. Cleared on unmount too.
+  useEffect(() => {
+    if (toastTimerRef.current) {
+      clearTimeout(toastTimerRef.current);
+      toastTimerRef.current = null;
+    }
+
+    if (!message) return;
+
+    toastTimerRef.current = setTimeout(() => {
+      setMessage("");
+      toastTimerRef.current = null;
+    }, TOAST_DURATION_MS);
+
+    return () => {
+      if (toastTimerRef.current) {
+        clearTimeout(toastTimerRef.current);
+        toastTimerRef.current = null;
+      }
+    };
+  }, [message]);
 
   // Keyboard shortcuts for the selected canvas element:
   // Delete/Backspace removes it, Escape deselects it, and the arrow
@@ -1208,8 +1246,7 @@ const Customize = () => {
             />
           </div>
           <small className="character-count">
-            Max 8MB. We check print sharpness based on the actual size you place
-            it at — bigger placement needs a higher-res image.
+            Max 8MB. Allowed types: PNG, JPG, JPEG, WEBP.
           </small>
 
           {image && (
@@ -1488,11 +1525,11 @@ const Customize = () => {
           </button>
         </div>
 
-        {message && (
-          <p className={`save-message ${isError ? "error" : "success"}`}>
-            {message}
-          </p>
-        )}
+        {/* NOTE: the inline "save-message" paragraph that used to live
+            here has been removed — success/error messages now render as
+            a fixed-position toast popup near the end of this component
+            (see "TOAST NOTIFICATION POPUP" below), so they're visible
+            regardless of scroll position. */}
       </div>
 
       {/* IMAGE QUALITY POPUP */}
@@ -1552,6 +1589,35 @@ const Customize = () => {
               </button>
             </div>
           </div>
+        </div>
+      )}
+
+      {/* TOAST NOTIFICATION POPUP
+          Fixed to the viewport (not the scrolling panel), so save/cart/
+          checkout/upload success & error messages are always visible the
+          instant they fire, even if the user is scrolled elsewhere on the
+          page. Auto-dismisses after TOAST_DURATION_MS (see effect above),
+          and can be closed early with the ✕ button. */}
+      {message && (
+        <div
+          className={`toast-popup ${isError ? "toast-error" : "toast-success"}`}
+          role="status"
+          aria-live="polite"
+        >
+          <span className="toast-icon">
+            {isError ? <FaExclamationCircle /> : <FaCheckCircle />}
+          </span>
+          <span className="toast-message">
+            {message.replace(/^✅\s*|^❌\s*|^🛒\s*/, "")}
+          </span>
+          <button
+            type="button"
+            className="toast-close"
+            aria-label="Dismiss notification"
+            onClick={() => setMessage("")}
+          >
+            <FaTimes />
+          </button>
         </div>
       )}
 
