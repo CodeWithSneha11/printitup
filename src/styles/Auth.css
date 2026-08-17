@@ -291,7 +291,14 @@
 .auth-switch a:hover{
     color:#ff7d95;
 }
+.password-wrapper input::-ms-reveal,
+.password-wrapper input::-ms-clear {
+    display: none;
+}
 
+.password-wrapper input::-webkit-credentials-auto-fill-button {
+    display: none !important;
+}
 /* ================================================= */
 /* ERROR */
 /* ================================================= */

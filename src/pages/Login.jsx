@@ -19,7 +19,7 @@ import {
   serverTimestamp,
 } from "firebase/firestore";
 
-import { FaGoogle } from "react-icons/fa";
+import { FaGoogle,FaEye, FaEyeSlash  } from "react-icons/fa";
 
 import "../styles/Auth.css";
 
@@ -161,7 +161,7 @@ function Login() {
             onClick={() => setShowPassword(!showPassword)}
             aria-label={showPassword ? "Hide password" : "Show password"}
           >
-            {showPassword ? "🙈" : "👁"}
+{showPassword ? <FaEyeSlash /> : <FaEye />}
           </button>
         </div>
 
