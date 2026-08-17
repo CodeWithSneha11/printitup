@@ -58,10 +58,9 @@ const MAX_PROMPT_LENGTH = 500;
 const COOLDOWN_MS = 10 * 1000; // 10s between generations per user
 
 if (!GEMINI_API_KEY) {
-  console.error(
-    "Missing GEMINI_API_KEY. Set it in server/.env before starting the server.",
+  console.warn(
+    "GEMINI_API_KEY is not configured. Gemini image generation is disabled.",
   );
-  process.exit(1);
 }
 
 // --- App ---------------------------------------------------------------
@@ -93,6 +92,11 @@ const requireAuth = async (req, res, next) => {
 };
 
 app.post("/api/generate-image", requireAuth, async (req, res) => {
+    if (!GEMINI_API_KEY) {
+    return res.status(503).json({
+      error: "Image generation is currently unavailable.",
+    });
+  }
   const prompt = (req.body?.prompt || "").trim();
 
   if (!prompt) {
